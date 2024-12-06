@@ -92,6 +92,12 @@ public class MotionManager: ObservableObject {
                     let totalAcc = CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ)
                     self.accelerationData = totalAcc
                     self.rotationData = motion.rotationRate
+                    
+                    WatchConnectivityManager.shared.sendRealtimeData(
+                        accData: totalAcc,
+                        gyroData: motion.rotationRate,
+                        timestamp: timestampNs
+                    )
                 }
             } else {
                 print("设备运动数据不可用")

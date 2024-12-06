@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import CoreMotion
 
 class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
@@ -12,6 +13,28 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()
+        }
+    }
+    
+    func sendRealtimeData(accData: CMAcceleration, gyroData: CMRotationRate, timestamp: UInt64) {
+        guard WCSession.default.isReachable else {
+            self.lastMessage = "iPhone 未连接"
+            return
+        }
+        
+        let data: [String: Any] = [
+            "type": "realtime_data",
+            "timestamp": timestamp,
+            "acc_x": accData.x,
+            "acc_y": accData.y,
+            "acc_z": accData.z,
+            "gyro_x": gyroData.x,
+            "gyro_y": gyroData.y,
+            "gyro_z": gyroData.z
+        ]
+        
+        WCSession.default.sendMessage(data, replyHandler: nil) { error in
+            print("发送实时数据失败: \(error.localizedDescription)")
         }
     }
     
@@ -28,7 +51,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         let mergedFileURL = temporaryDir.appendingPathComponent("merged_data.txt")
         
         do {
-            // 如果已存在则删除
+            // 如果已存在则��除
             if FileManager.default.fileExists(atPath: mergedFileURL.path) {
                 try FileManager.default.removeItem(at: mergedFileURL)
             }

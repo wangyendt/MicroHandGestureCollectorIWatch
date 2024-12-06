@@ -71,16 +71,6 @@
 		B09627692D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "MicroHandGestureCollectorIWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B09627F72D02D45B0015F052 /* Exceptions for "MicroHandGestureCollectorIWatch Watch App" folder in "MicroHandGestureCollectorIWatch Watch App" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"MicroHandGestureCollectorIWatch-Watch-App-Info.plist",
-			);
-			target = B096274C2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B09627292D02CFA50015F052 /* MicroHandGestureCollectorIWatch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -99,9 +89,6 @@
 		};
 		B09627512D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				B09627F72D02D45B0015F052 /* Exceptions for "MicroHandGestureCollectorIWatch Watch App" folder in "MicroHandGestureCollectorIWatch Watch App" target */,
-			);
 			path = "MicroHandGestureCollectorIWatch Watch App";
 			sourceTree = "<group>";
 		};
