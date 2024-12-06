@@ -1,6 +1,7 @@
 import Foundation
 import WatchConnectivity
 import Network
+import QuartzCore
 
 class SensorDataManager: NSObject, ObservableObject {
     static let shared = SensorDataManager()

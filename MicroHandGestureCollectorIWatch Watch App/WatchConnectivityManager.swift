@@ -20,7 +20,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     }
     
     func sendRealtimeData(accData: CMAcceleration, gyroData: CMRotationRate, timestamp: UInt64) {
-        let currentTime = CACurrentMediaTime()
+        let currentTime = Date().timeIntervalSinceReferenceDate
         if currentTime - lastSentTime < minSendInterval {
             return  // 控制发送频率
         }
