@@ -5,10 +5,12 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>processing</string>
 	</array>
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>
+		<string>sensor-processing</string>
 	</array>
 </dict>
 </plist>
