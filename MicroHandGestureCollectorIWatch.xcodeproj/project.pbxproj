@@ -1,0 +1,966 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B096274E2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B09627382D02CFA70015F052 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B096271F2D02CFA50015F052 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B09627262D02CFA50015F052;
+			remoteInfo = MicroHandGestureCollectorIWatch;
+		};
+		B09627422D02CFA70015F052 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B096271F2D02CFA50015F052 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B09627262D02CFA50015F052;
+			remoteInfo = MicroHandGestureCollectorIWatch;
+		};
+		B096274F2D02CFA70015F052 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B096271F2D02CFA50015F052 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B096274C2D02CFA70015F052;
+			remoteInfo = "MicroHandGestureCollectorIWatch Watch App";
+		};
+		B09627602D02CFA80015F052 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B096271F2D02CFA50015F052 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B096274C2D02CFA70015F052;
+			remoteInfo = "MicroHandGestureCollectorIWatch Watch App";
+		};
+		B096276A2D02CFA80015F052 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B096271F2D02CFA50015F052 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B096274C2D02CFA70015F052;
+			remoteInfo = "MicroHandGestureCollectorIWatch Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B09627762D02CFA80015F052 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				B096274E2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		B09627272D02CFA50015F052 /* MicroHandGestureCollectorIWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MicroHandGestureCollectorIWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B09627372D02CFA70015F052 /* MicroHandGestureCollectorIWatchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MicroHandGestureCollectorIWatchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B09627412D02CFA70015F052 /* MicroHandGestureCollectorIWatchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MicroHandGestureCollectorIWatchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MicroHandGestureCollectorIWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B096275F2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "MicroHandGestureCollectorIWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B09627692D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "MicroHandGestureCollectorIWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		B09627292D02CFA50015F052 /* MicroHandGestureCollectorIWatch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MicroHandGestureCollectorIWatch;
+			sourceTree = "<group>";
+		};
+		B096273A2D02CFA70015F052 /* MicroHandGestureCollectorIWatchTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MicroHandGestureCollectorIWatchTests;
+			sourceTree = "<group>";
+		};
+		B09627442D02CFA70015F052 /* MicroHandGestureCollectorIWatchUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MicroHandGestureCollectorIWatchUITests;
+			sourceTree = "<group>";
+		};
+		B09627512D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "MicroHandGestureCollectorIWatch Watch App";
+			sourceTree = "<group>";
+		};
+		B09627622D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "MicroHandGestureCollectorIWatch Watch AppTests";
+			sourceTree = "<group>";
+		};
+		B096276C2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "MicroHandGestureCollectorIWatch Watch AppUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B09627242D02CFA50015F052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B09627342D02CFA70015F052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B096273E2D02CFA70015F052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B096274A2D02CFA70015F052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B096275C2D02CFA80015F052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B09627662D02CFA80015F052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B096271E2D02CFA50015F052 = {
+			isa = PBXGroup;
+			children = (
+				B09627292D02CFA50015F052 /* MicroHandGestureCollectorIWatch */,
+				B096273A2D02CFA70015F052 /* MicroHandGestureCollectorIWatchTests */,
+				B09627442D02CFA70015F052 /* MicroHandGestureCollectorIWatchUITests */,
+				B09627512D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */,
+				B09627622D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests */,
+				B096276C2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests */,
+				B09627282D02CFA50015F052 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B09627282D02CFA50015F052 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B09627272D02CFA50015F052 /* MicroHandGestureCollectorIWatch.app */,
+				B09627372D02CFA70015F052 /* MicroHandGestureCollectorIWatchTests.xctest */,
+				B09627412D02CFA70015F052 /* MicroHandGestureCollectorIWatchUITests.xctest */,
+				B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */,
+				B096275F2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests.xctest */,
+				B09627692D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B09627262D02CFA50015F052 /* MicroHandGestureCollectorIWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B09627772D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatch" */;
+			buildPhases = (
+				B09627232D02CFA50015F052 /* Sources */,
+				B09627242D02CFA50015F052 /* Frameworks */,
+				B09627252D02CFA50015F052 /* Resources */,
+				B09627762D02CFA80015F052 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B09627502D02CFA70015F052 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B09627292D02CFA50015F052 /* MicroHandGestureCollectorIWatch */,
+			);
+			name = MicroHandGestureCollectorIWatch;
+			packageProductDependencies = (
+			);
+			productName = MicroHandGestureCollectorIWatch;
+			productReference = B09627272D02CFA50015F052 /* MicroHandGestureCollectorIWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B09627362D02CFA70015F052 /* MicroHandGestureCollectorIWatchTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B096277A2D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatchTests" */;
+			buildPhases = (
+				B09627332D02CFA70015F052 /* Sources */,
+				B09627342D02CFA70015F052 /* Frameworks */,
+				B09627352D02CFA70015F052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B09627392D02CFA70015F052 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B096273A2D02CFA70015F052 /* MicroHandGestureCollectorIWatchTests */,
+			);
+			name = MicroHandGestureCollectorIWatchTests;
+			packageProductDependencies = (
+			);
+			productName = MicroHandGestureCollectorIWatchTests;
+			productReference = B09627372D02CFA70015F052 /* MicroHandGestureCollectorIWatchTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B09627402D02CFA70015F052 /* MicroHandGestureCollectorIWatchUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B096277D2D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatchUITests" */;
+			buildPhases = (
+				B096273D2D02CFA70015F052 /* Sources */,
+				B096273E2D02CFA70015F052 /* Frameworks */,
+				B096273F2D02CFA70015F052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B09627432D02CFA70015F052 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B09627442D02CFA70015F052 /* MicroHandGestureCollectorIWatchUITests */,
+			);
+			name = MicroHandGestureCollectorIWatchUITests;
+			packageProductDependencies = (
+			);
+			productName = MicroHandGestureCollectorIWatchUITests;
+			productReference = B09627412D02CFA70015F052 /* MicroHandGestureCollectorIWatchUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		B096274C2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B09627732D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatch Watch App" */;
+			buildPhases = (
+				B09627492D02CFA70015F052 /* Sources */,
+				B096274A2D02CFA70015F052 /* Frameworks */,
+				B096274B2D02CFA70015F052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B09627512D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */,
+			);
+			name = "MicroHandGestureCollectorIWatch Watch App";
+			packageProductDependencies = (
+			);
+			productName = "MicroHandGestureCollectorIWatch Watch App";
+			productReference = B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B096275E2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B09627802D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatch Watch AppTests" */;
+			buildPhases = (
+				B096275B2D02CFA80015F052 /* Sources */,
+				B096275C2D02CFA80015F052 /* Frameworks */,
+				B096275D2D02CFA80015F052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B09627612D02CFA80015F052 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B09627622D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests */,
+			);
+			name = "MicroHandGestureCollectorIWatch Watch AppTests";
+			packageProductDependencies = (
+			);
+			productName = "MicroHandGestureCollectorIWatch Watch AppTests";
+			productReference = B096275F2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B09627682D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B09627832D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatch Watch AppUITests" */;
+			buildPhases = (
+				B09627652D02CFA80015F052 /* Sources */,
+				B09627662D02CFA80015F052 /* Frameworks */,
+				B09627672D02CFA80015F052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B096276B2D02CFA80015F052 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B096276C2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests */,
+			);
+			name = "MicroHandGestureCollectorIWatch Watch AppUITests";
+			packageProductDependencies = (
+			);
+			productName = "MicroHandGestureCollectorIWatch Watch AppUITests";
+			productReference = B09627692D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B096271F2D02CFA50015F052 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1610;
+				LastUpgradeCheck = 1610;
+				TargetAttributes = {
+					B09627262D02CFA50015F052 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					B09627362D02CFA70015F052 = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = B09627262D02CFA50015F052;
+					};
+					B09627402D02CFA70015F052 = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = B09627262D02CFA50015F052;
+					};
+					B096274C2D02CFA70015F052 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					B096275E2D02CFA80015F052 = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = B096274C2D02CFA70015F052;
+					};
+					B09627682D02CFA80015F052 = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = B096274C2D02CFA70015F052;
+					};
+				};
+			};
+			buildConfigurationList = B09627222D02CFA50015F052 /* Build configuration list for PBXProject "MicroHandGestureCollectorIWatch" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B096271E2D02CFA50015F052;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B09627282D02CFA50015F052 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B09627262D02CFA50015F052 /* MicroHandGestureCollectorIWatch */,
+				B09627362D02CFA70015F052 /* MicroHandGestureCollectorIWatchTests */,
+				B09627402D02CFA70015F052 /* MicroHandGestureCollectorIWatchUITests */,
+				B096274C2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */,
+				B096275E2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests */,
+				B09627682D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B09627252D02CFA50015F052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B09627352D02CFA70015F052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B096273F2D02CFA70015F052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B096274B2D02CFA70015F052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B096275D2D02CFA80015F052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B09627672D02CFA80015F052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B09627232D02CFA50015F052 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B09627332D02CFA70015F052 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B096273D2D02CFA70015F052 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B09627492D02CFA70015F052 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B096275B2D02CFA80015F052 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B09627652D02CFA80015F052 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B09627392D02CFA70015F052 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B09627262D02CFA50015F052 /* MicroHandGestureCollectorIWatch */;
+			targetProxy = B09627382D02CFA70015F052 /* PBXContainerItemProxy */;
+		};
+		B09627432D02CFA70015F052 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B09627262D02CFA50015F052 /* MicroHandGestureCollectorIWatch */;
+			targetProxy = B09627422D02CFA70015F052 /* PBXContainerItemProxy */;
+		};
+		B09627502D02CFA70015F052 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B096274C2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */;
+			targetProxy = B096274F2D02CFA70015F052 /* PBXContainerItemProxy */;
+		};
+		B09627612D02CFA80015F052 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B096274C2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */;
+			targetProxy = B09627602D02CFA80015F052 /* PBXContainerItemProxy */;
+		};
+		B096276B2D02CFA80015F052 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B096274C2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */;
+			targetProxy = B096276A2D02CFA80015F052 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		B09627712D02CFA80015F052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		B09627722D02CFA80015F052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		B09627742D02CFA80015F052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MicroHandGestureCollectorIWatch Watch App/Preview Content\"";
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatch.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Debug;
+		};
+		B09627752D02CFA80015F052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MicroHandGestureCollectorIWatch Watch App/Preview Content\"";
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatch.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Release;
+		};
+		B09627782D02CFA80015F052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MicroHandGestureCollectorIWatch/Preview Content\"";
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B09627792D02CFA80015F052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MicroHandGestureCollectorIWatch/Preview Content\"";
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B096277B2D02CFA80015F052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatchTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MicroHandGestureCollectorIWatch.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MicroHandGestureCollectorIWatch";
+			};
+			name = Debug;
+		};
+		B096277C2D02CFA80015F052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatchTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MicroHandGestureCollectorIWatch.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MicroHandGestureCollectorIWatch";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B096277E2D02CFA80015F052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatchUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = MicroHandGestureCollectorIWatch;
+			};
+			name = Debug;
+		};
+		B096277F2D02CFA80015F052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatchUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = MicroHandGestureCollectorIWatch;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B09627812D02CFA80015F052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "wayne.MicroHandGestureCollectorIWatch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MicroHandGestureCollectorIWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MicroHandGestureCollectorIWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Debug;
+		};
+		B09627822D02CFA80015F052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "wayne.MicroHandGestureCollectorIWatch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MicroHandGestureCollectorIWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MicroHandGestureCollectorIWatch Watch App";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Release;
+		};
+		B09627842D02CFA80015F052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "wayne.MicroHandGestureCollectorIWatch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "MicroHandGestureCollectorIWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Debug;
+		};
+		B09627852D02CFA80015F052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 52C5XZZ89T;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "wayne.MicroHandGestureCollectorIWatch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "MicroHandGestureCollectorIWatch Watch App";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B09627222D02CFA50015F052 /* Build configuration list for PBXProject "MicroHandGestureCollectorIWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B09627712D02CFA80015F052 /* Debug */,
+				B09627722D02CFA80015F052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B09627732D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B09627742D02CFA80015F052 /* Debug */,
+				B09627752D02CFA80015F052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B09627772D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B09627782D02CFA80015F052 /* Debug */,
+				B09627792D02CFA80015F052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B096277A2D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatchTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B096277B2D02CFA80015F052 /* Debug */,
+				B096277C2D02CFA80015F052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B096277D2D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatchUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B096277E2D02CFA80015F052 /* Debug */,
+				B096277F2D02CFA80015F052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B09627802D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatch Watch AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B09627812D02CFA80015F052 /* Debug */,
+				B09627822D02CFA80015F052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B09627832D02CFA80015F052 /* Build configuration list for PBXNativeTarget "MicroHandGestureCollectorIWatch Watch AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B09627842D02CFA80015F052 /* Debug */,
+				B09627852D02CFA80015F052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B096271F2D02CFA50015F052 /* Project object */;
+}
