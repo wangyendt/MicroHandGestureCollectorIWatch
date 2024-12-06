@@ -13,6 +13,10 @@ class SensorDataManager: NSObject, ObservableObject {
     @Published var lastReceivedData: [String: Double] = [:]
     @Published var lastUpdateTime = Date()
     
+    private var dataQueue = DispatchQueue(label: "com.wayne.dataQueue", qos: .userInteractive)
+    private var lastSentTime: TimeInterval = 0
+    private let minSendInterval: TimeInterval = 0.01  // 最小发送间隔，100Hz
+    
     private override init() {
         super.init()
         setupWatchConnectivity()
@@ -60,11 +64,21 @@ class SensorDataManager: NSObject, ObservableObject {
     }
     
     func sendDataToMac(_ data: Data) {
-        connection?.send(content: data, completion: .contentProcessed { [weak self] error in
-            if let error = error {
-                self?.lastMessage = "发送数据失败: \(error.localizedDescription)"
-            }
-        })
+        let currentTime = CACurrentMediaTime()
+        if currentTime - lastSentTime < minSendInterval {
+            return
+        }
+        
+        dataQueue.async { [weak self] in
+            self?.connection?.send(content: data, completion: .contentProcessed { error in
+                if let error = error {
+                    DispatchQueue.main.async {
+                        self?.lastMessage = "发送数据失败: \(error.localizedDescription)"
+                    }
+                }
+            })
+            self?.lastSentTime = currentTime
+        }
     }
 }
 

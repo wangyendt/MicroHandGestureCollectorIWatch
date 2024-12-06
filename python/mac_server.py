@@ -5,8 +5,10 @@ import time
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from collections import deque
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import os
 
 class SensorDataServer:
     def __init__(self, host='0.0.0.0', port=12345):
@@ -15,13 +17,24 @@ class SensorDataServer:
         self.server_socket = None
         self.client_socket = None
         self.running = False
-        self.data_buffer = []
+        self.data_buffer = deque(maxlen=1000)  # 限制缓冲区大小
+        self.lock = threading.Lock()
         
         # 用于实时绘图的数据
         self.time_window = 500  # 显示最近500个数据点
         self.timestamps = []
         self.acc_data = {'x': [], 'y': [], 'z': []}
         self.gyro_data = {'x': [], 'y': [], 'z': []}
+        
+        # 创建数据保存目录
+        self.data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        os.makedirs(self.data_dir, exist_ok=True)
+        
+        # 设置socket选项
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # 禁用Nagle算法
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 262144)  # 增加接收缓冲区
         
         # 创建实时绘图窗口
         self.setup_plot()
@@ -57,30 +70,29 @@ class SensorDataServer:
         plt.show(block=False)
     
     def update_plot(self, frame):
-        if len(self.timestamps) > self.time_window:
-            start_idx = -self.time_window
-        else:
-            start_idx = 0
+        with self.lock:
+            if len(self.timestamps) > self.time_window:
+                start_idx = -self.time_window
+            else:
+                start_idx = 0
+                
+            x_data = range(len(self.timestamps[start_idx:]))
             
-        x_data = range(len(self.timestamps[start_idx:]))
-        
-        # 更新加速度计数据
-        for axis in ['x', 'y', 'z']:
-            self.acc_lines[axis].set_data(x_data, self.acc_data[axis][start_idx:])
-        self.ax1.relim()
-        self.ax1.autoscale_view()
-        
-        # 更新陀螺仪数据
-        for axis in ['x', 'y', 'z']:
-            self.gyro_lines[axis].set_data(x_data, self.gyro_data[axis][start_idx:])
-        self.ax2.relim()
-        self.ax2.autoscale_view()
-        
-        return self.acc_lines.values(), self.gyro_lines.values()
+            # 更新加速度计数据
+            for axis in ['x', 'y', 'z']:
+                self.acc_lines[axis].set_data(x_data, self.acc_data[axis][start_idx:])
+            self.ax1.relim()
+            self.ax1.autoscale_view()
+            
+            # 更新陀螺仪数据
+            for axis in ['x', 'y', 'z']:
+                self.gyro_lines[axis].set_data(x_data, self.gyro_data[axis][start_idx:])
+            self.ax2.relim()
+            self.ax2.autoscale_view()
+            
+            return self.acc_lines.values(), self.gyro_lines.values()
     
     def start(self):
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(1)
         self.running = True
@@ -106,23 +118,27 @@ class SensorDataServer:
     
     def handle_client(self):
         buffer = ""
+        self.client_socket.settimeout(0.1)  # 设置超时，避免阻塞
+        
         while self.running:
             try:
-                data = self.client_socket.recv(4096).decode('utf-8')
+                data = self.client_socket.recv(8192)  # 增加接收缓冲区
                 if not data:
                     break
                 
-                buffer += data
+                buffer += data.decode('utf-8')
                 
-                # 处理可能的多个JSON对象
                 while '\n' in buffer:
                     line, buffer = buffer.split('\n', 1)
                     try:
                         sensor_data = json.loads(line)
-                        self.process_sensor_data(sensor_data)
+                        with self.lock:
+                            self.process_sensor_data(sensor_data)
                     except json.JSONDecodeError:
-                        print(f"JSON解析错误: {line}")
-                
+                        continue
+                    
+            except socket.timeout:
+                continue
             except Exception as e:
                 print(f"数据接收错误: {e}")
                 break
@@ -154,14 +170,21 @@ class SensorDataServer:
               f"Gyro(x={data['gyro_x']:.2f}, y={data['gyro_y']:.2f}, z={data['gyro_z']:.2f})")
     
     def save_data_periodically(self):
+        last_save_time = time.time()
+        
         while self.running:
-            time.sleep(5)  # 每5秒保存一次数据
-            if self.data_buffer:
-                df = pd.DataFrame(self.data_buffer)
-                filename = f"sensor_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                df.to_csv(filename, index=False)
-                print(f"数据已保存到 {filename}")
-                self.data_buffer = []
+            current_time = time.time()
+            if current_time - last_save_time >= 5 and self.data_buffer:  # 每5秒保存一次
+                with self.lock:
+                    df = pd.DataFrame(list(self.data_buffer))
+                    filename = os.path.join(self.data_dir, 
+                                         f"sensor_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+                    df.to_csv(filename, index=False)
+                    print(f"数据已保存到 {filename}")
+                    self.data_buffer.clear()
+                last_save_time = current_time
+            
+            time.sleep(0.1)  # 降低CPU使用率
     
     def stop(self):
         self.running = False
@@ -169,6 +192,7 @@ class SensorDataServer:
             self.client_socket.close()
         if self.server_socket:
             self.server_socket.close()
+        plt.close('all')
 
 if __name__ == "__main__":
     server = SensorDataServer()
@@ -177,4 +201,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n正在停止服务器...")
         server.stop()
-        plt.close('all')

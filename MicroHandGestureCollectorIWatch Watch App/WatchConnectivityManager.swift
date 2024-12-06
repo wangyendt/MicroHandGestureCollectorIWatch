@@ -5,7 +5,10 @@ import CoreMotion
 class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
     @Published var isSending = false
-    @Published var lastMessage: String = ""
+    @Published var lastMessage = ""
+    private var messageQueue = DispatchQueue(label: "com.wayne.messageQueue")
+    private var lastSentTime: TimeInterval = 0
+    private let minSendInterval: TimeInterval = 0.01  // 最小发送间隔，100Hz
     
     private override init() {
         super.init()
@@ -17,24 +20,32 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     }
     
     func sendRealtimeData(accData: CMAcceleration, gyroData: CMRotationRate, timestamp: UInt64) {
+        let currentTime = CACurrentMediaTime()
+        if currentTime - lastSentTime < minSendInterval {
+            return  // 控制发送频率
+        }
+        
         guard WCSession.default.isReachable else {
-            self.lastMessage = "iPhone 未连接"
             return
         }
         
-        let data: [String: Any] = [
-            "type": "realtime_data",
-            "timestamp": timestamp,
-            "acc_x": accData.x,
-            "acc_y": accData.y,
-            "acc_z": accData.z,
-            "gyro_x": gyroData.x,
-            "gyro_y": gyroData.y,
-            "gyro_z": gyroData.z
-        ]
-        
-        WCSession.default.sendMessage(data, replyHandler: nil) { error in
-            print("发送实时数据失败: \(error.localizedDescription)")
+        messageQueue.async { [weak self] in
+            let data: [String: Any] = [
+                "type": "realtime_data",
+                "timestamp": timestamp,
+                "acc_x": accData.x,
+                "acc_y": accData.y,
+                "acc_z": accData.z,
+                "gyro_x": gyroData.x,
+                "gyro_y": gyroData.y,
+                "gyro_z": gyroData.z
+            ]
+            
+            WCSession.default.sendMessage(data, replyHandler: nil) { error in
+                print("发送实时数据失败: \(error.localizedDescription)")
+            }
+            
+            self?.lastSentTime = currentTime
         }
     }
     
@@ -51,7 +62,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         let mergedFileURL = temporaryDir.appendingPathComponent("merged_data.txt")
         
         do {
-            // 如果已存在则��除
+            // 如果已存在则除
             if FileManager.default.fileExists(atPath: mergedFileURL.path) {
                 try FileManager.default.removeItem(at: mergedFileURL)
             }
