@@ -114,16 +114,27 @@ extension SensorDataManager: WCSessionDelegate {
             
             // 处理批量数据
             for (index, data) in batchData.enumerated() {
-                if let timestamp = data["timestamp"] as? UInt64,
-                   let accX = data["acc_x"] as? Double,
-                   let accY = data["acc_y"] as? Double,
-                   let accZ = data["acc_z"] as? Double,
-                   let gyroX = data["gyro_x"] as? Double,
-                   let gyroY = data["gyro_y"] as? Double,
-                   let gyroZ = data["gyro_z"] as? Double {
+                if let timestamp = data["timestamp"] as? UInt64 {
+                    // 只打印时间戳，用于验证采样率
+//                    let timestampSeconds = Double(timestamp) / 1_000_000_000.0
+//                    print("时间戳[\(index)]: \(timestampSeconds)秒")
                     
-                    // 更新UI数据（只显示最新的数据）
-                    if index == batchData.count - 1 {  // 使用索引判断是否是最后一个元素
+                    // 记录时间戳用于计算采样率
+                    self.timestampHistory.append(timestamp)
+                    if self.timestampHistory.count >= self.maxHistorySize {
+                        self.timestampHistory = Array(self.timestampHistory.suffix(self.minHistorySize))
+                    }
+                }
+                
+                // 只用最后一帧更新UI
+                if index == batchData.count - 1 {
+                    if let accX = data["acc_x"] as? Double,
+                       let accY = data["acc_y"] as? Double,
+                       let accZ = data["acc_z"] as? Double,
+                       let gyroX = data["gyro_x"] as? Double,
+                       let gyroY = data["gyro_y"] as? Double,
+                       let gyroZ = data["gyro_z"] as? Double {
+                        
                         DispatchQueue.main.async {
                             self.lastReceivedData = [
                                 "acc_x": accX,
@@ -135,12 +146,6 @@ extension SensorDataManager: WCSessionDelegate {
                             ]
                             self.lastUpdateTime = Date()
                         }
-                    }
-                    
-                    // 记录时间戳
-                    self.timestampHistory.append(timestamp)
-                    if self.timestampHistory.count >= self.maxHistorySize {
-                        self.timestampHistory = Array(self.timestampHistory.suffix(self.minHistorySize))
                     }
                 }
                 
@@ -155,12 +160,12 @@ extension SensorDataManager: WCSessionDelegate {
                 }
             }
             
-            // 计算并打印平均采样率
+            // 计算并打印当前采样率
             if self.timestampHistory.count >= 2 {
                 let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
                 let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
                 let avgSamplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
-                print("收到时间戳: \(self.timestampHistory.last!), 平均采样率: \(String(format: "%.1f Hz", avgSamplingRate))")
+                print("当前采样率: \(String(format: "%.1f Hz", avgSamplingRate))")
             }
         } else if message["type"] as? String == "stop_collection" {
             resetState()
