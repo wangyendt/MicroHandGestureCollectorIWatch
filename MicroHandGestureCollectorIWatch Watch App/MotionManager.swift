@@ -63,7 +63,7 @@ public class MotionManager: ObservableObject {
             accFileHandle?.write(accHeader.data(using: .utf8)!)
             gyroFileHandle?.write(gyroHeader.data(using: .utf8)!)
             
-            motionManager.deviceMotionUpdateInterval = 1.0 / 100.0
+            motionManager.deviceMotionUpdateInterval = 1.0 / 200.0
             
             if motionManager.isDeviceMotionAvailable {
                 motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] (motion, error) in

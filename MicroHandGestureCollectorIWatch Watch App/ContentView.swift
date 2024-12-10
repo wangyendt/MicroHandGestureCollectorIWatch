@@ -281,6 +281,19 @@ struct ContentView: View {
                 
                 Text("1024 + 1000 = \(calculator.sum(1000, with: 1024))")
                     .padding()
+                
+                // 添加时间戳和采样率显示
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("采样信息").font(.headline)
+                    Text(String(format: "时间戳: %llu", connectivityManager.lastTimestamp))
+                        .font(.system(.body, design: .monospaced))
+                    Text(String(format: "采样率: %.1f Hz", connectivityManager.samplingRate))
+                        .font(.system(.body, design: .monospaced))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(10)
             }
             .padding(.horizontal, 10)
         }

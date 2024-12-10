@@ -18,6 +18,9 @@ class SensorDataManager: NSObject, ObservableObject {
     private var lastSentTime: TimeInterval = 0
     private let minSendInterval: TimeInterval = 0.01  // 最小发送间隔，100Hz
     
+    private var timestampHistory: [UInt64] = []
+    private let maxHistorySize = 1000 // 记录更多样本用于统计
+    
     private override init() {
         super.init()
         setupWatchConnectivity()
@@ -97,12 +100,27 @@ extension SensorDataManager: WCSessionDelegate {
         if message["type"] as? String == "realtime_data" {
             // 更新UI数据
             DispatchQueue.main.async {
-                if let accX = message["acc_x"] as? Double,
+                if let timestamp = message["timestamp"] as? UInt64,
+                   let accX = message["acc_x"] as? Double,
                    let accY = message["acc_y"] as? Double,
                    let accZ = message["acc_z"] as? Double,
                    let gyroX = message["gyro_x"] as? Double,
                    let gyroY = message["gyro_y"] as? Double,
                    let gyroZ = message["gyro_z"] as? Double {
+                    
+                    // 记录时间戳
+                    self.timestampHistory.append(timestamp)
+                    if self.timestampHistory.count > self.maxHistorySize {
+                        self.timestampHistory.removeFirst()
+                    }
+                    
+                    // 计算并打印平均采样率
+                    if self.timestampHistory.count >= 2 {
+                        let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
+                        let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
+                        let avgSamplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
+                        print("收到时间戳: \(timestamp), 平均采样率: \(String(format: "%.1f Hz", avgSamplingRate))")
+                    }
                     
                     self.lastReceivedData = [
                         "acc_x": accX,

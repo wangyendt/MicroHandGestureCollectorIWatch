@@ -8,7 +8,12 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var lastMessage = ""
     private var messageQueue = DispatchQueue(label: "com.wayne.messageQueue")
     private var lastSentTime: TimeInterval = 0
-    private let minSendInterval: TimeInterval = 0.01  // 最小发送间隔，100Hz
+    private let minSendInterval: TimeInterval = 0.005  // 最小发送间隔，100Hz
+    
+    @Published var lastTimestamp: UInt64 = 0
+    @Published var samplingRate: Double = 0
+    private var timestampHistory: [UInt64] = []
+    private let maxHistorySize = 100 // 用于计算平均采样率的样本数
     
     private override init() {
         super.init()
@@ -30,6 +35,26 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         }
         
         messageQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            // 更新时间戳历史
+            self.timestampHistory.append(timestamp)
+            if self.timestampHistory.count > self.maxHistorySize {
+                self.timestampHistory.removeFirst()
+            }
+            
+            // 计算采样率
+            if self.timestampHistory.count >= 2 {
+                let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
+                let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
+                let samplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
+                
+                DispatchQueue.main.async {
+                    self.samplingRate = samplingRate
+                    self.lastTimestamp = timestamp
+                }
+            }
+            
             let data: [String: Any] = [
                 "type": "realtime_data",
                 "timestamp": timestamp,
@@ -45,7 +70,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 print("发送实时数据失败: \(error.localizedDescription)")
             }
             
-            self?.lastSentTime = currentTime
+            self.lastSentTime = currentTime
         }
     }
     
