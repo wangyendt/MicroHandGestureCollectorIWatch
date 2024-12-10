@@ -109,55 +109,60 @@ extension SensorDataManager: WCSessionDelegate {
     func sessionDidDeactivate(_ session: WCSession) {}
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
-        if message["type"] as? String == "realtime_data" {
-            // 更新UI数据
-            DispatchQueue.main.async {
-                if let timestamp = message["timestamp"] as? UInt64,
-                   let accX = message["acc_x"] as? Double,
-                   let accY = message["acc_y"] as? Double,
-                   let accZ = message["acc_z"] as? Double,
-                   let gyroX = message["gyro_x"] as? Double,
-                   let gyroY = message["gyro_y"] as? Double,
-                   let gyroZ = message["gyro_z"] as? Double {
+        if message["type"] as? String == "batch_data",
+           let batchData = message["data"] as? [[String: Any]] {
+            
+            // 处理批量数据
+            for (index, data) in batchData.enumerated() {
+                if let timestamp = data["timestamp"] as? UInt64,
+                   let accX = data["acc_x"] as? Double,
+                   let accY = data["acc_y"] as? Double,
+                   let accZ = data["acc_z"] as? Double,
+                   let gyroX = data["gyro_x"] as? Double,
+                   let gyroY = data["gyro_y"] as? Double,
+                   let gyroZ = data["gyro_z"] as? Double {
                     
-                    // 记录时间戳，使用滑动窗口方式
+                    // 更新UI数据（只显示最新的数据）
+                    if index == batchData.count - 1 {  // 使用索引判断是否是最后一个元素
+                        DispatchQueue.main.async {
+                            self.lastReceivedData = [
+                                "acc_x": accX,
+                                "acc_y": accY,
+                                "acc_z": accZ,
+                                "gyro_x": gyroX,
+                                "gyro_y": gyroY,
+                                "gyro_z": gyroZ
+                            ]
+                            self.lastUpdateTime = Date()
+                        }
+                    }
+                    
+                    // 记录时间戳
                     self.timestampHistory.append(timestamp)
-                    if self.timestampHistory.count > self.maxHistorySize {
-                        // 当超过最大容量时，只保留后面的minHistorySize个样本
+                    if self.timestampHistory.count >= self.maxHistorySize {
                         self.timestampHistory = Array(self.timestampHistory.suffix(self.minHistorySize))
                     }
-                    
-                    // 计算并打印平均采样率
-                    if self.timestampHistory.count >= 2 {
-                        let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
-                        let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
-                        let avgSamplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
-                        print("收到时间戳: \(timestamp), 平均采样率: \(String(format: "%.1f Hz", avgSamplingRate))")
-                    }
-                    
-                    self.lastReceivedData = [
-                        "acc_x": accX,
-                        "acc_y": accY,
-                        "acc_z": accZ,
-                        "gyro_x": gyroX,
-                        "gyro_y": gyroY,
-                        "gyro_z": gyroZ
-                    ]
-                    self.lastUpdateTime = Date()
+                }
+                
+                // 发送数据到Mac
+                do {
+                    let jsonData = try JSONSerialization.data(withJSONObject: data)
+                    var dataWithNewline = jsonData
+                    dataWithNewline.append("\n".data(using: .utf8)!)
+                    sendDataToMac(dataWithNewline)
+                } catch {
+                    print("数据转换失败: \(error)")
                 }
             }
             
-            // 发送数据到Mac
-            do {
-                let jsonData = try JSONSerialization.data(withJSONObject: message)
-                var dataWithNewline = jsonData
-                dataWithNewline.append("\n".data(using: .utf8)!)
-                sendDataToMac(dataWithNewline)
-            } catch {
-                print("数据转换失败: \(error)")
+            // 计算并打印平均采样率
+            if self.timestampHistory.count >= 2 {
+                let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
+                let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
+                let avgSamplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
+                print("收到时间戳: \(self.timestampHistory.last!), 平均采样率: \(String(format: "%.1f Hz", avgSamplingRate))")
             }
         } else if message["type"] as? String == "stop_collection" {
-            // 当收到停止采集的消息时重置状态
             resetState()
         }
     }

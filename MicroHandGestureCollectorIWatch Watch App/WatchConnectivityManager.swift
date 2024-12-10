@@ -16,6 +16,9 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     private let maxHistorySize = 100 // 使用较小的缓存大小
     private let minHistorySize = 50  // 最小保留样本数
     
+    private var dataBuffer: [(CMAcceleration, CMRotationRate, UInt64)] = []
+    private let batchSize = 5  // 每5个样本发送一次
+    
     private override init() {
         super.init()
         
@@ -26,56 +29,54 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     }
     
     func sendRealtimeData(accData: CMAcceleration, gyroData: CMRotationRate, timestamp: UInt64) {
-        let currentTime = Date().timeIntervalSinceReferenceDate
-        if currentTime - lastSentTime < minSendInterval {
-            return  // 控制发送频率
-        }
-        
-        guard WCSession.default.isReachable else {
-            return
-        }
-        
-        messageQueue.async { [weak self] in
-            guard let self = self else { return }
+        // 使用异步方式更新时间戳历史
+        DispatchQueue.main.async {
+            // 更新时间戳历史，使用滑动窗口方式
+            self.timestampHistory.append(timestamp)
+            if self.timestampHistory.count > self.maxHistorySize {
+                self.timestampHistory = Array(self.timestampHistory.suffix(self.minHistorySize))
+            }
             
-            // 使用同步块来保护数组操作
-            DispatchQueue.main.sync {
-                // 更新时间戳历史，使用滑动窗口方式
-                self.timestampHistory.append(timestamp)
-                if self.timestampHistory.count > self.maxHistorySize {
-                    // 当超过最大容量时，只保留后面的minHistorySize个样本
-                    self.timestampHistory = Array(self.timestampHistory.suffix(self.minHistorySize))
+            // 计算采样率
+            if self.timestampHistory.count >= 2 {
+                let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
+                let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
+                let samplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
+                
+                self.samplingRate = samplingRate
+                self.lastTimestamp = timestamp
+            }
+        }
+        
+        // 数据缓冲处理放在单独的队列中
+        messageQueue.async {
+            self.dataBuffer.append((accData, gyroData, timestamp))
+            
+            if self.dataBuffer.count >= self.batchSize {
+                let batchData: [[String: Any]] = self.dataBuffer.map { acc, gyro, ts in
+                    let data: [String: Any] = [
+                        "timestamp": ts,
+                        "acc_x": acc.x,
+                        "acc_y": acc.y,
+                        "acc_z": acc.z,
+                        "gyro_x": gyro.x,
+                        "gyro_y": gyro.y,
+                        "gyro_z": gyro.z
+                    ]
+                    return data
                 }
                 
-                // 计算采样率
-                if self.timestampHistory.count >= 2 {
-                    let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
-                    let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
-                    let samplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
-                    
-                    DispatchQueue.main.async {
-                        self.samplingRate = samplingRate
-                        self.lastTimestamp = timestamp
-                    }
+                let message: [String: Any] = [
+                    "type": "batch_data",
+                    "data": batchData
+                ]
+                
+                WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                    print("发送批量数据失败: \(error.localizedDescription)")
                 }
+                
+                self.dataBuffer.removeAll()
             }
-            
-            let data: [String: Any] = [
-                "type": "realtime_data",
-                "timestamp": timestamp,
-                "acc_x": accData.x,
-                "acc_y": accData.y,
-                "acc_z": accData.z,
-                "gyro_x": gyroData.x,
-                "gyro_y": gyroData.y,
-                "gyro_z": gyroData.z
-            ]
-            
-            WCSession.default.sendMessage(data, replyHandler: nil) { error in
-                print("发送实时数据失败: \(error.localizedDescription)")
-            }
-            
-            self.lastSentTime = currentTime
         }
     }
     
@@ -135,6 +136,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             self.samplingRate = 0
             self.lastMessage = ""
             self.lastSentTime = 0
+            self.dataBuffer.removeAll() // 清除数据缓冲
             
             // 发送停止采集消息到手机
             if WCSession.default.isReachable {
