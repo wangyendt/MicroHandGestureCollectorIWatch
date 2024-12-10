@@ -130,6 +130,8 @@ public class MotionManager: ObservableObject {
         
         accelerationData = nil
         rotationData = nil
+        
+        WatchConnectivityManager.shared.resetState()
     }
     
     public var isGyroAvailable: Bool {

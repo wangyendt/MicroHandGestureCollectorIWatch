@@ -121,6 +121,25 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         
         self.isSending = false
     }
+    
+    // 添加重置状态的方法
+    func resetState() {
+        DispatchQueue.main.async {
+            self.timestampHistory.removeAll()
+            self.lastTimestamp = 0
+            self.samplingRate = 0
+            self.lastMessage = ""
+            self.lastSentTime = 0
+            
+            // 发送停止采集消息到手机
+            if WCSession.default.isReachable {
+                let message = ["type": "stop_collection"]
+                WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                    print("发送停止采集消息失败: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
 }
 
 extension WatchConnectivityManager: WCSessionDelegate {

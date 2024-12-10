@@ -84,6 +84,17 @@ class SensorDataManager: NSObject, ObservableObject {
             self?.lastSentTime = currentTime
         }
     }
+    
+    // 添加重置状态的方法
+    func resetState() {
+        DispatchQueue.main.async {
+            self.timestampHistory.removeAll()
+            self.lastReceivedData.removeAll()
+            self.lastUpdateTime = Date()
+            self.lastMessage = ""
+            self.lastSentTime = 0
+        }
+    }
 }
 
 extension SensorDataManager: WCSessionDelegate {
@@ -143,6 +154,9 @@ extension SensorDataManager: WCSessionDelegate {
             } catch {
                 print("数据转换失败: \(error)")
             }
+        } else if message["type"] as? String == "stop_collection" {
+            // 当收到停止采集的消息时重置状态
+            resetState()
         }
     }
 }
