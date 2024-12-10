@@ -20,6 +20,7 @@ class SensorDataManager: NSObject, ObservableObject {
     
     private var timestampHistory: [UInt64] = []
     private let maxHistorySize = 1000 // 记录更多样本用于统计
+    private let minHistorySize = 100  // 最小保留样本数
     
     private override init() {
         super.init()
@@ -119,10 +120,11 @@ extension SensorDataManager: WCSessionDelegate {
                    let gyroY = message["gyro_y"] as? Double,
                    let gyroZ = message["gyro_z"] as? Double {
                     
-                    // 记录时间戳
+                    // 记录时间戳，使用滑动窗口方式
                     self.timestampHistory.append(timestamp)
                     if self.timestampHistory.count > self.maxHistorySize {
-                        self.timestampHistory.removeFirst()
+                        // 当超过最大容量时，只保留后面的minHistorySize个样本
+                        self.timestampHistory = Array(self.timestampHistory.suffix(self.minHistorySize))
                     }
                     
                     // 计算并打印平均采样率

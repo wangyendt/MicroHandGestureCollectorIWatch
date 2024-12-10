@@ -13,7 +13,8 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var lastTimestamp: UInt64 = 0
     @Published var samplingRate: Double = 0
     private var timestampHistory: [UInt64] = []
-    private let maxHistorySize = 100 // 用于计算平均采样率的样本数
+    private let maxHistorySize = 100 // 使用较小的缓存大小
+    private let minHistorySize = 50  // 最小保留样本数
     
     private override init() {
         super.init()
@@ -37,21 +38,25 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         messageQueue.async { [weak self] in
             guard let self = self else { return }
             
-            // 更新时间戳历史
-            self.timestampHistory.append(timestamp)
-            if self.timestampHistory.count > self.maxHistorySize {
-                self.timestampHistory.removeFirst()
-            }
-            
-            // 计算采样率
-            if self.timestampHistory.count >= 2 {
-                let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
-                let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
-                let samplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
+            // 使用同步块来保护数组操作
+            DispatchQueue.main.sync {
+                // 更新时间戳历史，使用滑动窗口方式
+                self.timestampHistory.append(timestamp)
+                if self.timestampHistory.count > self.maxHistorySize {
+                    // 当超过最大容量时，只保留后面的minHistorySize个样本
+                    self.timestampHistory = Array(self.timestampHistory.suffix(self.minHistorySize))
+                }
                 
-                DispatchQueue.main.async {
-                    self.samplingRate = samplingRate
-                    self.lastTimestamp = timestamp
+                // 计算采样率
+                if self.timestampHistory.count >= 2 {
+                    let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
+                    let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
+                    let samplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
+                    
+                    DispatchQueue.main.async {
+                        self.samplingRate = samplingRate
+                        self.lastTimestamp = timestamp
+                    }
                 }
             }
             
