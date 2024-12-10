@@ -12,5 +12,7 @@
 		<string>workout-processing</string>
 		<string>sensor-processing</string>
 	</array>
+	<key>OS_ACTIVITY_MODE</key>
+	<string>debug</string>
 </dict>
 </plist>

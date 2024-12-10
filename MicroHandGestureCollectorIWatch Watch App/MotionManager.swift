@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreMotion
 import Combine
+import os.log
 
 #if os(watchOS)
 public class MotionManager: ObservableObject {
@@ -17,10 +18,13 @@ public class MotionManager: ObservableObject {
     private var accFileHandle: FileHandle?
     private var gyroFileHandle: FileHandle?
     private var isCollecting = false
+    private var logger: OSLog
     
     @Published var isReady = true
     
     public init() {
+        logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
+
         motionManager = CMMotionManager()
         print("MotionManager 初始化")
         print("加速度计状态: \(motionManager.isAccelerometerAvailable ? "可用" : "不可用")")
@@ -70,6 +74,14 @@ public class MotionManager: ObservableObject {
                     let totalAccX = motion.gravity.x * 9.81 + motion.userAcceleration.x * 9.81
                     let totalAccY = motion.gravity.y * 9.81 + motion.userAcceleration.y * 9.81
                     let totalAccZ = motion.gravity.z * 9.81 + motion.userAcceleration.z * 9.81
+//                    print("timestampNs: \(timestampNs), totalAccX: \(totalAccX), totalAccY: \(totalAccY), totalAccZ: \(totalAccZ)")
+                    os_log("timestampNs: %lld, totalAccX: %.6f, totalAccY: %.6f, totalAccZ: %.6f",
+                           log: logger,
+                           type: .debug,
+                           timestampNs,
+                           totalAccX,
+                           totalAccY,
+                           totalAccZ)
                     
                     let accDataString = String(format: "%llu,%.6f,%.6f,%.6f\n",
                                             timestampNs,
