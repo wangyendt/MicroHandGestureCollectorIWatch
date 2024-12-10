@@ -320,6 +320,13 @@ struct ContentView: View {
                 workoutSession = nil
             }
         }
+        .onAppear {
+            startExtendedSession()
+        }
+        .onDisappear {
+            workoutSession?.invalidate()
+            workoutSession = nil
+        }
     }
     
     private func deleteAllData() {
@@ -338,11 +345,8 @@ struct ContentView: View {
     }
     
     private func startExtendedSession() {
-        guard workoutSession == nil else { return }
-        
-        let session = WKExtendedRuntimeSession()
-        session.start()
-        workoutSession = session
+        workoutSession = WKExtendedRuntimeSession()
+        workoutSession?.start()
     }
 }
 

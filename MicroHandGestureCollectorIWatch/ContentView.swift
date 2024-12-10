@@ -20,17 +20,21 @@ struct ContentView: View {
     private let maxDataPoints = 100
     @State private var startTime: Date? = nil
     
+    // 添加防止锁屏的属性
+    @State private var idleTimer: Timer?
+    
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 30) {
                     // 连接状态
                     HStack {
                         Image(systemName: sensorManager.isConnected ? "circle.fill" : "circle")
                             .foregroundColor(sensorManager.isConnected ? .green : .red)
                         Text(sensorManager.isConnected ? "已连接到Mac" : "未连接到Mac")
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(10)
                     
@@ -50,7 +54,8 @@ struct ContentView: View {
                             }
                         }
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(10)
                     
@@ -64,8 +69,8 @@ struct ContentView: View {
                         yData: sensorManager.lastReceivedData["acc_y"] ?? 0,
                         zData: sensorManager.lastReceivedData["acc_z"] ?? 0
                     )
-                    .frame(height: 200)
-                    .padding()
+                    .frame(height: 350)
+                    .padding(.horizontal, 8)
                     
                     // 陀螺仪图表
                     ChartView(
@@ -77,15 +82,16 @@ struct ContentView: View {
                         yData: sensorManager.lastReceivedData["gyro_y"] ?? 0,
                         zData: sensorManager.lastReceivedData["gyro_z"] ?? 0
                     )
-                    .frame(height: 200)
-                    .padding()
+                    .frame(height: 350)
+                    .padding(.horizontal, 8)
                     
                     // 最后更新时间
                     Text("最后更新: \(timeAgoString(from: sensorManager.lastUpdateTime))")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .padding(.top, 10)
                     
-                    Spacer()
+                    Spacer(minLength: 30)
                     
                     // 状态消息
                     if !sensorManager.lastMessage.isEmpty {
@@ -95,12 +101,30 @@ struct ContentView: View {
                             .padding()
                     }
                 }
-                .padding()
+                .padding(.vertical, 20)
             }
             .navigationTitle("传感器数据监控")
         }
         .onReceive(sensorManager.$lastReceivedData) { _ in
             updateChartData()
+        }
+        .onAppear {
+            // 禁用空闲计时器（防止锁屏）
+            UIApplication.shared.isIdleTimerDisabled = true
+            
+            // 每30秒触发一次用户活动
+            idleTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
+                UIDevice.current.isProximityMonitoringEnabled = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    UIDevice.current.isProximityMonitoringEnabled = false
+                }
+            }
+        }
+        .onDisappear {
+            // 恢复空闲计时器
+            UIApplication.shared.isIdleTimerDisabled = false
+            idleTimer?.invalidate()
+            idleTimer = nil
         }
     }
     
@@ -176,7 +200,52 @@ struct SensorDataPoint: Identifiable {
     let axis: String
 }
 
-// 修改后的图表视图组件
+// 新增一个专门的图表组件
+struct SensorChart: View {
+    let data: [SensorDataPoint]
+    let timeWindow: Double
+    
+    var body: some View {
+        Chart(data) { point in
+            LineMark(
+                x: .value("Time", point.time),
+                y: .value("Value", point.value)
+            )
+            .foregroundStyle(by: .value("Axis", point.axis))
+        }
+        .chartForegroundStyleScale([
+            "X": .red,
+            "Y": .green,
+            "Z": .blue
+        ])
+        .chartXAxis {
+            AxisMarks(position: .bottom) { value in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel {
+                    if let seconds = value.as(Double.self) {
+                        Text(String(format: "%.1fs", seconds))
+                            .font(.caption)
+                    }
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks { value in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel {
+                    if let value = value.as(Double.self) {
+                        Text(String(format: "%.1f", value))
+                            .font(.caption)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 修改后的 ChartView
 struct ChartView: View {
     let title: String
     let dataX: [(Double, Double)]
@@ -188,84 +257,56 @@ struct ChartView: View {
     
     private let timeWindow: Double = 10.0
     
-    // 将数据转换为 SensorDataPoint 数组
     private var chartData: [SensorDataPoint] {
-        var result: [SensorDataPoint] = []
-        
-        dataX.forEach { time, value in
-            result.append(SensorDataPoint(time: time, value: value, axis: "X"))
-        }
-        dataY.forEach { time, value in
-            result.append(SensorDataPoint(time: time, value: value, axis: "Y"))
-        }
-        dataZ.forEach { time, value in
-            result.append(SensorDataPoint(time: time, value: value, axis: "Z"))
-        }
-        
-        return result
+        dataX.map { SensorDataPoint(time: $0.0, value: $0.1, axis: "X") } +
+        dataY.map { SensorDataPoint(time: $0.0, value: $0.1, axis: "Y") } +
+        dataZ.map { SensorDataPoint(time: $0.0, value: $0.1, axis: "Z") }
     }
     
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(title)
-                .font(.headline)
-            
-            Chart(chartData) { point in
-                LineMark(
-                    x: .value("Time", point.time),
-                    y: .value("Value", point.value)
-                )
-                .foregroundStyle(by: .value("Axis", point.axis))
-            }
-            .chartForegroundStyleScale([
-                "X": .red,
-                "Y": .green,
-                "Z": .blue
-            ])
-            .chartXAxis {
-                AxisMarks(position: .bottom) { value in
-                    AxisGridLine()
-                    AxisTick()
-                    AxisValueLabel {
-                        if let seconds = value.as(Double.self) {
-                            Text(String(format: "%.1fs", seconds))
-                        }
-                    }
-                }
-            }
-            .chartXScale(domain: getXRange())
-            .chartYScale(domain: getYRange())
-            
-            // 当前值显示
-            HStack {
-                Text("X: \(String(format: "%.2f", xData))")
-                    .foregroundColor(.red)
-                Text("Y: \(String(format: "%.2f", yData))")
-                    .foregroundColor(.green)
-                Text("Z: \(String(format: "%.2f", zData))")
-                    .foregroundColor(.blue)
-            }
-            .font(.caption)
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
-    }
-    
-    private func getXRange() -> ClosedRange<Double> {
+    private var xRange: ClosedRange<Double> {
         if let maxTime = [dataX.last?.0, dataY.last?.0, dataZ.last?.0].compactMap({ $0 }).max() {
             return (maxTime - timeWindow)...maxTime
         }
         return 0...timeWindow
     }
     
-    private func getYRange() -> ClosedRange<Double> {
+    private var yRange: ClosedRange<Double> {
         let allValues = dataX.map { $0.1 } + dataY.map { $0.1 } + dataZ.map { $0.1 }
         if let minY = allValues.min(), let maxY = allValues.max() {
             let padding = abs(maxY - minY) * 0.1
             return (minY - padding)...(maxY + padding)
         }
-        return -10...10 // 默认范围调整为更合理的值
+        return -10...10
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .padding(.horizontal)
+            
+            SensorChart(data: chartData, timeWindow: timeWindow)
+                .chartXScale(domain: xRange)
+                .chartYScale(domain: yRange)
+                .frame(height: 250)
+            
+            HStack {
+                Text("X: \(String(format: "%.2f", xData))")
+                    .foregroundColor(.red)
+                    .bold()
+                Text("Y: \(String(format: "%.2f", yData))")
+                    .foregroundColor(.green)
+                    .bold()
+                Text("Z: \(String(format: "%.2f", zData))")
+                    .foregroundColor(.blue)
+                    .bold()
+            }
+            .font(.system(.body))
+            .padding(.horizontal)
+        }
+        .padding(.vertical, 12)
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(10)
     }
 }
 
