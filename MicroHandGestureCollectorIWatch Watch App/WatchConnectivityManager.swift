@@ -17,7 +17,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     private let minHistorySize = 50  // 最小保留样本数
     
     private var dataBuffer: [(CMAcceleration, CMRotationRate, UInt64)] = []
-    private let batchSize = 5  // 每5个样本发送一次
+    private let batchSize = 10  // 每5个样本发送一次
     
     private override init() {
         super.init()
@@ -130,21 +130,26 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     
     // 添加重置状态的方法
     func resetState() {
+        sendStopSignal()
+    }
+    
+    func sendStopSignal() {
+        // 立即发送停止信号到手机
+        if WCSession.default.isReachable {
+            let message = ["type": "stop_collection"]
+            WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                print("发送停止采集消息失败: \(error.localizedDescription)")
+            }
+        }
+        
+        // 然后清除本地状态
         DispatchQueue.main.async {
             self.timestampHistory.removeAll()
             self.lastTimestamp = 0
             self.samplingRate = 0
             self.lastMessage = ""
             self.lastSentTime = 0
-            self.dataBuffer.removeAll() // 清除数据缓冲
-            
-            // 发送停止采集消息到手机
-            if WCSession.default.isReachable {
-                let message = ["type": "stop_collection"]
-                WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                    print("发送停止采集消息失败: \(error.localizedDescription)")
-                }
-            }
+            self.dataBuffer.removeAll()
         }
     }
 }

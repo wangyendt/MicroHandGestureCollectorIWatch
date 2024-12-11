@@ -170,6 +170,9 @@ struct ContentView: View {
                             note: noteText
                         )
                     } else {
+                        // 立即发送停止信号到手机
+                        WatchConnectivityManager.shared.sendStopSignal()
+                        // 然后停止数据采集
                         motionManager.stopDataCollection()
                     }
                 }) {
