@@ -158,7 +158,7 @@ public class MotionManager: ObservableObject {
             
             // 发送数据到手机
             WatchConnectivityManager.shared.sendRealtimeData(
-                accData: motion.userAcceleration,
+                accData: CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ),
                 gyroData: motion.rotationRate,
                 timestamp: timestamp
             )
