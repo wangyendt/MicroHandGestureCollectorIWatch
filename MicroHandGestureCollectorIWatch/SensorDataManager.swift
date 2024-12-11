@@ -7,7 +7,7 @@ class SensorDataManager: NSObject, ObservableObject {
     static let shared = SensorDataManager()
     private var connection: NWConnection?
     private let serverPort: UInt16 = 12345 // Mac服务器端口
-    private let serverHost = "10.144.34.42" // 替换为Mac的IP地址
+    private let serverHost = "10.144.34.61" // 替换为Mac的IP地址
     
     @Published var isConnected = false
     @Published var lastMessage = ""
@@ -16,7 +16,7 @@ class SensorDataManager: NSObject, ObservableObject {
     
     private var dataQueue = DispatchQueue(label: "com.wayne.dataQueue", qos: .userInteractive)
     private var lastSentTime: TimeInterval = 0
-    private let minSendInterval: TimeInterval = 0.01  // 最小发送间隔，100Hz
+    private let minSendInterval: TimeInterval = 0.005  // 最小发送间隔，100Hz
     
     private var timestampHistory: [UInt64] = []
     private let maxHistorySize = 1000 // 记录更多样本用于统计
