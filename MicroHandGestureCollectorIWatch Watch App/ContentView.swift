@@ -39,8 +39,6 @@ struct ContentView: View {
     let forceOptions = ["轻", "中", "重"]
     let calculator = CalculatorBridge()
     
-    @AppStorage("isCollectingState") private var isCollectingState = false
-    
     var body: some View {
         ScrollView {
             VStack(spacing: 15) {
@@ -289,7 +287,6 @@ struct ContentView: View {
             case .active:
                 startExtendedSession()
             case .background:
-                // 保持后台运行
                 if isCollecting {
                     startExtendedSession()
                 }
@@ -300,7 +297,6 @@ struct ContentView: View {
             }
         }
         .onChange(of: isCollecting) { oldValue, newValue in
-            isCollectingState = newValue
             if newValue {
                 startExtendedSession()
             } else {
@@ -308,18 +304,17 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            if isCollectingState {
-                isCollecting = true
-                motionManager.startDataCollection(
-                    hand: selectedHand,
-                    gesture: selectedGesture,
-                    force: selectedForce,
-                    note: noteText
-                )
-            }
+            isCollecting = false
+            motionManager.stopDataCollection()
+            WatchConnectivityManager.shared.sendStopSignal()
             startExtendedSession()
         }
         .onDisappear {
+            if isCollecting {
+                isCollecting = false
+                motionManager.stopDataCollection()
+                WatchConnectivityManager.shared.sendStopSignal()
+            }
             ExtendedRuntimeSessionManager.shared.invalidateSession()
         }
     }
