@@ -624,6 +624,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "需要使用蓝牙来传输传感器数据";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "需要使用蓝牙来传输传感器数据";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "需要访问健康数据以记录运动数据";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "需要更新健康数据以保存运动记录";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "需要使用本地网络来传输传感器数据";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch;
@@ -658,6 +660,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "需要使用蓝牙来传输传感器数据";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "需要使用蓝牙来传输传感器数据";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "需要访问健康数据以记录运动数据";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "需要更新健康数据以保存运动记录";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "需要使用本地网络来传输传感器数据";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch;

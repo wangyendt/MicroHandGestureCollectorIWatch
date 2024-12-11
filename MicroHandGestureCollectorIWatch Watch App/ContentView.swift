@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WatchConnectivity
+import CoreMotion
 
 #if os(watchOS)
 import WatchKit
@@ -28,6 +29,7 @@ struct ContentView: View {
     @State private var showingDeleteAllAlert = false
     
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     @State private var workoutSession: WKExtendedRuntimeSession?
     
     @State private var noteText = "静坐"
@@ -36,6 +38,8 @@ struct ContentView: View {
     let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "左滑[正]", "右滑[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
     let forceOptions = ["轻", "中", "重"]
     let calculator = CalculatorBridge()
+    
+    @AppStorage("isCollectingState") private var isCollectingState = false
     
     var body: some View {
         ScrollView {
@@ -254,29 +258,7 @@ struct ContentView: View {
                 
                 // 实时数据显示
                 if let accData = motionManager.accelerationData {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("加速度计").font(.headline)
-                        Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
-                                  accData.x,
-                                  accData.y,
-                                  accData.z))
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundColor(.green)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                
-                if let rotationData = motionManager.rotationData {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("陀螺仪").font(.headline)
-                        Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
-                                  rotationData.x,
-                                  rotationData.y,
-                                  rotationData.z))
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundColor(.blue)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    RealTimeDataView(accData: accData, rotationData: motionManager.rotationData)
                 }
                 
                 Text("1024 + 1000 = \(calculator.sum(1000, with: 1024))")
@@ -297,6 +279,8 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
         }
+        .navigationTitle("传感器数据监控")
+        .modifier(AlwaysOnModifier(isCollecting: isCollecting))
         .onChange(of: scenePhase) { oldPhase, newPhase in
             switch newPhase {
             case .active:
@@ -313,19 +297,27 @@ struct ContentView: View {
             }
         }
         .onChange(of: isCollecting) { oldValue, newValue in
+            isCollectingState = newValue
             if newValue {
                 startExtendedSession()
             } else {
-                workoutSession?.invalidate()
-                workoutSession = nil
+                ExtendedRuntimeSessionManager.shared.invalidateSession()
             }
         }
         .onAppear {
+            if isCollectingState {
+                isCollecting = true
+                motionManager.startDataCollection(
+                    hand: selectedHand,
+                    gesture: selectedGesture,
+                    force: selectedForce,
+                    note: noteText
+                )
+            }
             startExtendedSession()
         }
         .onDisappear {
-            workoutSession?.invalidate()
-            workoutSession = nil
+            ExtendedRuntimeSessionManager.shared.invalidateSession()
         }
     }
     
@@ -345,8 +337,59 @@ struct ContentView: View {
     }
     
     private func startExtendedSession() {
-        workoutSession = WKExtendedRuntimeSession()
-        workoutSession?.start()
+        ExtendedRuntimeSessionManager.shared.startSession()
+    }
+}
+
+// 添加 Always On 显示修饰器
+struct AlwaysOnModifier: ViewModifier {
+    let isCollecting: Bool
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+    
+    func body(content: Content) -> some View {
+        content
+            // 在 Always On 状态下保持更新
+            .allowsHitTesting(!isLuminanceReduced)
+            // 调整 Always On 状态下的外观
+            .opacity(isLuminanceReduced ? 0.8 : 1.0)
+    }
+}
+
+// 添加实时数据显示组件
+struct RealTimeDataView: View {
+    let accData: CMAcceleration?
+    let rotationData: CMRotationRate?
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            if let accData = accData {
+                Text("加速度计")
+                    .font(.headline)
+                    .opacity(isLuminanceReduced ? 0.6 : 1.0)
+                Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
+                          accData.x,
+                          accData.y,
+                          accData.z))
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(isLuminanceReduced ? .gray : .green)
+            }
+            
+            if let rotationData = rotationData {
+                Text("陀螺仪")
+                    .font(.headline)
+                    .opacity(isLuminanceReduced ? 0.6 : 1.0)
+                Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
+                          rotationData.x,
+                          rotationData.y,
+                          rotationData.z))
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(isLuminanceReduced ? .gray : .blue)
+            }
+        }
+        .padding()
+        .background(Color.black.opacity(isLuminanceReduced ? 0.5 : 0.1))
+        .cornerRadius(10)
     }
 }
 

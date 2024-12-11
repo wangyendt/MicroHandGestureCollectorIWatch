@@ -9,6 +9,7 @@ import SwiftUI
 import CoreMotion
 import Combine
 import os.log
+import WatchKit
 
 #if os(watchOS)
 public class MotionManager: ObservableObject {
@@ -21,6 +22,8 @@ public class MotionManager: ObservableObject {
     private var logger: OSLog
     
     @Published var isReady = true
+    
+    private var runtimeSession: WKExtendedRuntimeSession?
     
     public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
@@ -35,6 +38,9 @@ public class MotionManager: ObservableObject {
     public func startDataCollection(hand: String, gesture: String, force: String, note: String) {
         stopDataCollection()
         isCollecting = true
+        
+        runtimeSession = WKExtendedRuntimeSession()
+        runtimeSession?.start()
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy_MM_dd_HH_mm_ss"
@@ -66,50 +72,54 @@ public class MotionManager: ObservableObject {
             motionManager.deviceMotionUpdateInterval = 1.0 / 200.0
             
             if motionManager.isDeviceMotionAvailable {
-                motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] (motion, error) in
+                let queue = OperationQueue()
+                queue.qualityOfService = .userInitiated
+                
+                motionManager.startDeviceMotionUpdates(to: queue) { [weak self] (motion, error) in
                     guard let self = self, let motion = motion else { return }
                     
-                    let timestampNs = UInt64(motion.timestamp * 1_000_000_000)
-                    
-                    let totalAccX = motion.gravity.x * 9.81 + motion.userAcceleration.x * 9.81
-                    let totalAccY = motion.gravity.y * 9.81 + motion.userAcceleration.y * 9.81
-                    let totalAccZ = motion.gravity.z * 9.81 + motion.userAcceleration.z * 9.81
-//                    print("timestampNs: \(timestampNs), totalAccX: \(totalAccX), totalAccY: \(totalAccY), totalAccZ: \(totalAccZ)")
-                    os_log("timestampNs: %lld, totalAccX: %.6f, totalAccY: %.6f, totalAccZ: %.6f",
-                           log: logger,
-                           type: .debug,
-                           timestampNs,
-                           totalAccX,
-                           totalAccY,
-                           totalAccZ)
-                    
-                    let accDataString = String(format: "%llu,%.6f,%.6f,%.6f\n",
-                                            timestampNs,
-                                            totalAccX,
-                                            totalAccY,
-                                            totalAccZ)
-                    
-                    let gyroDataString = String(format: "%llu,%.6f,%.6f,%.6f\n",
-                                             timestampNs,
-                                             motion.rotationRate.x,
-                                             motion.rotationRate.y,
-                                             motion.rotationRate.z)
-                    
-                    if let accData = accDataString.data(using: .utf8),
-                       let gyroData = gyroDataString.data(using: .utf8) {
-                        self.accFileHandle?.write(accData)
-                        self.gyroFileHandle?.write(gyroData)
+                    DispatchQueue.main.async {
+                        let timestampNs = UInt64(motion.timestamp * 1_000_000_000)
+                        
+                        let totalAccX = motion.gravity.x * 9.81 + motion.userAcceleration.x * 9.81
+                        let totalAccY = motion.gravity.y * 9.81 + motion.userAcceleration.y * 9.81
+                        let totalAccZ = motion.gravity.z * 9.81 + motion.userAcceleration.z * 9.81
+                        os_log("timestampNs: %lld, totalAccX: %.6f, totalAccY: %.6f, totalAccZ: %.6f",
+                               log: self.logger,
+                               type: .debug,
+                               timestampNs,
+                               totalAccX,
+                               totalAccY,
+                               totalAccZ)
+                        
+                        let accDataString = String(format: "%llu,%.6f,%.6f,%.6f\n",
+                                                timestampNs,
+                                                totalAccX,
+                                                totalAccY,
+                                                totalAccZ)
+                        
+                        let gyroDataString = String(format: "%llu,%.6f,%.6f,%.6f\n",
+                                                 timestampNs,
+                                                 motion.rotationRate.x,
+                                                 motion.rotationRate.y,
+                                                 motion.rotationRate.z)
+                        
+                        if let accData = accDataString.data(using: .utf8),
+                           let gyroData = gyroDataString.data(using: .utf8) {
+                            self.accFileHandle?.write(accData)
+                            self.gyroFileHandle?.write(gyroData)
+                        }
+                        
+                        let totalAcc = CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ)
+                        self.accelerationData = totalAcc
+                        self.rotationData = motion.rotationRate
+                        
+                        WatchConnectivityManager.shared.sendRealtimeData(
+                            accData: totalAcc,
+                            gyroData: motion.rotationRate,
+                            timestamp: timestampNs
+                        )
                     }
-                    
-                    let totalAcc = CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ)
-                    self.accelerationData = totalAcc
-                    self.rotationData = motion.rotationRate
-                    
-                    WatchConnectivityManager.shared.sendRealtimeData(
-                        accData: totalAcc,
-                        gyroData: motion.rotationRate,
-                        timestamp: timestampNs
-                    )
                 }
             } else {
                 print("设备运动数据不可用")
@@ -121,6 +131,9 @@ public class MotionManager: ObservableObject {
     }
     
     public func stopDataCollection() {
+        runtimeSession?.invalidate()
+        runtimeSession = nil
+        
         motionManager.stopDeviceMotionUpdates()
         accFileHandle?.closeFile()
         accFileHandle = nil

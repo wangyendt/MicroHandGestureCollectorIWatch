@@ -2,17 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>OS_ACTIVITY_MODE</key>
+	<string>debug</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 		<string>processing</string>
 	</array>
+	<key>WKAlwaysRunsInBackground</key>
+	<true/>
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>
 		<string>sensor-processing</string>
 	</array>
-	<key>OS_ACTIVITY_MODE</key>
-	<string>debug</string>
+	<key>WKRunsIndependentlyOfCompanionApp</key>
+	<true/>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>gyroscope</string>
+		<string>accelerometer</string>
+	</array>
+	<key>WKSupportsAlwaysOnDisplay</key>
+	<true/>
 </dict>
 </plist>
