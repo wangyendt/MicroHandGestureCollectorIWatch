@@ -345,13 +345,36 @@ struct ContentView: View {
 struct AlwaysOnModifier: ViewModifier {
     let isCollecting: Bool
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+    @State private var session: WKExtendedRuntimeSession?
     
     func body(content: Content) -> some View {
         content
-            // 在 Always On 状态下保持更新
-            .allowsHitTesting(!isLuminanceReduced)
-            // 调整 Always On 状态下的外观
-            .opacity(isLuminanceReduced ? 0.8 : 1.0)
+            .allowsHitTesting(true)
+            .opacity(1.0)
+            .brightness(isLuminanceReduced ? 0 : -0.1)
+            .onAppear {
+                if isCollecting {
+                    startSession()
+                }
+            }
+            .onDisappear {
+                session?.invalidate()
+                session = nil
+            }
+            .onChange(of: isCollecting) { oldValue, newValue in
+                if newValue {
+                    startSession()
+                } else {
+                    session?.invalidate()
+                    session = nil
+                }
+            }
+    }
+    
+    private func startSession() {
+        session?.invalidate()
+        session = WKExtendedRuntimeSession()
+        session?.start()
     }
 }
 

@@ -8,6 +8,7 @@
 	<array>
 		<string>remote-notification</string>
 		<string>processing</string>
+		<string>health-kit</string>
 	</array>
 	<key>WKAlwaysRunsInBackground</key>
 	<true/>
@@ -25,5 +26,17 @@
 	</array>
 	<key>WKSupportsAlwaysOnDisplay</key>
 	<true/>
+	<key>WKPreservesAppearanceOnLaunch</key>
+	<true/>
+	<key>WKExtendedRuntimeSessionEnabled</key>
+	<true/>
+	<key>WKPreferredExtendedRuntimeSessionDuration</key>
+	<integer>3600</integer>
+	<key>WKExtendedRuntimeSessionWatchOSVersion</key>
+	<string>11.0</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>需要访问健康数据以保持应用在后台运行</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>需要更新健康数据以保持应用在后台运行</string>
 </dict>
 </plist>
