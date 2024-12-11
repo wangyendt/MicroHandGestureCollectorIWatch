@@ -15,18 +15,30 @@ def setup_server(host='0.0.0.0', port=12345):
 def process_data(data_str):
     try:
         data = json.loads(data_str)
-        if data.get("type") == "realtime_data":
-            timestamp_ns = data.get("timestamp", 0)  # 获取iWatch的采集时间戳
-            acc_x = data.get("acc_x", 0)
-            acc_y = data.get("acc_y", 0)
-            acc_z = data.get("acc_z", 0)
-            gyro_x = data.get("gyro_x", 0)
-            gyro_y = data.get("gyro_y", 0)
-            gyro_z = data.get("gyro_z", 0)
-            
-            return timestamp_ns, acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z
-    except json.JSONDecodeError:
-        print("JSON解析错误")
+        if data.get("type") == "batch_data":
+            batch_data = data.get("data", [])
+            if batch_data and isinstance(batch_data, list):
+                processed_batch = []
+                for item in batch_data:
+                    timestamp_ns = item.get("timestamp", 0)
+                    acc_x = item.get("acc_x", 0)
+                    acc_y = item.get("acc_y", 0)
+                    acc_z = item.get("acc_z", 0)
+                    gyro_x = item.get("gyro_x", 0)
+                    gyro_y = item.get("gyro_y", 0)
+                    gyro_z = item.get("gyro_z", 0)
+                    
+                    processed_batch.append((timestamp_ns, acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z))
+                
+                print(f"Processed batch of {len(processed_batch)} data points")
+                return processed_batch
+                
+        elif data.get("type") == "stop_collection":
+            print("收到停止采集信号")
+            return None
+        print("Unexpected data type:", data.get("type"))
+    except json.JSONDecodeError as e:
+        print("JSON parsing error:", e)
     return None
 
 def save_to_csv(data_points, filename):
@@ -80,7 +92,10 @@ def main():
                         line, buffer = buffer.split('\n', 1)
                         processed_data = process_data(line)
                         if processed_data:
-                            current_data_points.append(processed_data)
+                            if isinstance(processed_data, list):
+                                # 处理批量数据
+                                current_data_points.extend(processed_data)
+                                print(f"Added {len(processed_data)} points, total: {len(current_data_points)}")
                             
                     # 每隔一定时间保存数据
                     if (datetime.now() - start_time).seconds >= 60:
@@ -92,6 +107,9 @@ def main():
                             
             except Exception as e:
                 print(f"处理数据时出错: {e}")
+                print(f"错误详情: {str(e)}")
+                import traceback
+                traceback.print_exc()
             finally:
                 if current_data_points:
                     filename = f"sensor_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"

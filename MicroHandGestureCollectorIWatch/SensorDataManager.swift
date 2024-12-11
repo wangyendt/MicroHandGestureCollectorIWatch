@@ -75,6 +75,11 @@ class SensorDataManager: NSObject, ObservableObject {
         }
         
         dataQueue.async { [weak self] in
+            // 添加调试信息
+//            if let dataString = String(data: data, encoding: .utf8) {
+//                print("Sending to Mac:", dataString)
+//            }
+            
             self?.connection?.send(content: data, completion: .contentProcessed { error in
                 if let error = error {
                     DispatchQueue.main.async {
@@ -112,60 +117,42 @@ extension SensorDataManager: WCSessionDelegate {
         if message["type"] as? String == "batch_data",
            let batchData = message["data"] as? [[String: Any]] {
             
-            // 处理批量数据
-            for (index, data) in batchData.enumerated() {
-                if let timestamp = data["timestamp"] as? UInt64 {
-                    // 只打印时间戳，用于验证采样率
-//                    let timestampSeconds = Double(timestamp) / 1_000_000_000.0
-//                    print("时间戳[\(index)]: \(timestampSeconds)秒")
-                    
-                    // 记录时间戳用于计算采样率
-                    self.timestampHistory.append(timestamp)
-                    if self.timestampHistory.count >= self.maxHistorySize {
-                        self.timestampHistory = Array(self.timestampHistory.suffix(self.minHistorySize))
-                    }
-                }
+            // 直接转发批量数据到Mac
+            do {
+                let macMessage: [String: Any] = [
+                    "type": "batch_data",
+                    "data": batchData
+                ]
                 
-                // 只用最后一帧更新UI
-                if index == batchData.count - 1 {
-                    if let accX = data["acc_x"] as? Double,
-                       let accY = data["acc_y"] as? Double,
-                       let accZ = data["acc_z"] as? Double,
-                       let gyroX = data["gyro_x"] as? Double,
-                       let gyroY = data["gyro_y"] as? Double,
-                       let gyroZ = data["gyro_z"] as? Double {
-                        
-                        DispatchQueue.main.async {
-                            self.lastReceivedData = [
-                                "acc_x": accX,
-                                "acc_y": accY,
-                                "acc_z": accZ,
-                                "gyro_x": gyroX,
-                                "gyro_y": gyroY,
-                                "gyro_z": gyroZ
-                            ]
-                            self.lastUpdateTime = Date()
-                        }
-                    }
-                }
-                
-                // 发送数据到Mac
-                do {
-                    let jsonData = try JSONSerialization.data(withJSONObject: data)
-                    var dataWithNewline = jsonData
-                    dataWithNewline.append("\n".data(using: .utf8)!)
-                    sendDataToMac(dataWithNewline)
-                } catch {
-                    print("数据转换失败: \(error)")
-                }
+                let jsonData = try JSONSerialization.data(withJSONObject: macMessage)
+                var dataWithNewline = jsonData
+                dataWithNewline.append("\n".data(using: .utf8)!)
+                sendDataToMac(dataWithNewline)
+            } catch {
+                print("数据转换失败: \(error)")
             }
             
-            // 计算并打印当前采样率
-            if self.timestampHistory.count >= 2 {
-                let timeSpanNs = Double(self.timestampHistory.last! - self.timestampHistory.first!)
-                let timeSpanSeconds = timeSpanNs / 1_000_000_000.0
-                let avgSamplingRate = Double(self.timestampHistory.count - 1) / timeSpanSeconds
-                print("当前采样率: \(String(format: "%.1f Hz", avgSamplingRate))")
+            // UI 更新代码保持不变
+            if let lastData = batchData.last {
+                if let accX = lastData["acc_x"] as? Double,
+                   let accY = lastData["acc_y"] as? Double,
+                   let accZ = lastData["acc_z"] as? Double,
+                   let gyroX = lastData["gyro_x"] as? Double,
+                   let gyroY = lastData["gyro_y"] as? Double,
+                   let gyroZ = lastData["gyro_z"] as? Double {
+                    
+                    DispatchQueue.main.async {
+                        self.lastReceivedData = [
+                            "acc_x": accX,
+                            "acc_y": accY,
+                            "acc_z": accZ,
+                            "gyro_x": gyroX,
+                            "gyro_y": gyroY,
+                            "gyro_z": gyroZ
+                        ]
+                        self.lastUpdateTime = Date()
+                    }
+                }
             }
         } else if message["type"] as? String == "stop_collection" {
             resetState()
