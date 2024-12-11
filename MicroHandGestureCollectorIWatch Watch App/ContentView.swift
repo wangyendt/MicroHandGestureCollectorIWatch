@@ -34,6 +34,9 @@ struct ContentView: View {
     
     @State private var noteText = "静坐"
     
+    @AppStorage("userName") private var userName = "王也"
+    @State private var showingNameInput = false
+    
     let handOptions = ["左手", "右手"]
     let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "左滑[正]", "右滑[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
     let forceOptions = ["轻", "中", "重"]
@@ -144,6 +147,18 @@ struct ContentView: View {
                     }
                 }
                 
+                // 姓名输入框
+                HStack {
+                    Text("姓名").font(.headline)
+                    TextField("请输入姓名", text: $userName)
+                        .frame(height: 32)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(6)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(8)
+                
                 // 新增备注输入框
                 HStack {
                     Text("备注").font(.headline)
@@ -162,15 +177,14 @@ struct ContentView: View {
                     isCollecting.toggle()
                     if isCollecting {
                         motionManager.startDataCollection(
+                            name: userName,
                             hand: selectedHand,
                             gesture: selectedGesture,
                             force: selectedForce,
                             note: noteText
                         )
                     } else {
-                        // 立即发送停止信号到手机
                         WatchConnectivityManager.shared.sendStopSignal()
-                        // 然后停止数据采集
                         motionManager.stopDataCollection()
                     }
                 }) {
@@ -316,6 +330,21 @@ struct ContentView: View {
                 WatchConnectivityManager.shared.sendStopSignal()
             }
             ExtendedRuntimeSessionManager.shared.invalidateSession()
+        }
+        .sheet(isPresented: $showingNameInput) {
+            NavigationView {
+                Form {
+                    TextField("输入姓名", text: $userName)
+                }
+                .navigationTitle("设置姓名")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("完成") {
+                            showingNameInput = false
+                        }
+                    }
+                }
+            }
         }
     }
     

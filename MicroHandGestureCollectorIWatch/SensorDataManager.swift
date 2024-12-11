@@ -117,6 +117,17 @@ extension SensorDataManager: WCSessionDelegate {
         if message["type"] as? String == "batch_data",
            let batchData = message["data"] as? [[String: Any]] {
             
+            // 检查丢帧
+            for i in 1..<batchData.count {
+                if let prevTimestamp = batchData[i-1]["timestamp"] as? UInt64,
+                   let currTimestamp = batchData[i]["timestamp"] as? UInt64 {
+                    let timeDiff = Double(currTimestamp - prevTimestamp) / 1_000_000.0 // 转换为毫秒
+                    if timeDiff > 13.0 { // 超过13ms认为丢帧
+                        print("丢帧: \(String(format: "%.2f", timeDiff))ms between frames")
+                    }
+                }
+            }
+            
             // 直接转发批量数据到Mac
             do {
                 let macMessage: [String: Any] = [
