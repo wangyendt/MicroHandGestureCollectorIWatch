@@ -8,6 +8,9 @@ import threading
 from datetime import datetime
 import queue
 from scipy import interpolate
+import torch
+import torch.nn as nn
+from pywayne.dsp import butter_bandpass_filter
 
 # 在文件开头添加OneEuroFilter类定义
 class OneEuroFilter:
@@ -41,6 +44,29 @@ class OneEuroFilter:
             result = self._val + self._alpha_value * (val - self._val)
         self._val = result
         return result
+
+# 添加模型定义
+class VanillaCNN(nn.Module):
+    def __init__(self, num_classes):
+        super(VanillaCNN, self).__init__()
+        self.conv1 = nn.Conv1d(6, 12, kernel_size=3, padding=1, stride=1)
+        self.bn1 = nn.BatchNorm1d(12)
+        self.maxpool1 = nn.MaxPool1d(2, stride=2)
+        self.conv2 = nn.Conv1d(12, 12, kernel_size=3, padding=1, stride=1)
+        self.bn2 = nn.BatchNorm1d(12)
+        self.maxpool2 = nn.MaxPool1d(4, stride=4)
+        self.conv3 = nn.Conv1d(12, 6, kernel_size=3, padding=1, stride=1)
+        self.bn3 = nn.BatchNorm1d(6)
+        self.relu = nn.ReLU()
+        self.fc = nn.Linear(6 * 7, num_classes)
+        
+    def forward(self, x):
+        xx = self.maxpool1(self.relu(self.bn1(self.conv1(x))))
+        xx = self.maxpool2(self.relu(self.bn2(self.conv2(xx))))
+        xx = self.relu(self.bn3(self.conv3(xx)))
+        xx = xx.view(xx.size(0), -1)  # flatten
+        xx = self.fc(xx)  # logits
+        return xx
 
 class MotionDataVisualizer:
     def __init__(self):
@@ -91,6 +117,22 @@ class MotionDataVisualizer:
         self.candidate_peaks = []  # [(time, value), ...]
         self.monotonic_stack = []  # [(time, value), ...] 维护单调递减的值
         self.last_selected_time = -np.inf
+
+        # 修改设备选择逻辑
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        elif torch.backends.mps.is_available():
+            self.device = torch.device('mps')
+        else:
+            self.device = torch.device('cpu')
+        self.device = 'cpu'
+        
+        # 加载模型时指定map_location
+        self.model = VanillaCNN(num_classes=9).to(self.device)
+        checkpoint = torch.load('valid_epoch=698_accuracy=0.983.pt', 
+                              map_location=self.device)
+        self.model.load_state_dict(checkpoint)
+        self.model.eval()
 
     def setup_plot(self):
         plt.style.use('dark_background')
@@ -304,9 +346,49 @@ class MotionDataVisualizer:
         self._handle_peak_data(data, peak_time)
 
     def _handle_peak_data(self, data, peak_time):
-        """处理peak周围的数据"""
+        """处理peak周围的数据并进行预测"""
         print(f"Peak at {peak_time:.3f}s, data shape: {data.shape}")
-        # 这里可以添加更多的数据处理逻辑
+        
+        # 数据预处理
+        # 分离加速度和陀螺仪数据
+        acc_data = data[:, :3]  # 前3列是加速度数据
+        gyro_data = data[:, 3:]  # 后3列是陀螺仪数据
+
+        # np.savetxt('data.txt', np.c_[acc_data, gyro_data], delimiter=',')
+        
+        # 对加速度数据进行滤波处理
+        acc_filtered = butter_bandpass_filter(
+            acc_data / 9.81,  # 转换为g
+            order=2,
+            lo=0.1,
+            hi=40,
+            fs=100.0,
+            btype='bandpass',
+            realtime=False
+        )
+        
+        # 陀螺仪数据保持不变
+        gyro_filtered = gyro_data
+        
+        # 组合处理后的数据
+        processed_data = np.concatenate([acc_filtered, gyro_filtered], axis=1)
+        
+        # 转换为torch tensor并调整维度
+        x = torch.from_numpy(processed_data.T).float().unsqueeze(0)  # [1, 6, 60]
+        x = x.to(self.device)
+        
+        # 模型预测
+        with torch.no_grad():
+            output = self.model(x)
+            probabilities = torch.nn.functional.softmax(output, dim=1)
+            predicted_class = torch.argmax(output, dim=1).item()
+            confidence = probabilities[0][predicted_class].item()
+        
+        # 获取预测结果
+        class_names = ['单击', '双击', '握拳', '左滑', '右滑', '鼓掌', '抖腕', '拍打', '日常']
+        predicted_label = class_names[predicted_class]
+        
+        print(f"Predicted gesture: {predicted_label} (confidence: {confidence:.3f})")
 
     def _online_peak_detection(self, value, timestamp, lookformax, mn, mx, mn_time, mx_time, delta):
         peak = None
