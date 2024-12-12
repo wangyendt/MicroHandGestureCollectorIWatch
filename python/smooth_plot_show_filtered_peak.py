@@ -85,6 +85,13 @@ class MotionDataVisualizer:
         # 创建图形
         self.setup_plot()
 
+        # 在原有初始化代码后添加
+        self.selected_acc_peaks = deque(maxlen=100)
+        self.peak_window = 0.3  # 300ms窗口
+        self.candidate_peaks = []  # [(time, value), ...]
+        self.monotonic_stack = []  # [(time, value), ...] 维护单调递减的值
+        self.last_selected_time = -np.inf
+
     def setup_plot(self):
         plt.style.use('dark_background')
         self.fig = plt.figure(figsize=(12, 8))
@@ -188,6 +195,17 @@ class MotionDataVisualizer:
         # 存储peaks和valleys
         if is_acc_peak:
             self.acc_peaks.append((acc_peak_time, acc_peak))
+            # 添加新的peak到候选列表
+            self.candidate_peaks.append((acc_peak_time, acc_peak))
+            
+            # 维护单调栈
+            while self.monotonic_stack and self.monotonic_stack[-1][1] <= acc_peak:
+                self.monotonic_stack.pop()
+            self.monotonic_stack.append((acc_peak_time, acc_peak))
+        
+        # 在每次更新时检查候选peaks
+        self._check_candidate_peaks(rel_time)
+        
         if is_acc_valley:
             self.acc_valleys.append((acc_valley_time, acc_valley))
         if is_gyro_peak:
@@ -200,6 +218,95 @@ class MotionDataVisualizer:
         self.gyro_diff.append(curr_gyro_diff)
         self.filtered_acc_diff.append(curr_filtered_acc_diff)
         self.filtered_gyro_diff.append(curr_filtered_gyro_diff)
+
+    def _check_candidate_peaks(self, current_time):
+        """使用单调栈检查候选peaks"""
+        if not self.candidate_peaks:
+            return
+            
+        i = 0
+        while i < len(self.candidate_peaks):
+            peak_time, peak_val = self.candidate_peaks[i]
+            
+            # 如果当前时间已经超过了这个peak后的300ms窗口
+            if current_time >= peak_time + self.peak_window:
+                # 清理过期的单调栈元素
+                while self.monotonic_stack and self.monotonic_stack[0][0] < peak_time - self.peak_window:
+                    self.monotonic_stack.pop(0)
+                
+                # 检查是否是窗口内的最大值
+                is_max = True
+                for stack_time, stack_val in self.monotonic_stack:
+                    if abs(stack_time - peak_time) <= self.peak_window and stack_val > peak_val:
+                        is_max = False
+                        break
+                
+                # 如果是局部最大值且与上一个选中的peak间隔足够
+                if is_max and peak_time - self.last_selected_time >= self.peak_window:
+                    self.selected_acc_peaks.append((peak_time, peak_val))
+                    self._process_selected_peak(peak_time)
+                    self.last_selected_time = peak_time
+                
+                # 从单调栈中移除当前peak（如果存在）
+                if self.monotonic_stack and self.monotonic_stack[0][0] == peak_time:
+                    self.monotonic_stack.pop(0)
+                
+                self.candidate_peaks.pop(i)
+            else:
+                i += 1
+
+    def _process_selected_peak(self, peak_time):
+        """处理被选中的peak周围的数据"""
+        start_time = peak_time - self.peak_window
+        end_time = peak_time + self.peak_window
+        
+        # 使用numpy的高效操作
+        times = np.array(list(self.timestamps))
+        mask = (times >= start_time) & (times <= end_time)
+        window_times = times[mask]
+        
+        if len(window_times) < 2:
+            return
+
+        # 预先创建数组
+        acc_data = np.zeros((len(window_times), 3))
+        gyro_data = np.zeros((len(window_times), 3))
+        
+        # 获取索引
+        indices = np.where(mask)[0]
+        
+        # 批量填充数据
+        acc_data[:, 0] = [self.acc_norm[i] for i in indices]
+        acc_data[:, 1] = [self.acc_diff[i] for i in indices]
+        acc_data[:, 2] = [self.filtered_acc_diff[i] for i in indices]
+        
+        gyro_data[:, 0] = [self.gyro_norm[i] for i in indices]
+        gyro_data[:, 1] = [self.gyro_diff[i] for i in indices]
+        gyro_data[:, 2] = [self.filtered_gyro_diff[i] for i in indices]
+
+        # 创建均匀时间序列
+        target_times = np.linspace(start_time, end_time, 60)
+        
+        # 批量插值
+        acc_interp = np.array([
+            np.interp(target_times, window_times, acc_data[:, i])
+            for i in range(3)
+        ])
+        
+        gyro_interp = np.array([
+            np.interp(target_times, window_times, gyro_data[:, i])
+            for i in range(3)
+        ])
+        
+        # 组合数据
+        data = np.vstack([acc_interp, gyro_interp]).T
+        
+        self._handle_peak_data(data, peak_time)
+
+    def _handle_peak_data(self, data, peak_time):
+        """处理peak周围的数据"""
+        print(f"Peak at {peak_time:.3f}s, data shape: {data.shape}")
+        # 这里可以添加更多的数据处理逻辑
 
     def _online_peak_detection(self, value, timestamp, lookformax, mn, mx, mn_time, mx_time, delta):
         peak = None
@@ -311,6 +418,13 @@ class MotionDataVisualizer:
         for valley_time, valley_val in self.gyro_valleys:
             if start_time <= valley_time <= current_time:
                 self.ax2.plot(valley_time, valley_val, 'yo', markersize=8)
+        
+        # 修改绘制selected peaks的部分
+        # 只绘制选中的acc peaks
+        for peak_time, peak_val in self.selected_acc_peaks:
+            if start_time <= peak_time <= current_time:
+                self.ax1.plot(peak_time, peak_val, 'o', color='lightblue', 
+                            markersize=12, alpha=0.7)
         
         return self.lines_acc + self.lines_gyro
 
