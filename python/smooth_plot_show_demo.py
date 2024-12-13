@@ -129,10 +129,18 @@ class MotionDataVisualizer:
         
         # 加载模型时指定map_location
         self.model = VanillaCNN(num_classes=9).to(self.device)
-        checkpoint = torch.load('valid_epoch=698_accuracy=0.983.pt', 
+        checkpoint = torch.load('total_epoch=400_accuracy=0.991.pt',
                               map_location=self.device)
         self.model.load_state_dict(checkpoint)
         self.model.eval()
+
+        # 添加原始数据的队列
+        self.acc_x = deque(maxlen=self.WINDOW_SIZE)
+        self.acc_y = deque(maxlen=self.WINDOW_SIZE)
+        self.acc_z = deque(maxlen=self.WINDOW_SIZE)
+        self.gyro_x = deque(maxlen=self.WINDOW_SIZE)
+        self.gyro_y = deque(maxlen=self.WINDOW_SIZE)
+        self.gyro_z = deque(maxlen=self.WINDOW_SIZE)
 
     def setup_plot(self):
         plt.style.use('dark_background')
@@ -194,7 +202,14 @@ class MotionDataVisualizer:
             self._process_point(point, rel_time, te)
 
     def _process_point(self, point, rel_time, te):
-        # 提取原update_plot_data中的数据处理逻辑...
+        # 存储原始数据
+        self.acc_x.append(point['acc_x'])
+        self.acc_y.append(point['acc_y'])
+        self.acc_z.append(point['acc_z'])
+        self.gyro_x.append(point['gyro_x'])
+        self.gyro_y.append(point['gyro_y'])
+        self.gyro_z.append(point['gyro_z'])
+
         acc_norm_val = np.sqrt(point['acc_x']**2 + point['acc_y']**2 + point['acc_z']**2)
         gyro_norm_val = np.sqrt(point['gyro_x']**2 + point['gyro_y']**2 + point['gyro_z']**2)
         
@@ -235,7 +250,7 @@ class MotionDataVisualizer:
             self.PEAK_DELTA)
         
         # 存储peaks和valleys
-        if is_acc_peak:
+        if is_acc_peak and acc_peak > 0.3:
             self.acc_peaks.append((acc_peak_time, acc_peak))
             # 添加新的peak到候选列表
             self.candidate_peaks.append((acc_peak_time, acc_peak))
@@ -302,7 +317,6 @@ class MotionDataVisualizer:
         start_time = peak_time - self.peak_window
         end_time = peak_time + self.peak_window
         
-        # 使用numpy的高效操作
         times = np.array(list(self.timestamps))
         mask = (times >= start_time) & (times <= end_time)
         window_times = times[mask]
@@ -317,14 +331,14 @@ class MotionDataVisualizer:
         # 获取索引
         indices = np.where(mask)[0]
         
-        # 批量填充数据
-        acc_data[:, 0] = [self.acc_norm[i] for i in indices]
-        acc_data[:, 1] = [self.acc_diff[i] for i in indices]
-        acc_data[:, 2] = [self.filtered_acc_diff[i] for i in indices]
+        # 批量填充原始数据
+        acc_data[:, 0] = [self.acc_x[i] for i in indices]
+        acc_data[:, 1] = [self.acc_y[i] for i in indices]
+        acc_data[:, 2] = [self.acc_z[i] for i in indices]
         
-        gyro_data[:, 0] = [self.gyro_norm[i] for i in indices]
-        gyro_data[:, 1] = [self.gyro_diff[i] for i in indices]
-        gyro_data[:, 2] = [self.filtered_gyro_diff[i] for i in indices]
+        gyro_data[:, 0] = [self.gyro_x[i] for i in indices]
+        gyro_data[:, 1] = [self.gyro_y[i] for i in indices]
+        gyro_data[:, 2] = [self.gyro_z[i] for i in indices]
 
         # 创建均匀时间序列
         target_times = np.linspace(start_time, end_time, 60)
