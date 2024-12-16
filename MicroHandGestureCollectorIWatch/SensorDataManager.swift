@@ -7,7 +7,16 @@ class SensorDataManager: NSObject, ObservableObject {
     static let shared = SensorDataManager()
     private var connection: NWConnection?
     private let serverPort: UInt16 = 12345 // Mac服务器端口
-    private let serverHost = "10.144.34.61" // 替换为Mac的IP地址
+    
+    // 添加IP地址属性
+    @Published var serverHost: String {
+        didSet {
+            // 当IP地址改变时保存到UserDefaults
+            UserDefaults.standard.set(serverHost, forKey: "serverHost")
+            // 重新建立连接
+            setupMacConnection()
+        }
+    }
     
     @Published var isConnected = false
     @Published var lastMessage = ""
@@ -23,6 +32,8 @@ class SensorDataManager: NSObject, ObservableObject {
     private let minHistorySize = 100  // 最小保留样本数
     
     private override init() {
+        // 从UserDefaults读取保存的IP地址，如果没有则使用默认值
+        self.serverHost = UserDefaults.standard.string(forKey: "serverHost") ?? "192.168.1.1"
         super.init()
         setupWatchConnectivity()
         setupMacConnection()

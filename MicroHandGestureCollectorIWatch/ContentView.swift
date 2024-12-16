@@ -19,6 +19,8 @@ struct ContentView: View {
     @State private var gyroDataZ: [(Double, Double)] = []
     private let maxDataPoints = 100
     @State private var startTime: Date? = nil
+    @State private var isEditingIP = false
+    @State private var tempIP: String = ""
     
     // 添加防止锁屏的属性
     @State private var idleTimer: Timer?
@@ -27,6 +29,33 @@ struct ContentView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 30) {
+                    // IP地址设置
+                    HStack {
+                        if isEditingIP {
+                            TextField("输入Mac的IP地址", text: $tempIP)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .keyboardType(.numbersAndPunctuation)
+                            Button("保存") {
+                                if isValidIP(tempIP) {
+                                    sensorManager.serverHost = tempIP
+                                    isEditingIP = false
+                                }
+                            }
+                            .disabled(!isValidIP(tempIP))
+                        } else {
+                            Text("Mac IP: \(sensorManager.serverHost)")
+                            Spacer()
+                            Button("编辑") {
+                                tempIP = sensorManager.serverHost
+                                isEditingIP = true
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(10)
+                    
                     // 连接状态
                     HStack {
                         Image(systemName: sensorManager.isConnected ? "circle.fill" : "circle")
@@ -174,6 +203,19 @@ struct ContentView: View {
         gyroDataX.removeAll()
         gyroDataY.removeAll()
         gyroDataZ.removeAll()
+    }
+    
+    // 验证IP地址格式是否正确
+    private func isValidIP(_ ip: String) -> Bool {
+        let parts = ip.components(separatedBy: ".")
+        if parts.count != 4 { return false }
+        
+        return parts.allSatisfy { part in
+            if let num = Int(part) {
+                return num >= 0 && num <= 255
+            }
+            return false
+        }
     }
 }
 
