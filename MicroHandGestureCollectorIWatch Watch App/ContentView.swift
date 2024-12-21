@@ -32,18 +32,22 @@ extension Notification.Name {
     static let flashScreenBorder = Notification.Name("flashScreenBorder")
 }
 
-// 添加视觉反馈修饰器
+// 修改视觉反馈修饰器
 struct FlashBorderModifier: ViewModifier {
     @State private var isFlashing = false
     
     func body(content: Content) -> some View {
         content
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.blue.opacity(isFlashing ? 0.6 : 0),
-                            lineWidth: isFlashing ? 3 : 0)
-                    .animation(.easeInOut(duration: 0.3), value: isFlashing)
-            )
+            .overlay {
+                if isFlashing {
+                    RoundedRectangle(cornerRadius: 40)
+                        .stroke(Color.blue.opacity(0.8), lineWidth: 20)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+                        .zIndex(999)
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: isFlashing)
             .onReceive(NotificationCenter.default.publisher(for: .flashScreenBorder)) { _ in
                 flash()
             }
