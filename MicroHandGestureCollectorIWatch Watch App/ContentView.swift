@@ -236,7 +236,7 @@ struct ContentView: View {
                     // 使用反馈管理器
                     if isCollecting {
                         // 开始采集时使用 success 类型的触觉反馈
-                        FeedbackManager.playFeedback(style: .success)
+                        FeedbackManager.playFeedback(style: .success) // notification, click, success, stop
                         motionManager.startDataCollection(
                             name: userName,
                             hand: selectedHand,
