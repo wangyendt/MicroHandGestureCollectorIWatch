@@ -38,5 +38,7 @@
 	<string>需要访问健康数据以保持应用在后台运行</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>需要更新健康数据以保持应用在后台运行</string>
+	<key>NSMotionUsageDescription</key>
+	<string>需要访问运动数据以进行手势识别</string>
 </dict>
 </plist>
