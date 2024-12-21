@@ -8,10 +8,63 @@
 import SwiftUI
 import WatchConnectivity
 import CoreMotion
+import WatchKit
 
 #if os(watchOS)
 import WatchKit
 #endif
+
+// 添加新的反馈管理器结构体
+struct FeedbackManager {
+    static func playFeedback(style: WKHapticType = .start, withFlash: Bool = true) {
+        // 触觉反馈
+        WKInterfaceDevice.current().play(style)
+        
+        // 发送通知以触发视觉反馈
+        if withFlash {
+            NotificationCenter.default.post(name: .flashScreenBorder, object: nil)
+        }
+    }
+}
+
+// 添加通知名称扩展
+extension Notification.Name {
+    static let flashScreenBorder = Notification.Name("flashScreenBorder")
+}
+
+// 添加视觉反馈修饰器
+struct FlashBorderModifier: ViewModifier {
+    @State private var isFlashing = false
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.blue.opacity(isFlashing ? 0.6 : 0),
+                            lineWidth: isFlashing ? 3 : 0)
+                    .animation(.easeInOut(duration: 0.3), value: isFlashing)
+            )
+            .onReceive(NotificationCenter.default.publisher(for: .flashScreenBorder)) { _ in
+                flash()
+            }
+    }
+    
+    private func flash() {
+        isFlashing = true
+        
+        // 延迟后重置闪烁状态
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            isFlashing = false
+        }
+    }
+}
+
+// 添加视图扩展
+extension View {
+    func flashBorder() -> some View {
+        modifier(FlashBorderModifier())
+    }
+}
 
 struct ContentView: View {
     @StateObject private var motionManager = MotionManager()
@@ -175,7 +228,11 @@ struct ContentView: View {
                 Button(action: {
                     guard motionManager.isReady else { return }
                     isCollecting.toggle()
+                    
+                    // 使用反馈管理器
                     if isCollecting {
+                        // 开始采集时使用 success 类型的触觉反馈
+                        FeedbackManager.playFeedback(style: .success)
                         motionManager.startDataCollection(
                             name: userName,
                             hand: selectedHand,
@@ -184,6 +241,8 @@ struct ContentView: View {
                             note: noteText
                         )
                     } else {
+                        // 停止采集时使用 stop 类型的触觉反馈
+                        FeedbackManager.playFeedback(style: .stop)
                         WatchConnectivityManager.shared.sendStopSignal()
                         motionManager.stopDataCollection()
                     }
@@ -295,6 +354,7 @@ struct ContentView: View {
             .padding(.horizontal, 10)
         }
         .navigationTitle("传感器数据监控")
+        .flashBorder()
         .modifier(AlwaysOnModifier(isCollecting: isCollecting))
         .onChange(of: scenePhase) { oldPhase, newPhase in
             switch newPhase {
