@@ -110,7 +110,7 @@ public class MotionManager: ObservableObject {
             let totalAccZ = motion.gravity.z * 9.81 + motion.userAcceleration.z * 9.81
             
             // 更新UI数据（使用用户加速度）
-            self?.accelerationData = motion.userAcceleration
+            self?.accelerationData = CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ)
             self?.rotationData = motion.rotationRate
             
             // 将数据添加到缓冲区
