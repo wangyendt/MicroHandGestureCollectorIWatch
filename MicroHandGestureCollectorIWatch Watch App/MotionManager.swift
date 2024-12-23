@@ -12,7 +12,7 @@ import os.log
 import WatchKit
 
 #if os(watchOS)
-public class MotionManager: ObservableObject {
+public class MotionManager: ObservableObject, SignalProcessorDelegate {
     @Published private(set) var accelerationData: CMAcceleration?
     @Published private(set) var rotationData: CMRotationRate?
     private let motionManager: CMMotionManager
@@ -32,6 +32,8 @@ public class MotionManager: ObservableObject {
     private var dataBuffer: [(timestamp: UInt64, acc: (x: Double, y: Double, z: Double), gyro: (x: Double, y: Double, z: Double))] = []
     private let bufferSize = 10 // 每10个数据点写入一次文件
     
+    private let signalProcessor = SignalProcessor()
+    
     public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
 
@@ -40,6 +42,15 @@ public class MotionManager: ObservableObject {
         print("加速度计状态: \(motionManager.isAccelerometerAvailable ? "可用" : "不可用")")
         print("陀螺仪状态: \(motionManager.isGyroAvailable ? "可用" : "不可用")")
         print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
+        
+        // 设置代理
+        signalProcessor.delegate = self
+    }
+    
+    // 实现代理方法
+    func signalProcessor(_ processor: SignalProcessor, didDetectStrongPeak value: Double) {
+        // 触发振动和视觉反馈
+        FeedbackManager.playFeedback(style: .success)
     }
     
     public func startDataCollection(name: String, hand: String, gesture: String, force: String, note: String) {
@@ -89,6 +100,7 @@ public class MotionManager: ObservableObject {
         
         var lastTimestamp: UInt64 = 0
         
+        var printCounter = 0
         // 开始收集数据
         motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, error in
             guard let motion = motion else { return }
@@ -104,14 +116,30 @@ public class MotionManager: ObservableObject {
             }
             lastTimestamp = timestamp
             
-            // 计算总加速度（重力加速度 + 用户加速度）
+            // 计算总加速度（保持原有的计算方式）
             let totalAccX = motion.gravity.x * 9.81 + motion.userAcceleration.x * 9.81
             let totalAccY = motion.gravity.y * 9.81 + motion.userAcceleration.y * 9.81
             let totalAccZ = motion.gravity.z * 9.81 + motion.userAcceleration.z * 9.81
-            
-            // 更新UI数据（使用用户加速度）
+
+            // 更新UI数据（使用总加速度）
             self?.accelerationData = CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ)
             self?.rotationData = motion.rotationRate
+
+            // 计算总加速度范数并进行峰值检测
+            let accNorm = self?.signalProcessor.calculateNorm(
+                x: totalAccX,
+                y: totalAccY,
+                z: totalAccZ
+            ) ?? 0.0
+
+            // 处理新的数据点
+            self?.signalProcessor.processNewPoint(
+                timestamp: motion.timestamp,
+                accNorm: accNorm
+            )
+
+            // 获取检测到的峰值（如果需要使用）
+            let peaks = self?.signalProcessor.getRecentPeaks() ?? []
             
             // 将数据添加到缓冲区
             self?.dataBuffer.append((
@@ -162,6 +190,13 @@ public class MotionManager: ObservableObject {
                 gyroData: motion.rotationRate,
                 timestamp: timestamp
             )
+            
+            // 每100帧打印一次状态
+            printCounter += 1
+            if printCounter >= 100 {
+                self?.signalProcessor.printStatus()
+                printCounter = 0
+            }
         }
         
         isCollecting = true
