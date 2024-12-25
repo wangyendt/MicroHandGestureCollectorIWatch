@@ -17,7 +17,7 @@ struct ContentView: View {
     @StateObject private var motionManager = MotionManager()
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @State private var isCollecting = false
-    @State private var selectedHand = "右手"
+    @State private var selectedHand = "左手"
     @State private var selectedGesture = "单击[正]"
     @State private var selectedForce = "轻"
     
@@ -38,7 +38,7 @@ struct ContentView: View {
     @State private var showingNameInput = false
     
     let handOptions = ["左手", "右手"]
-    let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "左滑[正]", "右滑[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
+    let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "左滑[正]", "右滑[正]", "左摆[正]", "右摆[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
     let forceOptions = ["轻", "中", "重"]
     let calculator = CalculatorBridge()
     
