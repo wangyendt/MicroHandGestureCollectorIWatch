@@ -32,7 +32,15 @@ class SignalProcessor {
     // 添加代理协议来处理峰值检测事件
     weak var delegate: SignalProcessorDelegate?
     
+    // 添加 VQF 相关属性
+    private let vqf: VQFBridge
+    private var lastQuaternion: [Double] = [1, 0, 0, 0] // w, x, y, z
+    private var printQuatCounter = 0 // 用于控制打印频率
+    
     init() {
+        // 初始化 VQF，采样率 100Hz (0.01s)
+        vqf = VQFBridge(gyrTs: 0.01, accTs: 0.01)
+        
         filter = OneEuroFilter(
             te: SAMPLE_TIME,
             mincutoff: 10.0,
@@ -89,7 +97,37 @@ class SignalProcessor {
     }
     
     // 处理新的数据点
-    func processNewPoint(timestamp: TimeInterval, accNorm: Double) {
+    func processNewPoint(timestamp: TimeInterval, accNorm: Double, acc: (x: Double, y: Double, z: Double)? = nil, gyro: (x: Double, y: Double, z: Double)? = nil) {
+        // 如果提供了原始的加速度和陀螺仪数据，更新姿态解算
+        if let acc = acc, let gyro = gyro {
+            // 创建数组并转换为指针
+            let accData: [Double] = [acc.x, acc.y, acc.z]
+            let gyroData: [Double] = [gyro.x, gyro.y, gyro.z]
+            
+            // 使用 withUnsafePointer 安全地传递数组指针
+            accData.withUnsafeBufferPointer { accPtr in
+                gyroData.withUnsafeBufferPointer { gyroPtr in
+                    // 更新 VQF
+                    vqf.updateGyr(SAMPLE_TIME, gyr: UnsafeMutablePointer(mutating: gyroPtr.baseAddress!))
+                    vqf.updateAcc(SAMPLE_TIME, acc: UnsafeMutablePointer(mutating: accPtr.baseAddress!))
+                }
+            }
+            
+            // 获取姿态四元数
+            var quaternion = [Double](repeating: 0, count: 4)
+            quaternion.withUnsafeMutableBufferPointer { quatPtr in
+                vqf.getQuat6D(quatPtr.baseAddress!)
+            }
+            lastQuaternion = quaternion
+            
+            // 每100帧打印一次四元数
+            printQuatCounter += 1
+            if printQuatCounter >= 100 {
+                print("Current quaternion [w,x,y,z]: [\(String(format: "%.4f", lastQuaternion[0])), \(String(format: "%.4f", lastQuaternion[1])), \(String(format: "%.4f", lastQuaternion[2])), \(String(format: "%.4f", lastQuaternion[3]))]")
+                printQuatCounter = 0
+            }
+        }
+        
         // 应用 OneEuro 滤波
         let filteredValue = filter.apply(val: accNorm, te: SAMPLE_TIME)
         

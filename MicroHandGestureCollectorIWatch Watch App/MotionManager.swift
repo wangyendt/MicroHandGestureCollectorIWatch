@@ -132,10 +132,12 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 z: totalAccZ
             ) ?? 0.0
 
-            // 处理新的数据点
+            // 传递原始数据给 SignalProcessor
             self?.signalProcessor.processNewPoint(
                 timestamp: motion.timestamp,
-                accNorm: accNorm
+                accNorm: accNorm,
+                acc: (totalAccX, totalAccY, totalAccZ),
+                gyro: (motion.rotationRate.x, motion.rotationRate.y, motion.rotationRate.z)
             )
 
             // 获取检测到的峰值（如果需要使用）
