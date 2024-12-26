@@ -1,1 +1,2 @@
-#import "CalculatorBridge.h" 
+#import "CalculatorBridge.h"
+#import "VQFBridge.h"
