@@ -23,8 +23,6 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     @Published var isReady = true
     
-    private var runtimeSession: WKExtendedRuntimeSession?
-    
     // 添加文件写入队列
     private let fileWriteQueue = DispatchQueue(label: "com.wayne.fileWriteQueue", qos: .utility)
     
@@ -239,9 +237,6 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 self.gyroFileHandle = nil
             }
         }
-        
-        runtimeSession?.invalidate()
-        runtimeSession = nil
         
         motionManager.stopDeviceMotionUpdates()
         isCollecting = false

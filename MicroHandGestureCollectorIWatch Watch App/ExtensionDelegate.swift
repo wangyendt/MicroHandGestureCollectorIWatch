@@ -15,13 +15,8 @@ class ExtensionDelegate: NSObject, WKExtensionDelegate {
     
     func handle(_ backgroundTasks: Set<WKRefreshBackgroundTask>) {
         for task in backgroundTasks {
-            switch task {
-            case let workoutTask as WKWatchConnectivityRefreshBackgroundTask:
-                // 处理后台任务
-                workoutTask.setTaskCompletedWithSnapshot(false)
-            default:
-                task.setTaskCompletedWithSnapshot(false)
-            }
+            // 静默完成任务
+            task.setTaskCompletedWithSnapshot(false)
         }
     }
 } 
