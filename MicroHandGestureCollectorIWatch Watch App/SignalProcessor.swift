@@ -135,6 +135,9 @@ class SignalProcessor {
         let (peak, valley, isPeak, isValley) = detectPeaks(timestamp: timestamp, value: filteredValue)
         
         if isPeak, let peakValue = peak {
+            // 添加代理调用来保存峰值
+            delegate?.signalProcessor(self, didDetectPeak: timestamp, value: peakValue)
+            
             print("检测到Peak: \(String(format: "%.2f", peakValue)) @ \(String(format: "%.2f", timestamp))s")
             peaks.append((timestamp: timestamp, value: peakValue))
             if peaks.count > 100 {
@@ -157,6 +160,9 @@ class SignalProcessor {
         checkCandidatePeaks(currentTime: timestamp)
         
         if isValley, let valleyValue = valley {
+            // 添加代理调用来保存谷值
+            delegate?.signalProcessor(self, didDetectValley: timestamp, value: valleyValue)
+            
             print("检测到Valley: \(String(format: "%.2f", valleyValue)) @ \(String(format: "%.2f", timestamp))s")
             valleys.append((timestamp: timestamp, value: valleyValue))
             if valleys.count > 100 {
@@ -193,10 +199,12 @@ class SignalProcessor {
                     selected_peaks.append((peak_time, peak_val))
                     last_selected_time = peak_time
                     
-                    // 当检测到大于2的峰值时通知代理
+                    // 只有当峰值大于阈值时才同时保存和触发反馈
                     if peak_val > 10.0 {
                         print("强Peak触发反馈: \(String(format: "%.2f", peak_val))")
                         delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
+                        // 只在触发反馈时保存选中的峰值
+                        delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
                     }
                 }
                 
@@ -246,6 +254,11 @@ class SignalProcessor {
         }
         print("")
     }
+    
+    // 添加获取当前四元数的方法
+    func getCurrentQuaternion() -> [Double] {
+        return lastQuaternion
+    }
 }
 
 // OneEuro 滤波器实现
@@ -285,4 +298,7 @@ class OneEuroFilter {
 // 添加代理协议
 protocol SignalProcessorDelegate: AnyObject {
     func signalProcessor(_ processor: SignalProcessor, didDetectStrongPeak value: Double)
+    func signalProcessor(_ processor: SignalProcessor, didDetectPeak timestamp: TimeInterval, value: Double)
+    func signalProcessor(_ processor: SignalProcessor, didDetectValley timestamp: TimeInterval, value: Double)
+    func signalProcessor(_ processor: SignalProcessor, didSelectPeak timestamp: TimeInterval, value: Double)
 } 

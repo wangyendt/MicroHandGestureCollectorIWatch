@@ -18,6 +18,10 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     private let motionManager: CMMotionManager
     private var accFileHandle: FileHandle?
     private var gyroFileHandle: FileHandle?
+    private var peakFileHandle: FileHandle?
+    private var valleyFileHandle: FileHandle?
+    private var selectedPeakFileHandle: FileHandle?
+    private var quaternionFileHandle: FileHandle?
     private var isCollecting = false
     private var logger: OSLog
     
@@ -51,6 +55,18 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         FeedbackManager.playFeedback(style: .success)
     }
     
+    func signalProcessor(_ processor: SignalProcessor, didDetectPeak timestamp: TimeInterval, value: Double) {
+        savePeak(timestamp: UInt64(timestamp * 1_000_000_000), value: value)
+    }
+    
+    func signalProcessor(_ processor: SignalProcessor, didDetectValley timestamp: TimeInterval, value: Double) {
+        saveValley(timestamp: UInt64(timestamp * 1_000_000_000), value: value)
+    }
+    
+    func signalProcessor(_ processor: SignalProcessor, didSelectPeak timestamp: TimeInterval, value: Double) {
+        saveSelectedPeak(timestamp: UInt64(timestamp * 1_000_000_000), value: value)
+    }
+    
     public func startDataCollection(name: String, hand: String, gesture: String, force: String, note: String) {
         // 设置更新间隔
         motionManager.accelerometerUpdateInterval = 1.0 / 200.0  // 200Hz
@@ -72,25 +88,45 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         do {
             try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
             
-            // 创建文件
+            // 创建所有需要的文件
             let accFileURL = folderURL.appendingPathComponent("acc.txt")
             let gyroFileURL = folderURL.appendingPathComponent("gyro.txt")
+            let peakFileURL = folderURL.appendingPathComponent("peak.txt")
+            let valleyFileURL = folderURL.appendingPathComponent("valley.txt")
+            let selectedPeakFileURL = folderURL.appendingPathComponent("selected_peak.txt")
+            let quaternionFileURL = folderURL.appendingPathComponent("quaternion.txt")
             
             // 创建文件头部信息
-//            let headerInfo = "采集时间: \(Date())\n姓名: \(name)\n手: \(hand)\n手势: \(gesture)\n力度: \(force)\n备注: \(note)\n---\n"
             let accHeader = "timestamp_ns,acc_x,acc_y,acc_z\n"
             let gyroHeader = "timestamp_ns,gyro_x,gyro_y,gyro_z\n"
+            let peakHeader = "timestamp_ns,value\n"
+            let valleyHeader = "timestamp_ns,value\n"
+            let selectedPeakHeader = "timestamp_ns,value\n"
+            let quaternionHeader = "timestamp_ns,w,x,y,z\n"
             
             // 写入文件头部信息
-            try (accHeader).write(to: accFileURL, atomically: true, encoding: .utf8)
-            try (gyroHeader).write(to: gyroFileURL, atomically: true, encoding: .utf8)
+            try accHeader.write(to: accFileURL, atomically: true, encoding: .utf8)
+            try gyroHeader.write(to: gyroFileURL, atomically: true, encoding: .utf8)
+            try peakHeader.write(to: peakFileURL, atomically: true, encoding: .utf8)
+            try valleyHeader.write(to: valleyFileURL, atomically: true, encoding: .utf8)
+            try selectedPeakHeader.write(to: selectedPeakFileURL, atomically: true, encoding: .utf8)
+            try quaternionHeader.write(to: quaternionFileURL, atomically: true, encoding: .utf8)
             
+            // 打开所有文件句柄
             accFileHandle = try FileHandle(forWritingTo: accFileURL)
             gyroFileHandle = try FileHandle(forWritingTo: gyroFileURL)
+            peakFileHandle = try FileHandle(forWritingTo: peakFileURL)
+            valleyFileHandle = try FileHandle(forWritingTo: valleyFileURL)
+            selectedPeakFileHandle = try FileHandle(forWritingTo: selectedPeakFileURL)
+            quaternionFileHandle = try FileHandle(forWritingTo: quaternionFileURL)
             
             // 移动到文件末尾
             accFileHandle?.seekToEndOfFile()
             gyroFileHandle?.seekToEndOfFile()
+            peakFileHandle?.seekToEndOfFile()
+            valleyFileHandle?.seekToEndOfFile()
+            selectedPeakFileHandle?.seekToEndOfFile()
+            quaternionFileHandle?.seekToEndOfFile()
         } catch {
             print("Error creating directory or files: \(error)")
             return
@@ -138,6 +174,11 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 gyro: (motion.rotationRate.x, motion.rotationRate.y, motion.rotationRate.z)
             )
 
+            // 保存四元数
+            if let quaternion = self?.signalProcessor.getCurrentQuaternion() {
+                self?.saveQuaternion(timestamp: timestamp, quaternion: quaternion)
+            }
+            
             // 获取检测到的峰值（如果需要使用）
             let peaks = self?.signalProcessor.getRecentPeaks() ?? []
             
@@ -194,7 +235,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             // 每100帧打印一次状态
             printCounter += 1
             if printCounter >= 100 {
-                self?.signalProcessor.printStatus()
+//                self?.signalProcessor.printStatus()
                 printCounter = 0
             }
         }
@@ -245,6 +286,16 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         rotationData = nil
         
         WatchConnectivityManager.shared.resetState()
+        
+        // 关闭所有文件句柄
+        peakFileHandle?.closeFile()
+        peakFileHandle = nil
+        valleyFileHandle?.closeFile()
+        valleyFileHandle = nil
+        selectedPeakFileHandle?.closeFile()
+        selectedPeakFileHandle = nil
+        quaternionFileHandle?.closeFile()
+        quaternionFileHandle = nil
     }
     
     public var isGyroAvailable: Bool {
@@ -287,6 +338,39 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             }
         } catch {
             print("Error deleting all files: \(error)")
+        }
+    }
+    
+    private func savePeak(timestamp: UInt64, value: Double) {
+        let peakString = String(format: "%llu,%.6f\n", timestamp, value)
+        if let data = peakString.data(using: .utf8) {
+            peakFileHandle?.write(data)
+        }
+    }
+    
+    private func saveValley(timestamp: UInt64, value: Double) {
+        let valleyString = String(format: "%llu,%.6f\n", timestamp, value)
+        if let data = valleyString.data(using: .utf8) {
+            valleyFileHandle?.write(data)
+        }
+    }
+    
+    private func saveSelectedPeak(timestamp: UInt64, value: Double) {
+        let selectedPeakString = String(format: "%llu,%.6f\n", timestamp, value)
+        if let data = selectedPeakString.data(using: .utf8) {
+            selectedPeakFileHandle?.write(data)
+        }
+    }
+    
+    private func saveQuaternion(timestamp: UInt64, quaternion: [Double]) {
+        let quaternionString = String(format: "%llu,%.6f,%.6f,%.6f,%.6f\n",
+                                    timestamp,
+                                    quaternion[0], // w
+                                    quaternion[1], // x
+                                    quaternion[2], // y
+                                    quaternion[3]) // z
+        if let data = quaternionString.data(using: .utf8) {
+            quaternionFileHandle?.write(data)
         }
     }
 }
