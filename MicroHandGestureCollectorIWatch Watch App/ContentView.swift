@@ -245,6 +245,7 @@ struct ContentView: View {
                     SettingsView(
                         peakThreshold: $peakThreshold,
                         peakWindow: $peakWindow,
+                        motionManager: motionManager,
                         onSettingsChanged: { threshold, window in
                             motionManager.signalProcessor.updateSettings(
                                 peakThreshold: threshold,
@@ -471,6 +472,13 @@ struct RealTimeDataView: View {
 struct SettingsView: View {
     @Binding var peakThreshold: Double
     @Binding var peakWindow: Double
+    @AppStorage("savePeaks") private var savePeaks = false
+    @AppStorage("saveValleys") private var saveValleys = false
+    @AppStorage("saveSelectedPeaks") private var saveSelectedPeaks = false
+    @AppStorage("saveQuaternions") private var saveQuaternions = false
+    
+    @ObservedObject var motionManager: MotionManager
+    
     let onSettingsChanged: (Double, Double) -> Void
     @Environment(\.dismiss) var dismiss
     
@@ -501,6 +509,25 @@ struct SettingsView: View {
                         Text(String(format: "%.1f", peakWindow))
                             .frame(width: 40)
                     }
+                }
+                
+                Section(header: Text("数据保存设置")) {
+                    Toggle("保存所有峰值", isOn: $savePeaks.animation())
+                        .onChange(of: savePeaks) { newValue in
+                            motionManager.updateSaveSettings(peaks: newValue)
+                        }
+                    Toggle("保存所有谷值", isOn: $saveValleys.animation())
+                        .onChange(of: saveValleys) { newValue in
+                            motionManager.updateSaveSettings(valleys: newValue)
+                        }
+                    Toggle("保存选中峰值", isOn: $saveSelectedPeaks.animation())
+                        .onChange(of: saveSelectedPeaks) { newValue in
+                            motionManager.updateSaveSettings(selectedPeaks: newValue)
+                        }
+                    Toggle("保存姿态四元数", isOn: $saveQuaternions.animation())
+                        .onChange(of: saveQuaternions) { newValue in
+                            motionManager.updateSaveSettings(quaternions: newValue)
+                        }
                 }
             }
             .navigationTitle("设置")
