@@ -36,14 +36,15 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     public let signalProcessor: SignalProcessor
     
+    // 添加数据保存控制变量
+    private var savePeaks: Bool = false
+    private var saveValleys: Bool = false
+    private var saveSelectedPeaks: Bool = false
+    private var saveQuaternions: Bool = false
+    
     public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
-
         motionManager = CMMotionManager()
-        print("MotionManager 初始化")
-        print("加速度计状态: \(motionManager.isAccelerometerAvailable ? "可用" : "不可用")")
-        print("陀螺仪状态: \(motionManager.isGyroAvailable ? "可用" : "不可用")")
-        print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
         
         // 从 UserDefaults 读取保存的设置
         let threshold = UserDefaults.standard.double(forKey: "peakThreshold")
@@ -51,11 +52,22 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         signalProcessor = SignalProcessor(
             peakThreshold: threshold > 0 ? threshold : 0.3,
-            peakWindow: window > 0 ? window : 1.0
+            peakWindow: window > 0 ? window : 0.6
         )
         
         // 设置代理
         signalProcessor.delegate = self
+        
+        print("MotionManager 初始化")
+        print("加速度计状态: \(motionManager.isAccelerometerAvailable ? "可用" : "不可用")")
+        print("陀螺仪状态: \(motionManager.isGyroAvailable ? "可用" : "不可用")")
+        print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
+        
+        // 从 UserDefaults 读取保存设置
+        savePeaks = UserDefaults.standard.bool(forKey: "savePeaks")
+        saveValleys = UserDefaults.standard.bool(forKey: "saveValleys")
+        saveSelectedPeaks = UserDefaults.standard.bool(forKey: "saveSelectedPeaks")
+        saveQuaternions = UserDefaults.standard.bool(forKey: "saveQuaternions")
     }
     
     // 实现代理方法
@@ -97,37 +109,59 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         do {
             try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
             
-            // 创建所有需要的文件
+            // 创建必需的文件
             let accFileURL = folderURL.appendingPathComponent("acc.txt")
             let gyroFileURL = folderURL.appendingPathComponent("gyro.txt")
-            let peakFileURL = folderURL.appendingPathComponent("peak.txt")
-            let valleyFileURL = folderURL.appendingPathComponent("valley.txt")
-            let selectedPeakFileURL = folderURL.appendingPathComponent("selected_peak.txt")
-            let quaternionFileURL = folderURL.appendingPathComponent("quaternion.txt")
             
-            // 创建文件头部信息
+            // 根据设置创建可选文件
+            let peakFileURL = savePeaks ? folderURL.appendingPathComponent("peak.txt") : nil
+            let valleyFileURL = saveValleys ? folderURL.appendingPathComponent("valley.txt") : nil
+            let selectedPeakFileURL = saveSelectedPeaks ? folderURL.appendingPathComponent("selected_peak.txt") : nil
+            let quaternionFileURL = saveQuaternions ? folderURL.appendingPathComponent("quaternion.txt") : nil
+            
+            // 创建必需的文件头部信息
             let accHeader = "timestamp_ns,acc_x,acc_y,acc_z\n"
             let gyroHeader = "timestamp_ns,gyro_x,gyro_y,gyro_z\n"
-            let peakHeader = "timestamp_ns,value\n"
-            let valleyHeader = "timestamp_ns,value\n"
-            let selectedPeakHeader = "timestamp_ns,value\n"
-            let quaternionHeader = "timestamp_ns,w,x,y,z\n"
             
-            // 写入文件头部信息
+            // 写入必需的文件头部信息
             try accHeader.write(to: accFileURL, atomically: true, encoding: .utf8)
             try gyroHeader.write(to: gyroFileURL, atomically: true, encoding: .utf8)
-            try peakHeader.write(to: peakFileURL, atomically: true, encoding: .utf8)
-            try valleyHeader.write(to: valleyFileURL, atomically: true, encoding: .utf8)
-            try selectedPeakHeader.write(to: selectedPeakFileURL, atomically: true, encoding: .utf8)
-            try quaternionHeader.write(to: quaternionFileURL, atomically: true, encoding: .utf8)
             
-            // 打开所有文件句柄
+            // 根据设置写入可选文件头部信息
+            if savePeaks {
+                let peakHeader = "timestamp_ns,value\n"
+                try peakHeader.write(to: peakFileURL!, atomically: true, encoding: .utf8)
+            }
+            if saveValleys {
+                let valleyHeader = "timestamp_ns,value\n"
+                try valleyHeader.write(to: valleyFileURL!, atomically: true, encoding: .utf8)
+            }
+            if saveSelectedPeaks {
+                let selectedPeakHeader = "timestamp_ns,value\n"
+                try selectedPeakHeader.write(to: selectedPeakFileURL!, atomically: true, encoding: .utf8)
+            }
+            if saveQuaternions {
+                let quaternionHeader = "timestamp_ns,w,x,y,z\n"
+                try quaternionHeader.write(to: quaternionFileURL!, atomically: true, encoding: .utf8)
+            }
+            
+            // 打开必需的文件句柄
             accFileHandle = try FileHandle(forWritingTo: accFileURL)
             gyroFileHandle = try FileHandle(forWritingTo: gyroFileURL)
-            peakFileHandle = try FileHandle(forWritingTo: peakFileURL)
-            valleyFileHandle = try FileHandle(forWritingTo: valleyFileURL)
-            selectedPeakFileHandle = try FileHandle(forWritingTo: selectedPeakFileURL)
-            quaternionFileHandle = try FileHandle(forWritingTo: quaternionFileURL)
+            
+            // 根据设置打开可选文件句柄
+            if savePeaks {
+                peakFileHandle = try FileHandle(forWritingTo: peakFileURL!)
+            }
+            if saveValleys {
+                valleyFileHandle = try FileHandle(forWritingTo: valleyFileURL!)
+            }
+            if saveSelectedPeaks {
+                selectedPeakFileHandle = try FileHandle(forWritingTo: selectedPeakFileURL!)
+            }
+            if saveQuaternions {
+                quaternionFileHandle = try FileHandle(forWritingTo: quaternionFileURL!)
+            }
             
             // 移动到文件末尾
             accFileHandle?.seekToEndOfFile()
@@ -351,6 +385,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     private func savePeak(timestamp: UInt64, value: Double) {
+        guard savePeaks else { return }
         let peakString = String(format: "%llu,%.6f\n", timestamp, value)
         if let data = peakString.data(using: .utf8) {
             peakFileHandle?.write(data)
@@ -358,6 +393,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     private func saveValley(timestamp: UInt64, value: Double) {
+        guard saveValleys else { return }
         let valleyString = String(format: "%llu,%.6f\n", timestamp, value)
         if let data = valleyString.data(using: .utf8) {
             valleyFileHandle?.write(data)
@@ -365,6 +401,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     private func saveSelectedPeak(timestamp: UInt64, value: Double) {
+        guard saveSelectedPeaks else { return }
         let selectedPeakString = String(format: "%llu,%.6f\n", timestamp, value)
         if let data = selectedPeakString.data(using: .utf8) {
             selectedPeakFileHandle?.write(data)
@@ -372,6 +409,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     private func saveQuaternion(timestamp: UInt64, quaternion: [Double]) {
+        guard saveQuaternions else { return }
         let quaternionString = String(format: "%llu,%.6f,%.6f,%.6f,%.6f\n",
                                     timestamp,
                                     quaternion[0], // w
@@ -380,6 +418,27 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                                     quaternion[3]) // z
         if let data = quaternionString.data(using: .utf8) {
             quaternionFileHandle?.write(data)
+        }
+    }
+    
+    // 添加更新设置的方法
+    public func updateSaveSettings(
+        peaks: Bool? = nil,
+        valleys: Bool? = nil,
+        selectedPeaks: Bool? = nil,
+        quaternions: Bool? = nil
+    ) {
+        if let peaks = peaks {
+            savePeaks = peaks
+        }
+        if let valleys = valleys {
+            saveValleys = valleys
+        }
+        if let selectedPeaks = selectedPeaks {
+            saveSelectedPeaks = selectedPeaks
+        }
+        if let quaternions = quaternions {
+            saveQuaternions = quaternions
         }
     }
 }
