@@ -87,7 +87,6 @@ struct ContentView: View {
     
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
-    @State private var workoutSession: WKExtendedRuntimeSession?
     
     @State private var noteText = "静坐"
     
@@ -357,35 +356,11 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
         }
-        .navigationTitle("传感器数据监控")
         .flashBorder()
-        .modifier(AlwaysOnModifier(isCollecting: isCollecting))
-        .onChange(of: scenePhase) { oldPhase, newPhase in
-            switch newPhase {
-            case .active:
-                startExtendedSession()
-            case .background:
-                if isCollecting {
-                    startExtendedSession()
-                }
-            case .inactive:
-                break
-            @unknown default:
-                break
-            }
-        }
-        .onChange(of: isCollecting) { oldValue, newValue in
-            if newValue {
-                startExtendedSession()
-            } else {
-                ExtendedRuntimeSessionManager.shared.invalidateSession()
-            }
-        }
         .onAppear {
             isCollecting = false
             motionManager.stopDataCollection()
             WatchConnectivityManager.shared.sendStopSignal()
-            startExtendedSession()
         }
         .onDisappear {
             if isCollecting {
@@ -393,7 +368,6 @@ struct ContentView: View {
                 motionManager.stopDataCollection()
                 WatchConnectivityManager.shared.sendStopSignal()
             }
-            ExtendedRuntimeSessionManager.shared.invalidateSession()
         }
         .sheet(isPresented: $showingNameInput) {
             NavigationView {
@@ -425,47 +399,6 @@ struct ContentView: View {
         } catch {
             print("Error deleting all files: \(error)")
         }
-    }
-    
-    private func startExtendedSession() {
-        ExtendedRuntimeSessionManager.shared.startSession()
-    }
-}
-
-// 添加 Always On 显示修饰器
-struct AlwaysOnModifier: ViewModifier {
-    let isCollecting: Bool
-    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
-    @State private var session: WKExtendedRuntimeSession?
-    
-    func body(content: Content) -> some View {
-        content
-            .allowsHitTesting(true)
-            .opacity(1.0)
-            .brightness(isLuminanceReduced ? 0 : -0.1)
-            .onAppear {
-                if isCollecting {
-                    startSession()
-                }
-            }
-            .onDisappear {
-                session?.invalidate()
-                session = nil
-            }
-            .onChange(of: isCollecting) { oldValue, newValue in
-                if newValue {
-                    startSession()
-                } else {
-                    session?.invalidate()
-                    session = nil
-                }
-            }
-    }
-    
-    private func startSession() {
-        session?.invalidate()
-        session = WKExtendedRuntimeSession()
-        session?.start()
     }
 }
 
