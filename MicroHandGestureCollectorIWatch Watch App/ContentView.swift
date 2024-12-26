@@ -19,17 +19,24 @@ import WatchKit
 struct FeedbackManager {
     private static let synthesizer = AVSpeechSynthesizer()
     
+    // 修改反馈开关的初始化方式
+    static var enableVisualFeedback = UserDefaults.standard.bool(forKey: "enableVisualFeedback") || !UserDefaults.standard.contains(forKey: "enableVisualFeedback")
+    static var enableHapticFeedback = UserDefaults.standard.bool(forKey: "enableHapticFeedback") || !UserDefaults.standard.contains(forKey: "enableHapticFeedback")
+    static var enableVoiceFeedback = UserDefaults.standard.bool(forKey: "enableVoiceFeedback") || !UserDefaults.standard.contains(forKey: "enableVoiceFeedback")
+    
     static func playFeedback(style: WKHapticType = .start, withFlash: Bool = true, speak text: String? = nil) {
-        // 触觉反馈
-        WKInterfaceDevice.current().play(style)
+        // 振动反馈
+        if enableHapticFeedback {
+            WKInterfaceDevice.current().play(style)
+        }
         
-        // 发送通知以触发视觉反馈
-        if withFlash {
+        // 视觉反馈
+        if enableVisualFeedback && withFlash {
             NotificationCenter.default.post(name: .flashScreenBorder, object: nil)
         }
         
         // 语音反馈
-        if let text = text {
+        if enableVoiceFeedback, let text = text {
             let utterance = AVSpeechUtterance(string: text)
             utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
             utterance.rate = 0.5
@@ -83,6 +90,13 @@ struct FlashBorderModifier: ViewModifier {
 extension View {
     func flashBorder() -> some View {
         modifier(FlashBorderModifier())
+    }
+}
+
+// 添加 UserDefaults 扩展
+extension UserDefaults {
+    func contains(forKey key: String) -> Bool {
+        return object(forKey: key) != nil
     }
 }
 
@@ -506,6 +520,11 @@ struct SettingsView: View {
     @AppStorage("saveSelectedPeaks") private var saveSelectedPeaks = false
     @AppStorage("saveQuaternions") private var saveQuaternions = false
     
+    // 添加反馈设置
+    @AppStorage("enableVisualFeedback") private var enableVisualFeedback = true
+    @AppStorage("enableHapticFeedback") private var enableHapticFeedback = true
+    @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback = true
+    
     @ObservedObject var motionManager: MotionManager
     
     let onSettingsChanged: (Double, Double) -> Void
@@ -556,6 +575,21 @@ struct SettingsView: View {
                     Toggle("保存姿态四元数", isOn: $saveQuaternions.animation())
                         .onChange(of: saveQuaternions) { newValue in
                             motionManager.updateSaveSettings(quaternions: newValue)
+                        }
+                }
+                
+                Section(header: Text("反馈设置")) {
+                    Toggle("视觉反馈", isOn: $enableVisualFeedback.animation())
+                        .onChange(of: enableVisualFeedback) { newValue in
+                            FeedbackManager.enableVisualFeedback = newValue
+                        }
+                    Toggle("振动反馈", isOn: $enableHapticFeedback.animation())
+                        .onChange(of: enableHapticFeedback) { newValue in
+                            FeedbackManager.enableHapticFeedback = newValue
+                        }
+                    Toggle("语音反馈", isOn: $enableVoiceFeedback.animation())
+                        .onChange(of: enableVoiceFeedback) { newValue in
+                            FeedbackManager.enableVoiceFeedback = newValue
                         }
                 }
             }
