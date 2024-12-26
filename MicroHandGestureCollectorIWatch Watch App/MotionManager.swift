@@ -34,7 +34,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     private var dataBuffer: [(timestamp: UInt64, acc: (x: Double, y: Double, z: Double), gyro: (x: Double, y: Double, z: Double))] = []
     private let bufferSize = 10 // 每10个数据点写入一次文件
     
-    private let signalProcessor = SignalProcessor()
+    public let signalProcessor: SignalProcessor
     
     public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
@@ -45,25 +45,34 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         print("陀螺仪状态: \(motionManager.isGyroAvailable ? "可用" : "不可用")")
         print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
         
+        // 从 UserDefaults 读取保存的设置
+        let threshold = UserDefaults.standard.double(forKey: "peakThreshold")
+        let window = UserDefaults.standard.double(forKey: "peakWindow")
+        
+        signalProcessor = SignalProcessor(
+            peakThreshold: threshold > 0 ? threshold : 0.3,
+            peakWindow: window > 0 ? window : 1.0
+        )
+        
         // 设置代理
         signalProcessor.delegate = self
     }
     
     // 实现代理方法
-    func signalProcessor(_ processor: SignalProcessor, didDetectStrongPeak value: Double) {
+    public func signalProcessor(_ processor: SignalProcessor, didDetectStrongPeak value: Double) {
         // 触发振动和视觉反馈
         FeedbackManager.playFeedback(style: .success)
     }
     
-    func signalProcessor(_ processor: SignalProcessor, didDetectPeak timestamp: TimeInterval, value: Double) {
+    public func signalProcessor(_ processor: SignalProcessor, didDetectPeak timestamp: TimeInterval, value: Double) {
         savePeak(timestamp: UInt64(timestamp * 1_000_000_000), value: value)
     }
     
-    func signalProcessor(_ processor: SignalProcessor, didDetectValley timestamp: TimeInterval, value: Double) {
+    public func signalProcessor(_ processor: SignalProcessor, didDetectValley timestamp: TimeInterval, value: Double) {
         saveValley(timestamp: UInt64(timestamp * 1_000_000_000), value: value)
     }
     
-    func signalProcessor(_ processor: SignalProcessor, didSelectPeak timestamp: TimeInterval, value: Double) {
+    public func signalProcessor(_ processor: SignalProcessor, didSelectPeak timestamp: TimeInterval, value: Double) {
         saveSelectedPeak(timestamp: UInt64(timestamp * 1_000_000_000), value: value)
     }
     
