@@ -17,28 +17,15 @@
 		<string>workout-processing</string>
 		<string>sensor-processing</string>
 	</array>
-	<key>WKRunsIndependentlyOfCompanionApp</key>
-	<true/>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>gyroscope</string>
-		<string>accelerometer</string>
-	</array>
-	<key>WKSupportsAlwaysOnDisplay</key>
-	<true/>
-	<key>WKPreservesAppearanceOnLaunch</key>
-	<true/>
 	<key>WKExtendedRuntimeSessionEnabled</key>
 	<true/>
-	<key>WKPreferredExtendedRuntimeSessionDuration</key>
-	<integer>3600</integer>
 	<key>WKExtendedRuntimeSessionWatchOSVersion</key>
 	<string>11.0</string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>需要访问健康数据以保持应用在后台运行</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>需要更新健康数据以保持应用在后台运行</string>
-	<key>NSMotionUsageDescription</key>
-	<string>需要访问运动数据以进行手势识别</string>
+	<key>WKPreferredExtendedRuntimeSessionDuration</key>
+	<integer>3600</integer>
+	<key>WKPreservesAppearanceOnLaunch</key>
+	<true/>
+	<key>WKSupportsAlwaysOnDisplay</key>
+	<true/>
 </dict>
 </plist>
