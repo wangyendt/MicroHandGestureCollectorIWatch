@@ -2,7 +2,7 @@ import Foundation
 import Accelerate
 import CoreMotion
 
-class SignalProcessor {
+public class SignalProcessor {
     // 常量定义，与 Python 版本保持一致
     private let WINDOW_SIZE = 1000  // 10秒数据，100Hz
     private let PEAK_DELTA = 0.3  // peak detection的阈值
@@ -23,7 +23,6 @@ class SignalProcessor {
     private var filter: OneEuroFilter
     
     // 添加单调栈相关的属性
-    private let peak_window = 1.0  // 300ms窗口
     private var candidate_peaks: [(timestamp: TimeInterval, value: Double)] = []
     private var monotonic_stack: [(timestamp: TimeInterval, value: Double)] = []
     private var last_selected_time: TimeInterval = -.infinity
@@ -40,7 +39,14 @@ class SignalProcessor {
     // 添加上一帧的加速度范数
     private var lastAccNorm: Double = 9.81
     
-    init() {
+    // 将阈值和窗口大小改为可配置的属性
+    private var peakThreshold: Double
+    private var peakWindow: Double
+    
+    init(peakThreshold: Double = 0.3, peakWindow: Double = 0.6) {
+        self.peakThreshold = peakThreshold
+        self.peakWindow = peakWindow
+        
         // 初始化 VQF，采样率 100Hz (0.01s)
         vqf = VQFBridge(gyrTs: 0.01, accTs: 0.01)
         
@@ -184,33 +190,31 @@ class SignalProcessor {
         while i < candidate_peaks.count {
             let (peak_time, peak_val) = candidate_peaks[i]
             
-            // 如果当前时间已经超过了这个peak后的300ms窗口
-            if currentTime >= peak_time + peak_window {
+            // 使用 peakWindow 替代 peak_window
+            if currentTime >= peak_time + peakWindow {
                 // 清理过期的单调栈元素
-                while !monotonic_stack.isEmpty && monotonic_stack[0].timestamp < peak_time - peak_window {
+                while !monotonic_stack.isEmpty && monotonic_stack[0].timestamp < peak_time - peakWindow {
                     monotonic_stack.removeFirst()
                 }
                 
                 // 检查是否是窗口内的最大值
                 var is_max = true
                 for (stack_time, stack_val) in monotonic_stack {
-                    if abs(stack_time - peak_time) <= peak_window && stack_val > peak_val {
+                    if abs(stack_time - peak_time) <= peakWindow && stack_val > peak_val {
                         is_max = false
                         break
                     }
                 }
                 
                 // 如果是局部最大值且与上一个选中的peak间隔足够
-                if is_max && peak_time - last_selected_time >= peak_window {
+                if is_max && peak_time - last_selected_time >= peakWindow {
                     print("选中Peak: \(String(format: "%.2f", peak_val)) @ \(String(format: "%.2f", peak_time))s")
                     selected_peaks.append((peak_time, peak_val))
                     last_selected_time = peak_time
                     
-                    // 调整阈值，因为现在是对差分值进行判断
-                    if peak_val > 0.3 {  // 可能需要调整这个阈值
-                        print("强Peak触发反馈: \(String(format: "%.2f", peak_val))")
+                    if peak_val > peakThreshold {
+                        print("强Peak触发反馈: \(String(format: "%.2f", peak_val)), peakWindow=\(String(format: "%.2f", peakWindow))")
                         delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
-                        // 只在触发反馈时保存选中的峰值
                         delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
                     }
                 }
@@ -266,6 +270,16 @@ class SignalProcessor {
     func getCurrentQuaternion() -> [Double] {
         return lastQuaternion
     }
+    
+    // 添加设置方法
+    func updateSettings(peakThreshold: Double? = nil, peakWindow: Double? = nil) {
+        if let threshold = peakThreshold {
+            self.peakThreshold = threshold
+        }
+        if let window = peakWindow {
+            self.peakWindow = window
+        }
+    }
 }
 
 // OneEuro 滤波器实现
@@ -303,7 +317,7 @@ class OneEuroFilter {
 }
 
 // 添加代理协议
-protocol SignalProcessorDelegate: AnyObject {
+public protocol SignalProcessorDelegate: AnyObject {
     func signalProcessor(_ processor: SignalProcessor, didDetectStrongPeak value: Double)
     func signalProcessor(_ processor: SignalProcessor, didDetectPeak timestamp: TimeInterval, value: Double)
     func signalProcessor(_ processor: SignalProcessor, didDetectValley timestamp: TimeInterval, value: Double)

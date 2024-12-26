@@ -93,6 +93,11 @@ struct ContentView: View {
     @AppStorage("userName") private var userName = "王也"
     @State private var showingNameInput = false
     
+    // 添加设置相关的状态
+    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.3
+    @AppStorage("peakWindow") private var peakWindow: Double = 0.6
+    @State private var showingSettings = false
+    
     let handOptions = ["左手", "右手"]
     let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "左滑[正]", "右滑[正]", "左摆[正]", "右摆[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
     let forceOptions = ["轻", "中", "重"]
@@ -226,6 +231,28 @@ struct ContentView: View {
                 .padding()
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
+                
+                // 添加设置按钮
+                Button(action: {
+                    showingSettings = true
+                }) {
+                    HStack {
+                        Text("⚙️ 设置")
+                            .foregroundColor(.blue)
+                    }
+                }
+                .sheet(isPresented: $showingSettings) {
+                    SettingsView(
+                        peakThreshold: $peakThreshold,
+                        peakWindow: $peakWindow,
+                        onSettingsChanged: { threshold, window in
+                            motionManager.signalProcessor.updateSettings(
+                                peakThreshold: threshold,
+                                peakWindow: window
+                            )
+                        }
+                    )
+                }
                 
                 // 开始/停止按钮
                 Button(action: {
@@ -437,6 +464,55 @@ struct RealTimeDataView: View {
         .padding()
         .background(Color.black.opacity(isLuminanceReduced ? 0.5 : 0.1))
         .cornerRadius(10)
+    }
+}
+
+// 添加设置视图
+struct SettingsView: View {
+    @Binding var peakThreshold: Double
+    @Binding var peakWindow: Double
+    let onSettingsChanged: (Double, Double) -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("峰值检测设置")) {
+                    HStack {
+                        Text("触发阈值")
+                        Spacer()
+                        Slider(
+                            value: $peakThreshold,
+                            in: 0.1...1.0,
+                            step: 0.1
+                        )
+                        Text(String(format: "%.1f", peakThreshold))
+                            .frame(width: 40)
+                    }
+                    
+                    HStack {
+                        Text("窗口大小")
+                        Spacer()
+                        Slider(
+                            value: $peakWindow,
+                            in: 0.1...1.0,
+                            step: 0.1
+                        )
+                        Text(String(format: "%.1f", peakWindow))
+                            .frame(width: 40)
+                    }
+                }
+            }
+            .navigationTitle("设置")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") {
+                        onSettingsChanged(peakThreshold, peakWindow)
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 
