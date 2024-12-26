@@ -42,6 +42,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     private var saveSelectedPeaks: Bool = false
     private var saveQuaternions: Bool = false
     
+    // 添加可观察的计数属性
+    @Published private(set) var peakCount: Int = 0
+    
     public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
         motionManager = CMMotionManager()
@@ -72,8 +75,12 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     // 实现代理方法
     public func signalProcessor(_ processor: SignalProcessor, didDetectStrongPeak value: Double) {
-        // 触发振动和视觉反馈
-        FeedbackManager.playFeedback(style: .success)
+        // 触发振动、视觉和语音反馈
+        FeedbackManager.playFeedback(
+            style: .success,
+            speak: "\(processor.selectedPeakCount)"
+        )
+        peakCount = processor.selectedPeakCount
     }
     
     public func signalProcessor(_ processor: SignalProcessor, didDetectPeak timestamp: TimeInterval, value: Double) {
@@ -89,6 +96,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     public func startDataCollection(name: String, hand: String, gesture: String, force: String, note: String) {
+        signalProcessor.resetCount()  // 重置计数
+        peakCount = 0
         // 设置更新间隔
         motionManager.accelerometerUpdateInterval = 1.0 / 200.0  // 200Hz
         motionManager.gyroUpdateInterval = 1.0 / 200.0  // 200Hz

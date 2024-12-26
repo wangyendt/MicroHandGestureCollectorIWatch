@@ -9,14 +9,17 @@ import SwiftUI
 import WatchConnectivity
 import CoreMotion
 import WatchKit
+import AVFoundation
 
 #if os(watchOS)
 import WatchKit
 #endif
 
-// 添加新的反馈管理器结构体
+// 简化反馈管理器结构体
 struct FeedbackManager {
-    static func playFeedback(style: WKHapticType = .start, withFlash: Bool = true) {
+    private static let synthesizer = AVSpeechSynthesizer()
+    
+    static func playFeedback(style: WKHapticType = .start, withFlash: Bool = true, speak text: String? = nil) {
         // 触觉反馈
         WKInterfaceDevice.current().play(style)
         
@@ -24,6 +27,19 @@ struct FeedbackManager {
         if withFlash {
             NotificationCenter.default.post(name: .flashScreenBorder, object: nil)
         }
+        
+        // 语音反馈
+        if let text = text {
+            let utterance = AVSpeechUtterance(string: text)
+            utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
+            utterance.rate = 0.5
+            utterance.volume = 1.0
+            synthesizer.speak(utterance)
+        }
+    }
+    
+    static func stopSpeaking() {
+        synthesizer.stopSpeaking(at: .immediate)
     }
 }
 
@@ -255,15 +271,23 @@ struct ContentView: View {
                     )
                 }
                 
+                // 添加计数显示
+                if isCollecting {
+                    Text("已采集: \(motionManager.peakCount) 次")
+                        .font(.headline)
+                        .foregroundColor(.blue)
+                }
+                
                 // 开始/停止按钮
                 Button(action: {
                     guard motionManager.isReady else { return }
                     isCollecting.toggle()
                     
-                    // 使用反馈管理器
                     if isCollecting {
-                        // 开始采集时使用 success 类型的触觉反馈
-                        FeedbackManager.playFeedback(style: .success) // notification, click, success, stop
+                        FeedbackManager.playFeedback(
+                            style: .success,
+                            speak: "开始采集"
+                        )
                         motionManager.startDataCollection(
                             name: userName,
                             hand: selectedHand,
@@ -272,8 +296,10 @@ struct ContentView: View {
                             note: noteText
                         )
                     } else {
-                        // 停止采集时使用 stop 类型的触觉反馈
-                        FeedbackManager.playFeedback(style: .stop)
+                        FeedbackManager.playFeedback(
+                            style: .stop,
+                            speak: "停止采集"
+                        )
                         WatchConnectivityManager.shared.sendStopSignal()
                         motionManager.stopDataCollection()
                     }
@@ -389,6 +415,9 @@ struct ContentView: View {
             isCollecting = false
             motionManager.stopDataCollection()
             WatchConnectivityManager.shared.sendStopSignal()
+            
+            // 添加欢迎语音
+            FeedbackManager.playFeedback(speak: " ")
         }
         .onDisappear {
             if isCollecting {
