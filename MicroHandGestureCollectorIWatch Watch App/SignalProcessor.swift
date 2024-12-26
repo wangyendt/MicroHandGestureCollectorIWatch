@@ -43,6 +43,9 @@ public class SignalProcessor {
     private var peakThreshold: Double
     private var peakWindow: Double
     
+    // 添加计数器
+    private(set) var selectedPeakCount: Int = 0
+    
     init(peakThreshold: Double = 0.3, peakWindow: Double = 0.6) {
         self.peakThreshold = peakThreshold
         self.peakWindow = peakWindow
@@ -213,6 +216,7 @@ public class SignalProcessor {
                     last_selected_time = peak_time
                     
                     if peak_val > peakThreshold {
+                        selectedPeakCount += 1  // 增加计数
                         print("强Peak触发反馈: \(String(format: "%.2f", peak_val)), peakWindow=\(String(format: "%.2f", peakWindow))")
                         delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
                         delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
@@ -279,6 +283,11 @@ public class SignalProcessor {
         if let window = peakWindow {
             self.peakWindow = window
         }
+    }
+    
+    // 添加重置计数的方法
+    public func resetCount() {
+        selectedPeakCount = 0
     }
 }
 
