@@ -37,6 +37,9 @@ class SignalProcessor {
     private var lastQuaternion: [Double] = [1, 0, 0, 0] // w, x, y, z
     private var printQuatCounter = 0 // 用于控制打印频率
     
+    // 添加上一帧的加速度范数
+    private var lastAccNorm: Double = 9.81
+    
     init() {
         // 初始化 VQF，采样率 100Hz (0.01s)
         vqf = VQFBridge(gyrTs: 0.01, accTs: 0.01)
@@ -128,14 +131,18 @@ class SignalProcessor {
             }
         }
         
-        // 应用 OneEuro 滤波
-        let filteredValue = filter.apply(val: accNorm, te: SAMPLE_TIME)
+        // 计算加速度范数的差分
+        let accNormDiff = abs(accNorm - lastAccNorm)
+        lastAccNorm = accNorm  // 更新上一帧的值
+        // print("accNorm: \(accNorm), lastAccNorm: \(lastAccNorm)")
         
-        // 检测峰值
+        // 应用 OneEuro 滤波到差分值
+        let filteredValue = filter.apply(val: accNormDiff, te: SAMPLE_TIME)
+        
+        // 检测峰值 (使用差分值)
         let (peak, valley, isPeak, isValley) = detectPeaks(timestamp: timestamp, value: filteredValue)
         
         if isPeak, let peakValue = peak {
-            // 添加代理调用来保存峰值
             delegate?.signalProcessor(self, didDetectPeak: timestamp, value: peakValue)
             
             print("检测到Peak: \(String(format: "%.2f", peakValue)) @ \(String(format: "%.2f", timestamp))s")
@@ -144,8 +151,8 @@ class SignalProcessor {
                 peaks.removeFirst()
             }
             
-            // 添加到候选peaks
-            if peakValue > 0.3 {
+            // 修改阈值，因为现在是对差分值进行判断
+            if peakValue > 0.3 {  // 可能需要调整这个阈值
                 candidate_peaks.append((timestamp: timestamp, value: peakValue))
                 
                 // 维护单调栈
@@ -199,8 +206,8 @@ class SignalProcessor {
                     selected_peaks.append((peak_time, peak_val))
                     last_selected_time = peak_time
                     
-                    // 只有当峰值大于阈值时才同时保存和触发反馈
-                    if peak_val > 10.0 {
+                    // 调整阈值，因为现在是对差分值进行判断
+                    if peak_val > 0.3 {  // 可能需要调整这个阈值
                         print("强Peak触发反馈: \(String(format: "%.2f", peak_val))")
                         delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
                         // 只在触发反馈时保存选中的峰值
