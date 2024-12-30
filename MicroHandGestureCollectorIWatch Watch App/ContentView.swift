@@ -519,6 +519,7 @@ struct SettingsView: View {
     @AppStorage("saveValleys") private var saveValleys = false
     @AppStorage("saveSelectedPeaks") private var saveSelectedPeaks = false
     @AppStorage("saveQuaternions") private var saveQuaternions = false
+    @AppStorage("saveGestureData") private var saveGestureData = false
     
     // 添加反馈设置
     @AppStorage("enableVisualFeedback") private var enableVisualFeedback = true
@@ -575,6 +576,14 @@ struct SettingsView: View {
                     Toggle("保存姿态四元数", isOn: $saveQuaternions.animation())
                         .onChange(of: saveQuaternions) { newValue in
                             motionManager.updateSaveSettings(quaternions: newValue)
+                        }
+                }
+                
+                Section(header: Text("手势识别设置")) {
+                    Toggle("保存手势数据", isOn: $saveGestureData.animation())
+                        .onChange(of: saveGestureData) { newValue in
+                            UserDefaults.standard.set(newValue, forKey: "saveGestureData")
+                            motionManager.updateSaveSettings(gestureData: newValue)
                         }
                 }
                 

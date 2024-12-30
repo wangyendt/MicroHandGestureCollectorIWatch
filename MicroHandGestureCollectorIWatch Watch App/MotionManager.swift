@@ -41,6 +41,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     private var saveValleys: Bool = false
     private var saveSelectedPeaks: Bool = false
     private var saveQuaternions: Bool = false
+    private var saveGestureData: Bool = false
     
     // 添加可观察的计数属性
     @Published private(set) var peakCount: Int = 0
@@ -66,11 +67,15 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         print("陀螺仪状态: \(motionManager.isGyroAvailable ? "可用" : "不可用")")
         print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
         
-        // 从 UserDefaults 读取保存设置
+        // 从 UserDefaults 读取所有保存设置的初始值
         savePeaks = UserDefaults.standard.bool(forKey: "savePeaks")
         saveValleys = UserDefaults.standard.bool(forKey: "saveValleys")
         saveSelectedPeaks = UserDefaults.standard.bool(forKey: "saveSelectedPeaks")
         saveQuaternions = UserDefaults.standard.bool(forKey: "saveQuaternions")
+        saveGestureData = UserDefaults.standard.bool(forKey: "saveGestureData")  // 默认为 false
+        
+        // 初始化时就更新 GestureRecognizer 的设置
+        signalProcessor.gestureRecognizer.updateSettings(saveGestureData: saveGestureData)
     }
     
     // 实现代理方法
@@ -93,6 +98,17 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     public func signalProcessor(_ processor: SignalProcessor, didSelectPeak timestamp: TimeInterval, value: Double) {
         saveSelectedPeak(timestamp: UInt64(timestamp * 1_000_000_000), value: value)
+    }
+    
+    public func signalProcessor(_ processor: SignalProcessor, didRecognizeGesture gesture: String, confidence: Double) {
+        // 处理识别结果
+        print("识别到手势: \(gesture), 置信度: \(confidence)")
+        
+        // 可以触发反馈
+        // FeedbackManager.playFeedback(
+        //     style: .success,
+        //     speak: "识别到\(gesture)"
+        // )
     }
     
     public func startDataCollection(name: String, hand: String, gesture: String, force: String, note: String) {
@@ -293,6 +309,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         }
         
         isCollecting = true
+        
+        // 创建文件夹后，设置GestureRecognizer的当前文件夹
+        signalProcessor.gestureRecognizer.setCurrentFolder(folderURL)
     }
     
     public func stopDataCollection() {
@@ -348,6 +367,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         selectedPeakFileHandle = nil
         quaternionFileHandle?.closeFile()
         quaternionFileHandle = nil
+        
+        // 关闭手势数据文件
+        signalProcessor.gestureRecognizer.closeFiles()
     }
     
     public var isGyroAvailable: Bool {
@@ -435,7 +457,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         peaks: Bool? = nil,
         valleys: Bool? = nil,
         selectedPeaks: Bool? = nil,
-        quaternions: Bool? = nil
+        quaternions: Bool? = nil,
+        gestureData: Bool? = nil
     ) {
         if let peaks = peaks {
             savePeaks = peaks
@@ -448,6 +471,10 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         }
         if let quaternions = quaternions {
             saveQuaternions = quaternions
+        }
+        if let gestureData = gestureData {
+            saveGestureData = gestureData
+            signalProcessor.gestureRecognizer.updateSettings(saveGestureData: gestureData)
         }
     }
 }
