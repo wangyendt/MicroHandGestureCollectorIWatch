@@ -46,6 +46,9 @@ public class SignalProcessor {
     // 添加计数器
     private(set) var selectedPeakCount: Int = 0
     
+    // 在类属性中添加
+    public let gestureRecognizer = GestureRecognizer()
+    
     init(peakThreshold: Double = 0.3, peakWindow: Double = 0.6) {
         self.peakThreshold = peakThreshold
         self.peakWindow = peakWindow
@@ -138,6 +141,12 @@ public class SignalProcessor {
                 print("Current quaternion [w,x,y,z]: [\(String(format: "%.4f", lastQuaternion[0])), \(String(format: "%.4f", lastQuaternion[1])), \(String(format: "%.4f", lastQuaternion[2])), \(String(format: "%.4f", lastQuaternion[3]))]")
                 printQuatCounter = 0
             }
+            
+            gestureRecognizer.addIMUData(
+                timestamp: timestamp,
+                acc: SIMD3(acc.x, acc.y, acc.z),
+                gyro: SIMD3(gyro.x, gyro.y, gyro.z)
+            )
         }
         
         // 计算加速度范数的差分
@@ -220,6 +229,11 @@ public class SignalProcessor {
                         print("强Peak触发反馈: \(String(format: "%.2f", peak_val)), peakWindow=\(String(format: "%.2f", peakWindow))")
                         delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
                         delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
+                        
+                        // 进行手势识别
+                        if let (gesture, confidence) = gestureRecognizer.recognizeGesture(atPeakTime: peak_time) {
+                            delegate?.signalProcessor(self, didRecognizeGesture: gesture, confidence: confidence)
+                        }
                     }
                 }
                 
@@ -331,4 +345,5 @@ public protocol SignalProcessorDelegate: AnyObject {
     func signalProcessor(_ processor: SignalProcessor, didDetectPeak timestamp: TimeInterval, value: Double)
     func signalProcessor(_ processor: SignalProcessor, didDetectValley timestamp: TimeInterval, value: Double)
     func signalProcessor(_ processor: SignalProcessor, didSelectPeak timestamp: TimeInterval, value: Double)
+    func signalProcessor(_ processor: SignalProcessor, didRecognizeGesture gesture: String, confidence: Double)
 } 

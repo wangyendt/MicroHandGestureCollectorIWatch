@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		B096274E2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B0FCE81A2D2277D500DEDC4A /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0FCE8192D2277D500DEDC4A /* Accelerate.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,6 +70,7 @@
 		B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MicroHandGestureCollectorIWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B096275F2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "MicroHandGestureCollectorIWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B09627692D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "MicroHandGestureCollectorIWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0FCE8192D2277D500DEDC4A /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.2.sdk/System/Library/Frameworks/Accelerate.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -130,6 +132,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0FCE81A2D2277D500DEDC4A /* Accelerate.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,6 +162,7 @@
 				B09627512D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App */,
 				B09627622D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppTests */,
 				B096276C2D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests */,
+				B0FCE8182D2277D500DEDC4A /* Frameworks */,
 				B09627282D02CFA50015F052 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -174,6 +178,14 @@
 				B09627692D02CFA80015F052 /* MicroHandGestureCollectorIWatch Watch AppUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B0FCE8182D2277D500DEDC4A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B0FCE8192D2277D500DEDC4A /* Accelerate.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -671,7 +683,7 @@
 				INFOPLIST_KEY_NSMotionUsageDescription = "需要访问运动数据以进行手势识别";
 				INFOPLIST_KEY_UIRequiredDeviceCapabilities = "gyroscope accelerometer";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch.demo;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -713,7 +725,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatch.demo;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -745,7 +757,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatch.demo;
+				PRODUCT_BUNDLE_IDENTIFIER = wayne.MicroHandGestureCollectorIWatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
