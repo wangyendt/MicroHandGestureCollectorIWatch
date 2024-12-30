@@ -19,24 +19,28 @@ import WatchKit
 struct FeedbackManager {
     private static let synthesizer = AVSpeechSynthesizer()
     
-    // 修改反馈开关的初始化方式
+    // 添加反馈开关
     static var enableVisualFeedback = UserDefaults.standard.bool(forKey: "enableVisualFeedback") || !UserDefaults.standard.contains(forKey: "enableVisualFeedback")
     static var enableHapticFeedback = UserDefaults.standard.bool(forKey: "enableHapticFeedback") || !UserDefaults.standard.contains(forKey: "enableHapticFeedback")
     static var enableVoiceFeedback = UserDefaults.standard.bool(forKey: "enableVoiceFeedback") || !UserDefaults.standard.contains(forKey: "enableVoiceFeedback")
     
-    static func playFeedback(style: WKHapticType = .start, withFlash: Bool = true, speak text: String? = nil) {
+    static func playFeedback(
+        style: WKHapticType? = nil,  // 改为可选类型
+        withFlash: Bool? = nil,      // 改为可选类型
+        speak text: String? = nil
+    ) {
         // 振动反馈
-        if enableHapticFeedback {
+        if let style = style, enableHapticFeedback {
             WKInterfaceDevice.current().play(style)
         }
         
         // 视觉反馈
-        if enableVisualFeedback && withFlash {
+        if let flash = withFlash, flash && enableVisualFeedback {
             NotificationCenter.default.post(name: .flashScreenBorder, object: nil)
         }
         
         // 语音反馈
-        if enableVoiceFeedback, let text = text {
+        if let text = text, enableVoiceFeedback {
             let utterance = AVSpeechUtterance(string: text)
             utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
             utterance.rate = 0.5
