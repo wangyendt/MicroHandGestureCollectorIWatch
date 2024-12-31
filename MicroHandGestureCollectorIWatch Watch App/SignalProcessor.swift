@@ -239,19 +239,28 @@ public class SignalProcessor {
                     if peak_val > peakThreshold {
                         selectedPeakCount += 1
                         
-                        // 计算相对于第一帧的时间（秒）
+                        // 计算相对时间
                         let relativeTimeS = peak_time - (startTime ?? peak_time)
                         let timestampNs = UInt64(peak_time * 1_000_000_000)
                         
                         print("Peak detected at relative time: \(String(format: "%.3f", relativeTimeS))s")
                         
-                        // 触发反馈
-                        print("强Peak触发反馈: \(String(format: "%.2f", peak_val)), peakWindow=\(String(format: "%.2f", peakWindow))")
-                        delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
-                        delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
+                        // 根据设置决定是否触发峰值反馈
+                        let feedbackType = UserDefaults.standard.string(forKey: "feedbackType") ?? "peak"
+                        if feedbackType == "peak" {
+                            print("强Peak触发反馈: \(String(format: "%.2f", peak_val)), peakWindow=\(String(format: "%.2f", peakWindow))")
+                            delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
+                            delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
+                        }
                         
                         // 进行手势识别
                         if let (gesture, confidence) = gestureRecognizer.recognizeGesture(atPeakTime: peak_time) {
+                            // 根据设置决定是否触发手势反馈
+                            if feedbackType == "gesture" {
+                                // 触发手势反馈
+                                delegate?.signalProcessor(self, didRecognizeGesture: gesture, confidence: confidence)
+                            }
+                            
                             // 发送到 iPhone，使用相对时间
                             let result: [String: Any] = [
                                 "type": "gesture_result",
@@ -270,8 +279,6 @@ public class SignalProcessor {
                                     print("发送手势结果失败: \(error.localizedDescription)")
                                 }
                             }
-                            
-                            delegate?.signalProcessor(self, didRecognizeGesture: gesture, confidence: confidence)
                         }
                     }
                 }

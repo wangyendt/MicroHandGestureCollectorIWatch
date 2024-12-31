@@ -530,6 +530,9 @@ struct SettingsView: View {
     @AppStorage("enableHapticFeedback") private var enableHapticFeedback = true
     @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback = true
     
+    // 添加反馈类型设置
+    @AppStorage("feedbackType") private var feedbackType = "peak" // "peak" 或 "gesture"
+    
     @ObservedObject var motionManager: MotionManager
     
     let onSettingsChanged: (Double, Double) -> Void
@@ -592,15 +595,21 @@ struct SettingsView: View {
                 }
                 
                 Section(header: Text("反馈设置")) {
-                    Toggle("视觉反馈", isOn: $enableVisualFeedback.animation())
+                    Picker("反馈触发时机", selection: $feedbackType) {
+                        Text("峰值检测").tag("peak")
+                        Text("手势识别").tag("gesture")
+                    }
+                    .pickerStyle(.wheel)
+                    
+                    Toggle("视觉反馈", isOn: $enableVisualFeedback)
                         .onChange(of: enableVisualFeedback) { newValue in
                             FeedbackManager.enableVisualFeedback = newValue
                         }
-                    Toggle("振动反馈", isOn: $enableHapticFeedback.animation())
+                    Toggle("振动反馈", isOn: $enableHapticFeedback)
                         .onChange(of: enableHapticFeedback) { newValue in
                             FeedbackManager.enableHapticFeedback = newValue
                         }
-                    Toggle("语音反馈", isOn: $enableVoiceFeedback.animation())
+                    Toggle("语音反馈", isOn: $enableVoiceFeedback)
                         .onChange(of: enableVoiceFeedback) { newValue in
                             FeedbackManager.enableVoiceFeedback = newValue
                         }
