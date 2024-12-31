@@ -241,9 +241,9 @@ public class SignalProcessor {
                         
                         // 计算相对时间
                         let relativeTimeS = peak_time - (startTime ?? peak_time)
-                        let timestampNs = UInt64(peak_time * 1_000_000_000)
                         
-                        print("Peak detected at relative time: \(String(format: "%.3f", relativeTimeS))s")
+                        // 触发代理方法来保存选中的峰值
+                        delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
                         
                         // 根据设置决定是否触发峰值反馈
                         let feedbackType = UserDefaults.standard.string(forKey: "feedbackType") ?? "peak"
@@ -261,18 +261,26 @@ public class SignalProcessor {
                                 delegate?.signalProcessor(self, didRecognizeGesture: gesture, confidence: confidence)
                             }
                             
+                            // 先生成一个 UUID，然后在发送和保存时都使用这个相同的 ID
+                            let resultId = UUID().uuidString
+                            
                             // 发送到 iPhone，使用相对时间
                             let result: [String: Any] = [
                                 "type": "gesture_result",
-                                "timestamp": relativeTimeS,  // 使用相对时间（秒）
+                                "timestamp": relativeTimeS,
                                 "gesture": gesture,
                                 "confidence": confidence,
                                 "peakValue": peak_val,
-                                "id": UUID().uuidString
+                                "id": resultId
                             ]
                             
                             // 保存结果到文件
-                            saveResult(timestamp: timestampNs, relativeTime: relativeTimeS, gesture: gesture, confidence: confidence, peakValue: peak_val)
+                            saveResult(timestamp: UInt64(peak_time * 1_000_000_000), 
+                                      relativeTime: relativeTimeS, 
+                                      gesture: gesture, 
+                                      confidence: confidence, 
+                                      peakValue: peak_val,
+                                      id: resultId)
                             
                             if WCSession.default.isReachable {
                                 WCSession.default.sendMessage(result, replyHandler: nil) { error in
@@ -351,7 +359,7 @@ public class SignalProcessor {
     }
     
     // 添加保存结果的方法
-    private func saveResult(timestamp: UInt64, relativeTime: TimeInterval, gesture: String, confidence: Double, peakValue: Double) {
+    private func saveResult(timestamp: UInt64, relativeTime: TimeInterval, gesture: String, confidence: Double, peakValue: Double, id: String) {
         guard let folderURL = currentFolderURL else {
             print("Error: currentFolderURL is nil")
             return
@@ -372,11 +380,10 @@ public class SignalProcessor {
             }
         }
         
-        // 写入结果，使用传入的相对时间
-        let id = UUID().uuidString
+        // 使用传入的 ID 而不是生成新的
         let resultString = String(format: "%llu,%.3f,%@,%.3f,%.3f,%@\n",
                                 timestamp,
-                                relativeTime,  // 使用传入的相对时间
+                                relativeTime,
                                 gesture,
                                 confidence,
                                 peakValue,

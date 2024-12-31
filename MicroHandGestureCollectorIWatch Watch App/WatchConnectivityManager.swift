@@ -19,6 +19,8 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     private var dataBuffer: [(CMAcceleration, CMRotationRate, UInt64)] = []
     private let batchSize = 10  // 每5个样本发送一次
     
+    private var currentFolderURL: URL?
+    
     private override init() {
         super.init()
         
@@ -152,6 +154,79 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             self.dataBuffer.removeAll()
         }
     }
+    
+    func setCurrentFolder(_ url: URL) {
+        currentFolderURL = url
+        print("Set current folder to: \(url.path)")
+    }
+    
+    private func deleteResultFromFile(id: String) {
+        guard let folderURL = currentFolderURL else {
+            print("❌ No current folder set")
+            return
+        }
+        
+        let resultFileURL = folderURL.appendingPathComponent("result.txt")
+        print("🔍 Attempting to delete from file: \(resultFileURL.path)")
+        
+        guard FileManager.default.fileExists(atPath: resultFileURL.path) else {
+            print("❌ Result file not found at path: \(resultFileURL.path)")
+            return
+        }
+        
+        do {
+            print("📝 Processing result file...")
+            print("🗑️ Looking for ID to delete: \(id)")
+            
+            // 读取文件内容
+            let content = try String(contentsOf: resultFileURL, encoding: .utf8)
+            let lines = content.components(separatedBy: .newlines)
+            print("📊 Total lines in file: \(lines.count)")
+            
+            // 过滤掉要删除的行，保留表头和其他行
+            var newLines = [String]()
+            var foundMatch = false
+            
+            // 打印所有行的ID
+            print("📋 All IDs in file:")
+            for (index, line) in lines.enumerated() {
+                if index == 0 {
+                    // 保留表头
+                    newLines.append(line)
+                    print("Header: \(line)")
+                } else if !line.isEmpty {
+                    // 提取并打印每行的ID
+                    let components = line.components(separatedBy: ",")
+                    if components.count >= 6 {
+                        let lineId = components[5]
+                        print("Line \(index): ID = \(lineId)")
+                        
+                        // 检查是否是要删除的行
+                        if line.contains(id) {
+                            foundMatch = true
+                            print("✅ Found line to delete: \(line)")
+                        } else {
+                            newLines.append(line)
+                        }
+                    } else {
+                        print("⚠️ Invalid line format at line \(index): \(line)")
+                    }
+                }
+            }
+            
+            // 只有在找到匹配行时才重写文件
+            if foundMatch {
+                print("✍️ Rewriting file with \(newLines.count) lines")
+                let newContent = newLines.joined(separator: "\n") + "\n"
+                try newContent.write(to: resultFileURL, atomically: true, encoding: .utf8)
+                print("✅ Successfully deleted record with ID: \(id)")
+            } else {
+                print("❌ No matching record found for ID: \(id)")
+            }
+        } catch {
+            print("❌ Error deleting result: \(error)")
+        }
+    }
 }
 
 extension WatchConnectivityManager: WCSessionDelegate {
@@ -174,56 +249,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        print("📱 Received message from iPhone: \(message)")
         if message["type"] as? String == "delete_result",
            let idToDelete = message["id"] as? String {
+            print("🗑️ Received delete request for ID: \(idToDelete)")
             deleteResultFromFile(id: idToDelete)
-        }
-    }
-    
-    private func deleteResultFromFile(id: String) {
-        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { 
-            print("Failed to get documents path")
-            return 
-        }
-        
-        do {
-            // 遍历所有文件夹
-            let fileURLs = try FileManager.default.contentsOfDirectory(at: documentsPath, includingPropertiesForKeys: nil)
-            for folderURL in fileURLs where folderURL.hasDirectoryPath {
-                let resultFileURL = folderURL.appendingPathComponent("result.txt")
-                
-                if FileManager.default.fileExists(atPath: resultFileURL.path) {
-                    print("Processing result file: \(resultFileURL.path)")
-                    
-                    // 读取文件内容
-                    let content = try String(contentsOf: resultFileURL, encoding: .utf8)
-                    var lines = content.components(separatedBy: .newlines)
-                    
-                    // 记录原始行数
-                    let originalCount = lines.count
-                    
-                    // 过滤掉要删除的行，保留表头和其他行
-                    lines = lines.enumerated().filter { index, line in
-                        if index == 0 { return true }  // 保留表头
-                        if line.isEmpty { return false }  // 跳过空行
-                        return !line.contains(id)  // 过滤掉包含指定ID的行
-                    }.map { $0.element }
-                    
-                    // 确保文件以换行符结束
-                    if let last = lines.last, !last.isEmpty {
-                        lines.append("")
-                    }
-                    
-                    // 写回文件
-                    let newContent = lines.joined(separator: "\n")
-                    try newContent.write(to: resultFileURL, atomically: true, encoding: .utf8)
-                    
-                    print("Processed file: \(resultFileURL.lastPathComponent)")
-                    print("Lines before: \(originalCount), after: \(lines.count)")
-                }
-            }
-        } catch {
-            print("Error deleting result: \(error)")
         }
     }
 } 
