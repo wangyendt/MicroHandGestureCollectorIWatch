@@ -392,8 +392,11 @@ public class SignalProcessor {
     
     // 添加设置当前文件夹的方法
     func setCurrentFolder(_ url: URL) {
-        print("Setting current folder to: \(url.path)") // 添加调试信息
+        print("Setting current folder to: \(url.path)")
         currentFolderURL = url
+        // 将文件夹 URL 也传递给 GestureRecognizer
+        gestureRecognizer.setCurrentFolder(url)  // 确保这行代码被执行
+        
         // 关闭之前的文件句柄
         resultFileHandle?.closeFile()
         resultFileHandle = nil
@@ -401,10 +404,11 @@ public class SignalProcessor {
     
     // 在停止数据收集时关闭文件
     func closeFiles() {
-        print("Closing result.txt file") // 添加调试信息
+        print("Closing SignalProcessor files")
         resultFileHandle?.closeFile()
         resultFileHandle = nil
-        currentFolderURL = nil // 也清除当前文件夹URL
+        currentFolderURL = nil
+        gestureRecognizer.closeFiles()  // 确保也关闭 GestureRecognizer 的文件
     }
     
     // 在开始新的数据采集时重置开始时间

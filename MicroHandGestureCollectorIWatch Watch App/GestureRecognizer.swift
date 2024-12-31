@@ -332,12 +332,15 @@ public class GestureRecognizer {
     }
     
     public func setCurrentFolder(_ url: URL) {
+        print("GestureRecognizer: Setting current folder to: \(url.path)")  // 添加日志
         currentFolderURL = url
         gestureCount = 0  // 重置计数器
     }
     
     public func closeFiles() {
+        print("GestureRecognizer: Closing files")  // 添加日志
         gestureCount = 0  // 重置计数器
+        currentFolderURL = nil  // 清除文件夹 URL
     }
     
     private func saveGestureData(rawData: [(acc: SIMD3<Double>, gyro: SIMD3<Double>)], 
