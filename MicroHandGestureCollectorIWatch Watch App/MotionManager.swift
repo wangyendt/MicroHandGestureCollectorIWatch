@@ -83,6 +83,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         // 触发振动、视觉和语音反馈
         FeedbackManager.playFeedback(
             style: .success,
+            withFlash: true,
             speak: "\(processor.selectedPeakCount)"
         )
         peakCount = processor.selectedPeakCount
@@ -377,6 +378,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         // 关闭手势数据文件
         signalProcessor.closeFiles()
         print("Closed SignalProcessor files") // 添加调试信息
+        
+        signalProcessor.resetStartTime()  // 重置开始时间
     }
     
     public var isGyroAvailable: Bool {
