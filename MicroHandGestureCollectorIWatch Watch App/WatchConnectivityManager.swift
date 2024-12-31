@@ -181,7 +181,10 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
     
     private func deleteResultFromFile(id: String) {
-        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { 
+            print("Failed to get documents path")
+            return 
+        }
         
         do {
             // 遍历所有文件夹
@@ -190,24 +193,33 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 let resultFileURL = folderURL.appendingPathComponent("result.txt")
                 
                 if FileManager.default.fileExists(atPath: resultFileURL.path) {
+                    print("Processing result file: \(resultFileURL.path)")
+                    
                     // 读取文件内容
                     let content = try String(contentsOf: resultFileURL, encoding: .utf8)
-                    let lines = content.components(separatedBy: .newlines)
+                    var lines = content.components(separatedBy: .newlines)
                     
-                    // 过滤掉要删除的行，同时保留表头
-                    var newLines = lines.enumerated().filter { index, line in
-                        index == 0 || !line.contains(id)  // 保留第一行（表头）和不包含要删除ID的行
+                    // 记录原始行数
+                    let originalCount = lines.count
+                    
+                    // 过滤掉要删除的行，保留表头和其他行
+                    lines = lines.enumerated().filter { index, line in
+                        if index == 0 { return true }  // 保留表头
+                        if line.isEmpty { return false }  // 跳过空行
+                        return !line.contains(id)  // 过滤掉包含指定ID的行
                     }.map { $0.element }
                     
-                    // 确保最后一行没有多余的换行符
-                    if let last = newLines.last, last.isEmpty {
-                        newLines.removeLast()
+                    // 确保文件以换行符结束
+                    if let last = lines.last, !last.isEmpty {
+                        lines.append("")
                     }
                     
                     // 写回文件
-                    let newContent = newLines.joined(separator: "\n") + "\n"
+                    let newContent = lines.joined(separator: "\n")
                     try newContent.write(to: resultFileURL, atomically: true, encoding: .utf8)
-                    print("Deleted result with ID: \(id) from file")
+                    
+                    print("Processed file: \(resultFileURL.lastPathComponent)")
+                    print("Lines before: \(originalCount), after: \(lines.count)")
                 }
             }
         } catch {

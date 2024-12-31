@@ -327,6 +327,7 @@ public class GestureRecognizer {
     }
     
     public func updateSettings(saveGestureData: Bool) {
+        print("GestureRecognizer: Updating saveGestureData to \(saveGestureData)")  // 添加日志
         self.saveGestureData = saveGestureData
     }
     
@@ -342,9 +343,15 @@ public class GestureRecognizer {
     private func saveGestureData(rawData: [(acc: SIMD3<Double>, gyro: SIMD3<Double>)], 
                                 processedData: [(acc: [Double], gyro: [Double])],
                                 prediction: (gesture: String, confidence: Double)?) {
+        // 添加调试日志
+        print("Attempting to save gesture data. saveGestureData=\(saveGestureData), folderURL=\(String(describing: currentFolderURL))")
+        
         guard saveGestureData,
               let folderURL = currentFolderURL,
-              let prediction = prediction else { return }
+              let prediction = prediction else {
+            print("Failed to save gesture data: saveGestureData=\(saveGestureData), folderURL exists=\(currentFolderURL != nil)")
+            return
+        }
         
         gestureCount += 1
         let fileName = "gesture_model_data_\(gestureCount).txt"

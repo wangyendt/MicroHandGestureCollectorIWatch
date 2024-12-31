@@ -313,11 +313,11 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         // 创建文件夹后，设置 SignalProcessor 的当前文件夹
         signalProcessor.setCurrentFolder(folderURL)
-        print("Set folder for SignalProcessor: \(folderURL.path)") // 添加调试信息
+        print("Set folder for SignalProcessor: \(folderURL.path)")
         
         // 确保设置被正确应用
         signalProcessor.gestureRecognizer.updateSettings(saveGestureData: saveGestureData)
-        print("Applied gesture data saving setting: \(saveGestureData)") // 添加调试日志
+        print("Applied gesture data saving setting: \(saveGestureData)")
     }
     
     public func stopDataCollection() {
@@ -486,9 +486,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         if let gestureData = gestureData {
             saveGestureData = gestureData
             UserDefaults.standard.set(gestureData, forKey: "saveGestureData")
+            print("MotionManager: Updating gesture data saving to \(gestureData)")
             // 立即更新 GestureRecognizer 的设置
             signalProcessor.gestureRecognizer.updateSettings(saveGestureData: gestureData)
-            print("Updated gesture data saving setting to: \(gestureData)") // 添加调试日志
         }
     }
 }
