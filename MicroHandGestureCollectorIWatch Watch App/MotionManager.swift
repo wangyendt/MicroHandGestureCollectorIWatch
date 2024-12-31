@@ -80,7 +80,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     // 实现代理方法
     public func signalProcessor(_ processor: SignalProcessor, didDetectStrongPeak value: Double) {
-        // 触发振动、视觉和语音反馈
+        // 峰值反馈
         FeedbackManager.playFeedback(
             style: .success,
             withFlash: true,
@@ -102,14 +102,13 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     public func signalProcessor(_ processor: SignalProcessor, didRecognizeGesture gesture: String, confidence: Double) {
-        // 处理识别结果
+        // 手势反馈
+        FeedbackManager.playFeedback(
+            style: .success,
+            withFlash: true,
+            speak: "\(gesture)"
+        )
         print("识别到手势: \(gesture), 置信度: \(confidence)")
-        
-        // 可以触发反馈
-        // FeedbackManager.playFeedback(
-        //     style: .success,
-        //     speak: "识别到\(gesture)"
-        // )
     }
     
     public func startDataCollection(name: String, hand: String, gesture: String, force: String, note: String) {
