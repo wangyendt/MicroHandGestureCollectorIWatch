@@ -5,6 +5,11 @@ project(butterworth_filter)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# 设置包含目录
+include_directories(
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../MicroHandGestureCollectorIWatch Watch App/cpp/detrend_iir"
+)
+
 # 方案1: 允许通过命令行参数指定Python路径
 if(DEFINED PYTHON_EXECUTABLE)
     set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
@@ -49,8 +54,8 @@ find_package(pybind11 CONFIG REQUIRED)
 
 # 添加源文件
 set(SOURCES
-    butterworth_filter.cpp
-    butterworth_filter_bind.cpp
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../MicroHandGestureCollectorIWatch Watch App/cpp/detrend_iir/butterworth_filter.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/butterworth_filter_bind.cpp"
 )
 
 # 创建Python模块
