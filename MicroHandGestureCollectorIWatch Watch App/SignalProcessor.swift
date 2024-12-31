@@ -120,9 +120,10 @@ public class SignalProcessor {
     
     // 处理新的数据点
     func processNewPoint(timestamp: TimeInterval, accNorm: Double, acc: (x: Double, y: Double, z: Double)? = nil, gyro: (x: Double, y: Double, z: Double)? = nil) {
-        // 设置开始时间
+        // 设置开始时间（第一帧的时间戳）
         if startTime == nil {
             startTime = timestamp
+            print("Set start time to: \(timestamp)")
         }
         
         // 如果提供了原始的加速度和陀螺仪数据，更新姿态解算
@@ -210,19 +211,10 @@ public class SignalProcessor {
     
     // 添加检查候选peaks的方法
     private func checkCandidatePeaks(currentTime: TimeInterval) {
-        // 设置开始时间
-        if startTime == nil {
-            startTime = currentTime
-        }
-        
-        // 计算相对时间
-        let relativeTime = currentTime - (startTime ?? currentTime)
-        
         var i = 0
         while i < candidate_peaks.count {
             let (peak_time, peak_val) = candidate_peaks[i]
             
-            // 使用 peakWindow 替代 peak_window
             if currentTime >= peak_time + peakWindow {
                 // 清理过期的单调栈元素
                 while !monotonic_stack.isEmpty && monotonic_stack[0].timestamp < peak_time - peakWindow {
@@ -245,25 +237,33 @@ public class SignalProcessor {
                     last_selected_time = peak_time
                     
                     if peak_val > peakThreshold {
-                        selectedPeakCount += 1  // 增加计数
+                        selectedPeakCount += 1
+                        
+                        // 计算相对于第一帧的时间（秒）
+                        let relativeTimeS = peak_time - (startTime ?? peak_time)
+                        let timestampNs = UInt64(peak_time * 1_000_000_000)
+                        
+                        print("Peak detected at relative time: \(String(format: "%.3f", relativeTimeS))s")
+                        
+                        // 触发反馈
                         print("强Peak触发反馈: \(String(format: "%.2f", peak_val)), peakWindow=\(String(format: "%.2f", peakWindow))")
                         delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
                         delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
                         
                         // 进行手势识别
                         if let (gesture, confidence) = gestureRecognizer.recognizeGesture(atPeakTime: peak_time) {
-                            // 保存结果到文件
-                            saveResult(timestamp: peak_time, gesture: gesture, confidence: confidence, peakValue: peak_val)
-                            
-                            // 发送到 iPhone
+                            // 发送到 iPhone，使用相对时间
                             let result: [String: Any] = [
                                 "type": "gesture_result",
-                                "timestamp": relativeTime, // 使用相对时间
+                                "timestamp": relativeTimeS,  // 使用相对时间（秒）
                                 "gesture": gesture,
                                 "confidence": confidence,
                                 "peakValue": peak_val,
-                                "id": UUID().uuidString  // 添加唯一标识符
+                                "id": UUID().uuidString
                             ]
+                            
+                            // 保存结果到文件
+                            saveResult(timestamp: timestampNs, relativeTime: relativeTimeS, gesture: gesture, confidence: confidence, peakValue: peak_val)
                             
                             if WCSession.default.isReachable {
                                 WCSession.default.sendMessage(result, replyHandler: nil) { error in
@@ -344,7 +344,7 @@ public class SignalProcessor {
     }
     
     // 添加保存结果的方法
-    private func saveResult(timestamp: TimeInterval, gesture: String, confidence: Double, peakValue: Double) {
+    private func saveResult(timestamp: UInt64, relativeTime: TimeInterval, gesture: String, confidence: Double, peakValue: Double) {
         guard let folderURL = currentFolderURL else {
             print("Error: currentFolderURL is nil")
             return
@@ -352,10 +352,6 @@ public class SignalProcessor {
         
         let resultFileURL = folderURL.appendingPathComponent("result.txt")
         print("Saving result to: \(resultFileURL.path)")
-        
-        // 转换时间戳：原始时间戳保持纳秒单位，相对时间戳使用秒单位
-        let timestampNs = UInt64(timestamp * 1_000_000_000)
-        let relativeTimeS = timestamp - (startTime ?? timestamp)
         
         // 如果文件不存在，创建文件并写入表头
         if !FileManager.default.fileExists(atPath: resultFileURL.path) {
@@ -369,11 +365,11 @@ public class SignalProcessor {
             }
         }
         
-        // 写入结果，对于相对时间使用浮点数格式
+        // 写入结果，使用传入的相对时间
         let id = UUID().uuidString
         let resultString = String(format: "%llu,%.3f,%@,%.3f,%.3f,%@\n",
-                                timestampNs,
-                                relativeTimeS,  // 使用秒为单位的相对时间
+                                timestamp,
+                                relativeTime,  // 使用传入的相对时间
                                 gesture,
                                 confidence,
                                 peakValue,
