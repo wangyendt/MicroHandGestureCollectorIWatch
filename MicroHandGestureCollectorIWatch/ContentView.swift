@@ -129,6 +129,105 @@ struct ContentView: View {
                             .foregroundColor(.secondary)
                             .padding()
                     }
+                    
+                    // 在陀螺仪图表下方添加手势结果显示
+                    VStack(spacing: 0) {
+                        // 标题栏
+                        HStack {
+                            Text("手势识别结果")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(sensorManager.gestureResults.count) 个结果")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .background(Color(.systemBackground))
+                        
+                        // 表头
+                        HStack {
+                            Text("时间")
+                                .frame(width: 70, alignment: .leading)
+                            Text("手势")
+                                .frame(width: 80, alignment: .leading)
+                            Text("置信度")
+                                .frame(width: 70, alignment: .leading)
+                            Text("峰值")
+                                .frame(width: 70, alignment: .leading)
+                            Spacer()
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        
+                        // 结果列表
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                LazyVStack(spacing: 0) {
+                                    ForEach(sensorManager.gestureResults) { result in
+                                        HStack {
+                                            // 时间列
+                                            Text(String(format: "%.2fs", result.timestamp))
+                                                .frame(width: 70, alignment: .leading)
+                                                .font(.system(.body, design: .monospaced))
+                                            
+                                            // 手势列
+                                            Text(result.gesture)
+                                                .frame(width: 80, alignment: .leading)
+                                                .bold()
+                                            
+                                            // 置信度列
+                                            Text(String(format: "%.2f", result.confidence))
+                                                .frame(width: 70, alignment: .leading)
+                                                .foregroundColor(result.confidence > 0.8 ? .green : .orange)
+                                            
+                                            // 峰值列
+                                            Text(String(format: "%.2f", result.peakValue))
+                                                .frame(width: 70, alignment: .leading)
+                                            
+                                            Spacer()
+                                            
+                                            // 删除按钮
+                                            Button(action: {
+                                                withAnimation {
+                                                    sensorManager.deleteResult(result)
+                                                }
+                                            }) {
+                                                Image(systemName: "trash")
+                                                    .foregroundColor(.red)
+                                                    .imageScale(.small)
+                                            }
+                                        }
+                                        .id(result.id)  // 添加 id
+                                        .padding(.horizontal)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            Rectangle()
+                                                .fill(Color(.systemBackground))
+                                                .shadow(color: Color.black.opacity(0.05), radius: 1, x: 0, y: 1)
+                                        )
+                                        .transition(.opacity)
+                                    }
+                                }
+                            }
+                            .frame(height: 350)
+                            .background(Color(.systemGray6))
+                            .onChange(of: sensorManager.gestureResults.count) { _ in
+                                // 当有新结果时，自动滚动到最后一个结果
+                                if let lastId = sensorManager.gestureResults.last?.id {
+                                    withAnimation {
+                                        proxy.scrollTo(lastId, anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                    .padding(.horizontal)
                 }
                 .padding(.vertical, 20)
             }
