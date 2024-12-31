@@ -137,139 +137,34 @@ public class GestureRecognizer {
         case bandstop
     }
     
-    // 添加 Butterworth 滤波器类
-    private class ButterworthFilter {
-        private let b = [0.63602426, 0.0, -1.27204851, 0.0, 0.63602426]
-        private let a = [1.0, -0.84856511, -0.87090805, 0.31034215, 0.40923166]
+    private func butterBandpassFilter(data: [[Double]], fs: Double, lowCut: Double, highCut: Double) -> [[Double]] {
+        // 使用预定义的滤波器系数
+        let b = [0.63602426, 0.0, -1.27204851, 0.0, 0.63602426]
+        let a = [1.0, -0.84856511, -0.87090805, 0.31034215, 0.40923166]
         
-        func filter(_ x: [Double]) -> [Double] {
-            // 去除信号趋势
-            let detrended = detrend(x)
-            
-            // 计算边界扩展
-            let (edge, ext) = validatePad(x: detrended)
-            
-            // 计算初始状态
-            let zi = lfilterZi()
-            
-            // 正向滤波
-            let x0 = ext[0]
-            var (y, _) = lfilter(ext, zi: zi.map { $0 * x0 })
-            
-            // 反向滤波
-            let y0 = y[y.count - 1]
-            y.reverse()
-            (y, _) = lfilter(y, zi: zi.map { $0 * y0 })
-            y.reverse()
-            
-            // 提取有效部分
-            return Array(y[edge..<(y.count - edge)])
+        // 创建ButterworthFilter实例
+        guard let filter = ButterworthFilterBridge(b: b as NSArray as! [NSNumber], a: a as NSArray as! [NSNumber]) else {
+            print("Error: Failed to create ButterworthFilterBridge")
+            return data // 如果创建失败，返回原始数据
         }
-        
-        private func detrend(_ x: [Double]) -> [Double] {
-            let n = x.count
-            guard n > 1 else { return x }
-            
-            // 计算线性趋势
-            let x_idx = Array(0..<n).map { Double($0) }
-            let mean_x = x_idx.reduce(0.0, +) / Double(n)
-            let mean_y = x.reduce(0.0, +) / Double(n)
-            
-            var slope = 0.0
-            var numerator = 0.0
-            var denominator = 0.0
-            
-            for i in 0..<n {
-                let dx = x_idx[i] - mean_x
-                let dy = x[i] - mean_y
-                numerator += dx * dy
-                denominator += dx * dx
-            }
-            
-            if denominator != 0 {
-                slope = numerator / denominator
-            }
-            
-            // 移除趋势
-            return x.enumerated().map { i, y in
-                y - (slope * Double(i) + (mean_y - slope * mean_x))
-            }
-        }
-        
-        private func validatePad(x: [Double]) -> (edge: Int, ext: [Double]) {
-            let ntaps = max(a.count, b.count)
-            let edge = ntaps * 3
-            
-            // 使用奇对称扩展
-            var ext = [Double](repeating: 0.0, count: x.count + 2 * edge)
-            
-            // 复制主信号
-            for i in 0..<x.count {
-                ext[i + edge] = x[i]
-            }
-            
-            // 奇对称扩展边界
-            for i in 0..<edge {
-                ext[i] = 2 * x[0] - x[edge - i - 1]
-                ext[ext.count - 1 - i] = 2 * x[x.count - 1] - x[x.count - 2 - i]
-            }
-            
-            return (edge, ext)
-        }
-        
-        private func lfilterZi() -> [Double] {
-            let n = max(a.count, b.count) - 1
-            var zi = [Double](repeating: 0.0, count: n)
-            
-            let sum_b = b.reduce(0.0, +)
-            let sum_a = a.reduce(0.0, +)
-            
-            if abs(sum_a) > 1e-6 {
-                let gain = sum_b / sum_a
-                for i in 0..<zi.count {
-                    zi[i] = gain
-                }
-            }
-            
-            return zi
-        }
-        
-        private func lfilter(_ x: [Double], zi: [Double]) -> (y: [Double], zf: [Double]) {
-            let n = x.count
-            var y = [Double](repeating: 0.0, count: n)
-            var z = zi
-            
-            // 使用直接II型结构实现滤波
-            for i in 0..<n {
-                y[i] = b[0] * x[i] + z[0]
-                
-                // 更新状态变量
-                for j in 1..<a.count {
-                    z[j-1] = b[j] * x[i] - a[j] * y[i] + (j < z.count ? z[j] : 0.0)
-                }
-            }
-            
-            return (y, z)
-        }
-    }
-    
-    private func butterBandpassFilter(data: [[Double]], fs: Double, lowCut: Double, highCut: Double, order: Int = 2) -> [[Double]] {
-        // 将截止频率归一化到 Nyquist 频率
-        let nyquist = fs / 2.0
-        let lowW = lowCut / nyquist
-        let highW = highCut / nyquist
-        
-        // 计算滤波器系数
-        let (b, a) = butterCoefficients(order: order, lowW: lowW, highW: highW)
         
         // 对每个通道进行滤波
         var filtered = Array(repeating: Array(repeating: 0.0, count: data[0].count), count: data.count)
         
         for ch in 0..<data[0].count {
             let channelData = data.map { $0[ch] }
-            let filteredChannel = filtfilt(x: channelData, b: b, a: a)
-            filtered.indices.forEach { i in
-                filtered[i][ch] = filteredChannel[i]
+            // 将Double数组转换为NSNumber数组
+            let channelDataNS = channelData.map { NSNumber(value: $0) }
+            // 调用C++实现的滤波器
+            if let filteredChannel = filter.filterData(channelDataNS) {
+                filtered.indices.forEach { i in
+                    filtered[i][ch] = filteredChannel[i].doubleValue
+                }
+            } else {
+                // 如果滤波失败，使用原始数据
+                filtered.indices.forEach { i in
+                    filtered[i][ch] = data[i][ch]
+                }
             }
         }
         
