@@ -120,6 +120,11 @@ public class SignalProcessor {
     
     // 处理新的数据点
     func processNewPoint(timestamp: TimeInterval, accNorm: Double, acc: (x: Double, y: Double, z: Double)? = nil, gyro: (x: Double, y: Double, z: Double)? = nil) {
+        // 设置开始时间
+        if startTime == nil {
+            startTime = timestamp
+        }
+        
         // 如果提供了原始的加速度和陀螺仪数据，更新姿态解算
         if let acc = acc, let gyro = gyro {
             // 创建数组并转换为指针
@@ -350,7 +355,7 @@ public class SignalProcessor {
         
         // 转换时间戳：原始时间戳保持纳秒单位，相对时间戳使用秒单位
         let timestampNs = UInt64(timestamp * 1_000_000_000)
-        let relativeTimeS = timestamp - (startTime ?? timestamp)  // 秒为单位
+        let relativeTimeS = timestamp - (startTime ?? timestamp)
         
         // 如果文件不存在，创建文件并写入表头
         if !FileManager.default.fileExists(atPath: resultFileURL.path) {
@@ -374,7 +379,7 @@ public class SignalProcessor {
                                 peakValue,
                                 id)
         
-        if let data = resultString.data(using: .utf8) {
+        if let data = resultString.data(using: String.Encoding.utf8) {
             if resultFileHandle == nil {
                 do {
                     resultFileHandle = try FileHandle(forWritingTo: resultFileURL)
