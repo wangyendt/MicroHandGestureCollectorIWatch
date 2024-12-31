@@ -318,6 +318,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         // 确保设置被正确应用
         signalProcessor.gestureRecognizer.updateSettings(saveGestureData: saveGestureData)
         print("Applied gesture data saving setting: \(saveGestureData)")
+        
+        WatchConnectivityManager.shared.setCurrentFolder(folderURL)  // 设置当前文件夹
     }
     
     public func stopDataCollection() {
