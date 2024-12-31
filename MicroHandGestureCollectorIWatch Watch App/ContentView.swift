@@ -524,6 +524,7 @@ struct SettingsView: View {
     @AppStorage("saveSelectedPeaks") private var saveSelectedPeaks = false
     @AppStorage("saveQuaternions") private var saveQuaternions = false
     @AppStorage("saveGestureData") private var saveGestureData = false
+    @AppStorage("saveResultFile") private var saveResultFile = true
     
     // 添加反馈设置
     @AppStorage("enableVisualFeedback") private var enableVisualFeedback = true
@@ -591,6 +592,11 @@ struct SettingsView: View {
                         .onChange(of: saveGestureData) { newValue in
                             UserDefaults.standard.set(newValue, forKey: "saveGestureData")
                             motionManager.updateSaveSettings(gestureData: newValue)
+                        }
+                    Toggle("保存识别结果", isOn: $saveResultFile.animation())
+                        .onChange(of: saveResultFile) { newValue in
+                            UserDefaults.standard.set(newValue, forKey: "saveResultFile")
+                            motionManager.updateSaveSettings(resultFile: newValue)
                         }
                 }
                 

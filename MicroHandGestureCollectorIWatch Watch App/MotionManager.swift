@@ -469,7 +469,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         valleys: Bool? = nil,
         selectedPeaks: Bool? = nil,
         quaternions: Bool? = nil,
-        gestureData: Bool? = nil
+        gestureData: Bool? = nil,
+        resultFile: Bool? = nil
     ) {
         if let peaks = peaks {
             savePeaks = peaks
@@ -493,6 +494,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             print("MotionManager: Updating gesture data saving to \(gestureData)")
             // 立即更新 GestureRecognizer 的设置
             signalProcessor.gestureRecognizer.updateSettings(saveGestureData: gestureData)
+        }
+        if let resultFile = resultFile {
+            signalProcessor.updateSettings(saveResult: resultFile)
         }
     }
 }

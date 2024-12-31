@@ -56,6 +56,8 @@ public class SignalProcessor {
     // 在 SignalProcessor 类中添加属性
     private var startTime: TimeInterval?
     
+    private var shouldSaveResult = true  // 添加这个属性
+    
     init(peakThreshold: Double = 0.3, peakWindow: Double = 0.6) {
         self.peakThreshold = peakThreshold
         self.peakWindow = peakWindow
@@ -360,6 +362,12 @@ public class SignalProcessor {
     
     // 添加保存结果的方法
     private func saveResult(timestamp: UInt64, relativeTime: TimeInterval, gesture: String, confidence: Double, peakValue: Double, id: String) {
+        // 如果设置为不保存，直接返回
+        guard shouldSaveResult else {
+            print("Skipping result save: feature disabled")
+            return
+        }
+        
         guard let folderURL = currentFolderURL else {
             print("Error: currentFolderURL is nil")
             return
@@ -429,6 +437,12 @@ public class SignalProcessor {
     // 在开始新的数据采集时重置开始时间
     func resetStartTime() {
         startTime = nil
+    }
+    
+    // 添加更新设置的方法
+    func updateSettings(saveResult: Bool) {
+        shouldSaveResult = saveResult
+        print("Updated result saving setting: \(saveResult)")
     }
 }
 
