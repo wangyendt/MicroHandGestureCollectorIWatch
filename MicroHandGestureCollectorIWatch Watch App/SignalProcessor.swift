@@ -1,6 +1,6 @@
-import Foundation
 import Accelerate
 import CoreMotion
+import WatchConnectivity
 
 public class SignalProcessor {
     // 常量定义，与 Python 版本保持一致
@@ -48,6 +48,13 @@ public class SignalProcessor {
     
     // 在类属性中添加
     public let gestureRecognizer = GestureRecognizer()
+    
+    // 在 SignalProcessor 类中添加
+    private var resultFileHandle: FileHandle?
+    private var currentFolderURL: URL?
+    
+    // 在 SignalProcessor 类中添加属性
+    private var startTime: TimeInterval?
     
     init(peakThreshold: Double = 0.3, peakWindow: Double = 0.6) {
         self.peakThreshold = peakThreshold
@@ -198,6 +205,14 @@ public class SignalProcessor {
     
     // 添加检查候选peaks的方法
     private func checkCandidatePeaks(currentTime: TimeInterval) {
+        // 设置开始时间
+        if startTime == nil {
+            startTime = currentTime
+        }
+        
+        // 计算相对时间
+        let relativeTime = currentTime - (startTime ?? currentTime)
+        
         var i = 0
         while i < candidate_peaks.count {
             let (peak_time, peak_val) = candidate_peaks[i]
@@ -232,6 +247,25 @@ public class SignalProcessor {
                         
                         // 进行手势识别
                         if let (gesture, confidence) = gestureRecognizer.recognizeGesture(atPeakTime: peak_time) {
+                            // 保存结果到文件
+                            saveResult(timestamp: peak_time, gesture: gesture, confidence: confidence, peakValue: peak_val)
+                            
+                            // 发送到 iPhone
+                            let result: [String: Any] = [
+                                "type": "gesture_result",
+                                "timestamp": relativeTime, // 使用相对时间
+                                "gesture": gesture,
+                                "confidence": confidence,
+                                "peakValue": peak_val,
+                                "id": UUID().uuidString  // 添加唯一标识符
+                            ]
+                            
+                            if WCSession.default.isReachable {
+                                WCSession.default.sendMessage(result, replyHandler: nil) { error in
+                                    print("发送手势结果失败: \(error.localizedDescription)")
+                                }
+                            }
+                            
                             delegate?.signalProcessor(self, didRecognizeGesture: gesture, confidence: confidence)
                         }
                     }
@@ -302,6 +336,80 @@ public class SignalProcessor {
     // 添加重置计数的方法
     public func resetCount() {
         selectedPeakCount = 0
+    }
+    
+    // 添加保存结果的方法
+    private func saveResult(timestamp: TimeInterval, gesture: String, confidence: Double, peakValue: Double) {
+        guard let folderURL = currentFolderURL else {
+            print("Error: currentFolderURL is nil")
+            return
+        }
+        
+        let resultFileURL = folderURL.appendingPathComponent("result.txt")
+        print("Saving result to: \(resultFileURL.path)")
+        
+        // 转换时间戳：原始时间戳保持纳秒单位，相对时间戳使用秒单位
+        let timestampNs = UInt64(timestamp * 1_000_000_000)
+        let relativeTimeS = timestamp - (startTime ?? timestamp)  // 秒为单位
+        
+        // 如果文件不存在，创建文件并写入表头
+        if !FileManager.default.fileExists(atPath: resultFileURL.path) {
+            let header = "timestamp_ns,relative_timestamp_s,gesture,confidence,peak_value,id\n"
+            do {
+                try header.write(to: resultFileURL, atomically: true, encoding: .utf8)
+                print("Created new result.txt file")
+            } catch {
+                print("Error creating result.txt: \(error)")
+                return
+            }
+        }
+        
+        // 写入结果，对于相对时间使用浮点数格式
+        let id = UUID().uuidString
+        let resultString = String(format: "%llu,%.3f,%@,%.3f,%.3f,%@\n",
+                                timestampNs,
+                                relativeTimeS,  // 使用秒为单位的相对时间
+                                gesture,
+                                confidence,
+                                peakValue,
+                                id)
+        
+        if let data = resultString.data(using: .utf8) {
+            if resultFileHandle == nil {
+                do {
+                    resultFileHandle = try FileHandle(forWritingTo: resultFileURL)
+                    resultFileHandle?.seekToEndOfFile()
+                    print("Opened result.txt for writing")
+                } catch {
+                    print("Error opening result.txt for writing: \(error)")
+                    return
+                }
+            }
+            resultFileHandle?.write(data)
+            print("Wrote result to file: \(resultString)")
+        }
+    }
+    
+    // 添加设置当前文件夹的方法
+    func setCurrentFolder(_ url: URL) {
+        print("Setting current folder to: \(url.path)") // 添加调试信息
+        currentFolderURL = url
+        // 关闭之前的文件句柄
+        resultFileHandle?.closeFile()
+        resultFileHandle = nil
+    }
+    
+    // 在停止数据收集时关闭文件
+    func closeFiles() {
+        print("Closing result.txt file") // 添加调试信息
+        resultFileHandle?.closeFile()
+        resultFileHandle = nil
+        currentFolderURL = nil // 也清除当前文件夹URL
+    }
+    
+    // 在开始新的数据采集时重置开始时间
+    func resetStartTime() {
+        startTime = nil
     }
 }
 

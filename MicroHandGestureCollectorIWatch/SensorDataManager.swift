@@ -3,7 +3,7 @@ import WatchConnectivity
 import Network
 import QuartzCore
 
-class SensorDataManager: NSObject, ObservableObject {
+class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = SensorDataManager()
     private var connection: NWConnection?
     private let serverPort: UInt16 = 12345 // Mac服务器端口
@@ -22,6 +22,7 @@ class SensorDataManager: NSObject, ObservableObject {
     @Published var lastMessage = ""
     @Published var lastReceivedData: [String: Double] = [:]
     @Published var lastUpdateTime = Date()
+    @Published var gestureResults: [GestureResult] = []
     
     private var dataQueue = DispatchQueue(label: "com.wayne.dataQueue", qos: .userInteractive)
     private var lastSentTime: TimeInterval = 0
@@ -110,11 +111,10 @@ class SensorDataManager: NSObject, ObservableObject {
             self.lastUpdateTime = Date()
             self.lastMessage = ""
             self.lastSentTime = 0
+            self.gestureResults.removeAll()
         }
     }
-}
-
-extension SensorDataManager: WCSessionDelegate {
+    
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         if let error = error {
             lastMessage = "Watch连接失败: \(error.localizedDescription)"
@@ -178,6 +178,41 @@ extension SensorDataManager: WCSessionDelegate {
             }
         } else if message["type"] as? String == "stop_collection" {
             resetState()
+        } else if message["type"] as? String == "gesture_result",
+                  let timestamp = message["timestamp"] as? Double,
+                  let gesture = message["gesture"] as? String,
+                  let confidence = message["confidence"] as? Double,
+                  let peakValue = message["peakValue"] as? Double,
+                  let id = message["id"] as? String {
+            
+            DispatchQueue.main.async {
+                let result = GestureResult(
+                    id: id,
+                    timestamp: timestamp,
+                    gesture: gesture,
+                    confidence: confidence,
+                    peakValue: peakValue
+                )
+                self.gestureResults.append(result)
+            }
+        }
+    }
+    
+    func deleteResult(_ result: GestureResult) {
+        // 从本地列表中删除
+        if let index = gestureResults.firstIndex(where: { $0.id == result.id }) {
+            gestureResults.remove(at: index)
+        }
+        
+        // 发送删除消息到 Watch
+        if WCSession.default.isReachable {
+            let message = [
+                "type": "delete_result",
+                "id": result.id
+            ]
+            WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                print("发送删除消息失败: \(error.localizedDescription)")
+            }
         }
     }
 }

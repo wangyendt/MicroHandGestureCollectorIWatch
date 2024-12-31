@@ -113,6 +113,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     public func startDataCollection(name: String, hand: String, gesture: String, force: String, note: String) {
         signalProcessor.resetCount()  // 重置计数
+        signalProcessor.resetStartTime()  // 重置开始时间
         peakCount = 0
         // 设置更新间隔
         motionManager.accelerometerUpdateInterval = 1.0 / 200.0  // 200Hz
@@ -310,8 +311,13 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         isCollecting = true
         
-        // 创建文件夹后，设置GestureRecognizer的当前文件夹
-        signalProcessor.gestureRecognizer.setCurrentFolder(folderURL)
+        // 创建文件夹后，设置 SignalProcessor 的当前文件夹
+        signalProcessor.setCurrentFolder(folderURL)
+        print("Set folder for SignalProcessor: \(folderURL.path)") // 添加调试信息
+        
+        // 确保设置被正确应用
+        signalProcessor.gestureRecognizer.updateSettings(saveGestureData: saveGestureData)
+        print("Applied gesture data saving setting: \(saveGestureData)") // 添加调试日志
     }
     
     public func stopDataCollection() {
@@ -369,7 +375,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         quaternionFileHandle = nil
         
         // 关闭手势数据文件
-        signalProcessor.gestureRecognizer.closeFiles()
+        signalProcessor.closeFiles()
+        print("Closed SignalProcessor files") // 添加调试信息
     }
     
     public var isGyroAvailable: Bool {
@@ -462,19 +469,26 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     ) {
         if let peaks = peaks {
             savePeaks = peaks
+            UserDefaults.standard.set(peaks, forKey: "savePeaks")
         }
         if let valleys = valleys {
             saveValleys = valleys
+            UserDefaults.standard.set(valleys, forKey: "saveValleys")
         }
         if let selectedPeaks = selectedPeaks {
             saveSelectedPeaks = selectedPeaks
+            UserDefaults.standard.set(selectedPeaks, forKey: "saveSelectedPeaks")
         }
         if let quaternions = quaternions {
             saveQuaternions = quaternions
+            UserDefaults.standard.set(quaternions, forKey: "saveQuaternions")
         }
         if let gestureData = gestureData {
             saveGestureData = gestureData
+            UserDefaults.standard.set(gestureData, forKey: "saveGestureData")
+            // 立即更新 GestureRecognizer 的设置
             signalProcessor.gestureRecognizer.updateSettings(saveGestureData: gestureData)
+            print("Updated gesture data saving setting to: \(gestureData)") // 添加调试日志
         }
     }
 }

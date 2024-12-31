@@ -172,4 +172,46 @@ extension WatchConnectivityManager: WCSessionDelegate {
             }
         }
     }
+    
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        if message["type"] as? String == "delete_result",
+           let idToDelete = message["id"] as? String {
+            deleteResultFromFile(id: idToDelete)
+        }
+    }
+    
+    private func deleteResultFromFile(id: String) {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        
+        do {
+            // 遍历所有文件夹
+            let fileURLs = try FileManager.default.contentsOfDirectory(at: documentsPath, includingPropertiesForKeys: nil)
+            for folderURL in fileURLs where folderURL.hasDirectoryPath {
+                let resultFileURL = folderURL.appendingPathComponent("result.txt")
+                
+                if FileManager.default.fileExists(atPath: resultFileURL.path) {
+                    // 读取文件内容
+                    let content = try String(contentsOf: resultFileURL, encoding: .utf8)
+                    let lines = content.components(separatedBy: .newlines)
+                    
+                    // 过滤掉要删除的行，同时保留表头
+                    var newLines = lines.enumerated().filter { index, line in
+                        index == 0 || !line.contains(id)  // 保留第一行（表头）和不包含要删除ID的行
+                    }.map { $0.element }
+                    
+                    // 确保最后一行没有多余的换行符
+                    if let last = newLines.last, last.isEmpty {
+                        newLines.removeLast()
+                    }
+                    
+                    // 写回文件
+                    let newContent = newLines.joined(separator: "\n") + "\n"
+                    try newContent.write(to: resultFileURL, atomically: true, encoding: .utf8)
+                    print("Deleted result with ID: \(id) from file")
+                }
+            }
+        } catch {
+            print("Error deleting result: \(error)")
+        }
+    }
 } 
