@@ -89,45 +89,65 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
         }
         
         self.isSending = true
+        var transferredCount = 0
+        var skippedCount = 0
         
-        // 创建一个临时文件夹用于存放合并的数据
-        let temporaryDir = FileManager.default.temporaryDirectory
-        let mergedFileURL = temporaryDir.appendingPathComponent("merged_data.txt")
-        
-        do {
-            // 如果已存在则除
-            if FileManager.default.fileExists(atPath: mergedFileURL.path) {
-                try FileManager.default.removeItem(at: mergedFileURL)
-            }
-            
-            // 创建新文件
-            FileManager.default.createFile(atPath: mergedFileURL.path, contents: nil)
-            
-            // 合并所有文件内容
-            var mergedData = Data()
-            for fileURL in fileURLs {
-                if let fileData = try? Data(contentsOf: fileURL) {
-                    mergedData.append(fileData)
-                    // 添加分隔符
-                    if let separator = "\n---\n".data(using: .utf8) {
-                        mergedData.append(separator)
+        for fileURL in fileURLs {
+            do {
+                // 检查是否是文件夹
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory) else {
+                    continue
+                }
+                
+                if isDirectory.boolValue {
+                    // 如果是文件夹，遍历其中的所有文件
+                    let contents = try FileManager.default.contentsOfDirectory(
+                        at: fileURL,
+                        includingPropertiesForKeys: nil,
+                        options: [.skipsHiddenFiles]
+                    )
+                    
+                    for contentURL in contents {
+                        let metadata = [
+                            "name": contentURL.lastPathComponent,
+                            "folder": fileURL.lastPathComponent
+                        ]
+                        
+                        WCSession.default.transferFile(contentURL, metadata: metadata)
+                        transferredCount += 1
+                        
+                        DispatchQueue.main.async {
+                            self.lastMessage = "正在传输: \(transferredCount) 个文件"
+                        }
+                    }
+                } else {
+                    // 如果是单个文件，直接发送
+                    let metadata = [
+                        "name": fileURL.lastPathComponent,
+                        "folder": fileURL.deletingLastPathComponent().lastPathComponent
+                    ]
+                    
+                    WCSession.default.transferFile(fileURL, metadata: metadata)
+                    transferredCount += 1
+                    
+                    DispatchQueue.main.async {
+                        self.lastMessage = "正在传输: \(transferredCount) 个文件"
                     }
                 }
+            } catch {
+                print("Error processing file/folder: \(error)")
             }
-            
-            // 写入合并后的数据
-            try mergedData.write(to: mergedFileURL)
-            
-            // 发送文件
-            WCSession.default.transferFile(mergedFileURL, metadata: nil)
-            self.lastMessage = "数据发送中..."
-            
-        } catch {
-            self.lastMessage = "导出失败: \(error.localizedDescription)"
-            print("Export error: \(error)")
         }
         
-        self.isSending = false
+        DispatchQueue.main.async {
+            self.isSending = false
+            if skippedCount > 0 {
+                self.lastMessage = "传输完成: \(transferredCount) 个文件，\(skippedCount) 个文件已存在"
+            } else {
+                self.lastMessage = "传输完成: \(transferredCount) 个文件"
+            }
+        }
     }
     
     // 添加重置状态的方法

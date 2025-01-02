@@ -215,4 +215,49 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
             }
         }
     }
+    
+    func session(_ session: WCSession, didReceive file: WCSessionFile) {
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let watchDataPath = documentsPath.appendingPathComponent("WatchData", isDirectory: true)
+        
+        do {
+            // 创建 WatchData 文件夹（如果不存在）
+            if !FileManager.default.fileExists(atPath: watchDataPath.path) {
+                try FileManager.default.createDirectory(at: watchDataPath, withIntermediateDirectories: true)
+            }
+            
+            // 获取文件名和文件夹名
+            guard let fileName = file.metadata?["name"] as? String,
+                  let folderName = file.metadata?["folder"] as? String else {
+                print("文件信息缺失")
+                return
+            }
+            
+            // 创建对应的文件夹
+            let folderPath = watchDataPath.appendingPathComponent(folderName)
+            if !FileManager.default.fileExists(atPath: folderPath.path) {
+                try FileManager.default.createDirectory(at: folderPath, withIntermediateDirectories: true)
+            }
+            
+            let destinationURL = folderPath.appendingPathComponent(fileName)
+            
+            // 检查文件是否已存在
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                print("文件已存在: \(fileName)")
+                return
+            }
+            
+            // 移动文件到目标位置
+            try FileManager.default.moveItem(at: file.fileURL, to: destinationURL)
+            
+            DispatchQueue.main.async {
+                self.lastMessage = "接收文件成功: \(fileName)"
+            }
+        } catch {
+            print("处理接收文件失败: \(error)")
+            DispatchQueue.main.async {
+                self.lastMessage = "接收文件失败: \(error.localizedDescription)"
+            }
+        }
+    }
 }
