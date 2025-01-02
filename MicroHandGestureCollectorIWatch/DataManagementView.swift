@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DataFile: Identifiable {
     let id = UUID()
@@ -13,6 +14,8 @@ struct DataManagementView: View {
     @State private var isEditing = false
     @State private var showingDeleteAlert = false
     @State private var selectedFiles: Set<UUID> = []
+    @State private var showingShareSheet = false
+    @State private var selectedURLsToShare: [URL] = []
     
     var body: some View {
         NavigationView {
@@ -21,6 +24,23 @@ struct DataManagementView: View {
                     Text("暂无数据文件")
                         .foregroundColor(.secondary)
                 } else {
+                    if isEditing {
+                        // 全选/取消全选按钮
+                        Button(action: {
+                            if selectedFiles.count == dataFiles.count {
+                                selectedFiles.removeAll()
+                            } else {
+                                selectedFiles = Set(dataFiles.map { $0.id })
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: selectedFiles.count == dataFiles.count ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(selectedFiles.count == dataFiles.count ? .blue : .gray)
+                                Text(selectedFiles.count == dataFiles.count ? "取消全选" : "全选")
+                            }
+                        }
+                    }
+                    
                     ForEach(dataFiles) { file in
                         HStack {
                             if isEditing {
@@ -34,7 +54,15 @@ struct DataManagementView: View {
                                         }
                                     }
                             }
-                            Text(file.name)
+                            VStack(alignment: .leading) {
+                                Text(file.name)
+                                    .lineLimit(1)
+                                if let fileSize = getFileSize(url: file.url) {
+                                    Text(fileSize)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                     }
                 }
@@ -56,28 +84,25 @@ struct DataManagementView: View {
                     }
                 }
                 if isEditing {
-                    ToolbarItem(placement: .bottomBar) {
-                        HStack {
-                            Button(role: .destructive) {
-                                showingDeleteAlert = true
-                            } label: {
-                                Label("删除", systemImage: "trash")
-                            }
-                            .disabled(selectedFiles.isEmpty)
-                            
-                            Spacer()
-                            
-                            Button {
-                                // 导出选中的文件
-                                let selectedURLs = dataFiles
-                                    .filter { selectedFiles.contains($0.id) }
-                                    .map { $0.url }
-                                // 调用导出方法
-                            } label: {
-                                Label("导出", systemImage: "square.and.arrow.up")
-                            }
-                            .disabled(selectedFiles.isEmpty)
+                    ToolbarItemGroup(placement: .bottomBar) {
+                        Button(role: .destructive) {
+                            showingDeleteAlert = true
+                        } label: {
+                            Label("删除", systemImage: "trash")
                         }
+                        .disabled(selectedFiles.isEmpty)
+                        
+                        Spacer()
+                        
+                        Button {
+                            selectedURLsToShare = dataFiles
+                                .filter { selectedFiles.contains($0.id) }
+                                .map { $0.url }
+                            showingShareSheet = true
+                        } label: {
+                            Label("分享", systemImage: "square.and.arrow.up")
+                        }
+                        .disabled(selectedFiles.isEmpty)
                     }
                 }
             }
@@ -87,7 +112,10 @@ struct DataManagementView: View {
                     deleteSelectedFiles()
                 }
             } message: {
-                Text("确定要删除选中的文件吗？")
+                Text("确定要删除选中的\(selectedFiles.count)个文件吗？")
+            }
+            .sheet(isPresented: $showingShareSheet) {
+                ShareSheet(activityItems: selectedURLsToShare)
             }
         }
         .onAppear {
@@ -97,12 +125,25 @@ struct DataManagementView: View {
     
     private func loadDataFiles() {
         guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let watchDataPath = documentsPath.appendingPathComponent("WatchData")
         
         do {
-            let fileURLs = try FileManager.default.contentsOfDirectory(at: documentsPath, includingPropertiesForKeys: nil)
-            dataFiles = fileURLs
-                .filter { $0.pathExtension == "txt" }
-                .map { DataFile(name: $0.lastPathComponent, url: $0) }
+            // 确保 WatchData 文件夹存在
+            if !FileManager.default.fileExists(atPath: watchDataPath.path) {
+                try FileManager.default.createDirectory(at: watchDataPath, withIntermediateDirectories: true)
+            }
+            
+            // 获取所有文件和文件夹
+            let fileURLs = try FileManager.default.contentsOfDirectory(
+                at: watchDataPath,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: .skipsHiddenFiles
+            )
+            
+            dataFiles = fileURLs.map { url in
+                DataFile(name: url.lastPathComponent, url: url)
+            }.sorted { $0.name > $1.name }
+            
         } catch {
             print("Error loading files: \(error)")
         }
@@ -122,4 +163,33 @@ struct DataManagementView: View {
         selectedFiles.removeAll()
         isEditing = false
     }
+    
+    private func getFileSize(url: URL) -> String? {
+        do {
+            let resources = try url.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
+            if resources.isDirectory == true {
+                return "文件夹"
+            } else if let fileSize = resources.fileSize {
+                return ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
+            }
+        } catch {
+            print("Error getting file size: \(error)")
+        }
+        return nil
+    }
+}
+
+// 用于显示系统分享菜单的包装器
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 } 
