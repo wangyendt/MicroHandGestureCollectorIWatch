@@ -54,15 +54,28 @@ struct DataManagementView: View {
                                         }
                                     }
                             }
-                            VStack(alignment: .leading) {
+                            
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(file.name)
-                                    .lineLimit(1)
-                                if let fileSize = getFileSize(url: file.url) {
-                                    Text(fileSize)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                    .font(.system(.body))
+                                
+                                HStack(spacing: 8) {
+                                    if let fileSize = getFileSize(url: file.url) {
+                                        Label(fileSize, systemImage: "folder.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    if let modificationDate = getFileModificationDate(url: file.url) {
+                                        Label(modificationDate, systemImage: "calendar")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
                             }
+                            .padding(.vertical, 4)
                         }
                     }
                 }
@@ -186,6 +199,20 @@ struct DataManagementView: View {
         if !selectedURLsToShare.isEmpty {
             showingShareSheet = true
         }
+    }
+    
+    private func getFileModificationDate(url: URL) -> String? {
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            if let modificationDate = attributes[.modificationDate] as? Date {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd HH:mm"
+                return formatter.string(from: modificationDate)
+            }
+        } catch {
+            print("Error getting file modification date: \(error)")
+        }
+        return nil
     }
 }
 
