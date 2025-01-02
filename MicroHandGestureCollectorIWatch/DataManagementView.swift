@@ -95,10 +95,7 @@ struct DataManagementView: View {
                         Spacer()
                         
                         Button {
-                            selectedURLsToShare = dataFiles
-                                .filter { selectedFiles.contains($0.id) }
-                                .map { $0.url }
-                            showingShareSheet = true
+                            prepareAndShare()
                         } label: {
                             Label("分享", systemImage: "square.and.arrow.up")
                         }
@@ -114,9 +111,11 @@ struct DataManagementView: View {
             } message: {
                 Text("确定要删除选中的\(selectedFiles.count)个文件吗？")
             }
-            .sheet(isPresented: $showingShareSheet) {
-                ShareSheet(activityItems: selectedURLsToShare)
-            }
+            .sheet(isPresented: $showingShareSheet, content: {
+                if !selectedURLsToShare.isEmpty {
+                    ShareSheet(activityItems: selectedURLsToShare)
+                }
+            })
         }
         .onAppear {
             loadDataFiles()
@@ -177,6 +176,17 @@ struct DataManagementView: View {
         }
         return nil
     }
+    
+    private func prepareAndShare() {
+        selectedURLsToShare = dataFiles
+            .filter { selectedFiles.contains($0.id) }
+            .map { $0.url }
+        
+        // 确保有文件要分享
+        if !selectedURLsToShare.isEmpty {
+            showingShareSheet = true
+        }
+    }
 }
 
 // 用于显示系统分享菜单的包装器
@@ -188,6 +198,19 @@ struct ShareSheet: UIViewControllerRepresentable {
             activityItems: activityItems,
             applicationActivities: nil
         )
+        
+        // 添加完成回调
+        controller.completionWithItemsHandler = { _, _, _, _ in
+            // 关闭分享页面后的处理（如果需要）
+        }
+        
+        // 在 iPad 上设置弹出位置（如果需要）
+        if let popover = controller.popoverPresentationController {
+            popover.sourceView = UIView()
+            popover.permittedArrowDirections = []
+            popover.sourceRect = CGRect(x: UIScreen.main.bounds.midX, y: UIScreen.main.bounds.midY, width: 0, height: 0)
+        }
+        
         return controller
     }
     
