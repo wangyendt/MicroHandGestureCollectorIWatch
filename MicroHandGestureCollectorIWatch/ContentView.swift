@@ -24,6 +24,7 @@ struct ContentView: View {
     
     // 添加防止锁屏的属性
     @State private var idleTimer: Timer?
+    @State private var isCollecting = false
     
     var body: some View {
         NavigationView {
@@ -132,6 +133,48 @@ struct ContentView: View {
                     
                     // 在陀螺仪图表下方添加手势结果显示
                     VStack(spacing: 0) {
+                        // 添加开始/停止采集按钮
+                        Button(action: {
+                            isCollecting.toggle()
+                            if isCollecting {
+                                // 发送开始采集消息到 Watch
+                                if WCSession.default.isReachable {
+                                    WCSession.default.sendMessage([
+                                        "type": "start_collection",
+                                        "trigger_collection": true
+                                    ], replyHandler: nil) { error in
+                                        print("发送开始采集消息失败: \(error.localizedDescription)")
+                                    }
+                                }
+                            } else {
+                                // 发送停止采集消息到 Watch
+                                if WCSession.default.isReachable {
+                                    WCSession.default.sendMessage([
+                                        "type": "stop_collection",
+                                        "trigger_collection": true
+                                    ], replyHandler: nil) { error in
+                                        print("发送停止采集消息失败: \(error.localizedDescription)")
+                                    }
+                                }
+                                sensorManager.resetState()
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: isCollecting ? "stop.circle.fill" : "play.circle.fill")
+                                    .font(.title2)
+                                Text(isCollecting ? "停止采集" : "开始采集")
+                                    .font(.headline)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(isCollecting ? Color.red : Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                        }
+                        .disabled(!WCSession.default.isReachable)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        
                         // 标题栏
                         HStack {
                             Text("手势识别结果")

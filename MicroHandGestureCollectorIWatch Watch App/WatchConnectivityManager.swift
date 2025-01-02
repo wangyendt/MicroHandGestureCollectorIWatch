@@ -2,7 +2,7 @@ import Foundation
 import WatchConnectivity
 import CoreMotion
 
-class WatchConnectivityManager: NSObject, ObservableObject {
+class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     static let shared = WatchConnectivityManager()
     @Published var isSending = false
     @Published var lastMessage = ""
@@ -227,15 +227,36 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             print("❌ Error deleting result: \(error)")
         }
     }
-}
-
-extension WatchConnectivityManager: WCSessionDelegate {
+    
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         if let error = error {
             print("WCSession activation failed with error: \(error.localizedDescription)")
             return
         }
         print("WCSession activated with state: \(activationState.rawValue)")
+    }
+    
+    #if os(iOS)
+    func sessionDidBecomeInactive(_ session: WCSession) {
+        print("WCSession became inactive")
+    }
+    
+    func sessionDidDeactivate(_ session: WCSession) {
+        print("WCSession deactivated")
+        // 重新激活会话
+        WCSession.default.activate()
+    }
+    #endif
+    
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        print("Watch收到消息:", message)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ReceivedWatchMessage"),
+                object: nil,
+                userInfo: message
+            )
+        }
     }
     
     func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
@@ -245,15 +266,6 @@ extension WatchConnectivityManager: WCSessionDelegate {
             } else {
                 self.lastMessage = "传输成功"
             }
-        }
-    }
-    
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
-        print("📱 Received message from iPhone: \(message)")
-        if message["type"] as? String == "delete_result",
-           let idToDelete = message["id"] as? String {
-            print("🗑️ Received delete request for ID: \(idToDelete)")
-            deleteResultFromFile(id: idToDelete)
         }
     }
 } 

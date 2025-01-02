@@ -459,6 +459,11 @@ struct ContentView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ReceivedWatchMessage"))) { notification in
+            if let message = notification.userInfo as? [String: Any] {
+                handleMessage(message)
+            }
+        }
     }
     
     private func deleteAllData() {
@@ -473,6 +478,53 @@ struct ContentView: View {
             }
         } catch {
             print("Error deleting all files: \(error)")
+        }
+    }
+
+    private func handleMessage(_ message: [String: Any]) {
+        print("处理消息:", message) // 添加调试输出
+        if let type = message["type"] as? String {
+            switch type {
+            case "start_collection":
+                print("收到开始采集消息") // 添加调试输出
+                if !isCollecting && motionManager.isReady {
+                    if message["trigger_collection"] as? Bool == true {
+                        print("准备开始采集") // 添加调试输出
+                        DispatchQueue.main.async {
+                            isCollecting = true
+                            FeedbackManager.playFeedback(
+                                style: .success,
+                                speak: "开始采集"
+                            )
+                            motionManager.startDataCollection(
+                                name: userName,
+                                hand: selectedHand,
+                                gesture: selectedGesture,
+                                force: selectedForce,
+                                note: noteText
+                            )
+                        }
+                    }
+                }
+            case "stop_collection":
+                print("收到停止采集消息") // 添加调试输出
+                if isCollecting {
+                    if message["trigger_collection"] as? Bool == true {
+                        print("准备停止采集") // 添加调试输出
+                        DispatchQueue.main.async {
+                            isCollecting = false
+                            FeedbackManager.playFeedback(
+                                style: .stop,
+                                speak: "停止采集"
+                            )
+                            WatchConnectivityManager.shared.sendStopSignal()
+                            motionManager.stopDataCollection()
+                        }
+                    }
+                }
+            default:
+                break
+            }
         }
     }
 }
