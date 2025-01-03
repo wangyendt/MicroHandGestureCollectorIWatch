@@ -27,7 +27,7 @@ class VanillaCNN(nn.Module):
 
 # 加载模型和权重
 model = VanillaCNN(num_classes=9)
-model.load_state_dict(torch.load('total_epoch=400_accuracy=0.991.pt', map_location='cpu'))
+model.load_state_dict(torch.load('total_epoch=950_accuracy=0.989.pt', map_location='cpu'))
 model.eval()
 
 # 创建示例输入
