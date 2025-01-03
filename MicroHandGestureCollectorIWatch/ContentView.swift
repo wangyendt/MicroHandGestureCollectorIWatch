@@ -414,19 +414,25 @@ struct ContentView: View {
     }
     
     private func handleMessage(_ message: [String: Any]) {
+        print("iPhone收到消息:", message) // 添加调试输出
         if let type = message["type"] as? String {
             switch type {
             case "start_collection":
+                print("收到开始采集消息") // 添加调试输出
                 if message["trigger_collection"] as? Bool == true {
+                    print("准备开始采集") // 添加调试输出
                     DispatchQueue.main.async {
                         isCollecting = true
                     }
                 }
             case "stop_collection":
+                print("收到停止采集消息") // 添加调试输出
                 if message["trigger_collection"] as? Bool == true {
+                    print("准备停止采集") // 添加调试输出
                     DispatchQueue.main.async {
                         isCollecting = false
                         sensorManager.resetState()
+                        resetChartData() // 重置图表数据
                     }
                 }
             default:

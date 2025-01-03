@@ -158,7 +158,10 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     func sendStopSignal() {
         // 立即发送停止信号到手机
         if WCSession.default.isReachable {
-            let message = ["type": "stop_collection"]
+            let message: [String: Any] = [
+                "type": "stop_collection" as String,
+                "trigger_collection": true as Bool
+            ]
             WCSession.default.sendMessage(message, replyHandler: nil) { error in
                 print("发送停止采集消息失败: \(error.localizedDescription)")
             }

@@ -1,6 +1,6 @@
 import Foundation
-import WatchConnectivity
 import Network
+import WatchConnectivity
 import QuartzCore
 
 class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
@@ -125,10 +125,25 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func sessionDidDeactivate(_ session: WCSession) {}
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        // 首先，转发所有消息到 NotificationCenter
+        DispatchQueue.main.async {
+            // 只打印控制消息的日志
+            if let type = message["type"] as? String,
+               type != "batch_data" {
+                print("iPhone收到消息:", message)
+            }
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ReceivedWatchMessage"),
+                object: nil,
+                userInfo: message
+            )
+        }
+        
+        // 然后处理传感器数据
         if message["type"] as? String == "batch_data",
            let batchData = message["data"] as? [[String: Any]] {
             
-            // 检查丢帧
+            // 检查丢帧（只在丢帧时打印日志）
             for i in 1..<batchData.count {
                 if let prevTimestamp = batchData[i-1]["timestamp"] as? UInt64,
                    let currTimestamp = batchData[i]["timestamp"] as? UInt64 {
