@@ -352,6 +352,17 @@ struct ContentView: View {
                                                                 Button(action: {
                                                                     if let index = sensorManager.gestureResults.firstIndex(where: { $0.id == result.id }) {
                                                                         sensorManager.gestureResults[index].trueGesture = gesture
+                                                                        // 发送更新的真实手势到手表
+                                                                        if WCSession.default.isReachable {
+                                                                            let message: [String: Any] = [
+                                                                                "type": "update_true_gesture",
+                                                                                "id": result.id,
+                                                                                "true_gesture": gesture
+                                                                            ]
+                                                                            WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                                                                                print("发送真实手势更新失败: \(error.localizedDescription)")
+                                                                            }
+                                                                        }
                                                                     }
                                                                 }) {
                                                                     Text(gesture)
@@ -509,8 +520,12 @@ struct ContentView: View {
     }
     
     private func handleMessage(_ message: [String: Any]) {
-        print("iPhone收到消息:", message) // 添加调试输出
         if let type = message["type"] as? String {
+            // 只打印非传感器数据的消息
+            if type != "batch_data" && type != "sensor_data" {
+                print("iPhone收到消息: \(type)")
+            }
+            
             switch type {
             case "start_collection":
                 print("收到开始采集消息") // 添加调试输出

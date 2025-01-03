@@ -125,96 +125,86 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func sessionDidDeactivate(_ session: WCSession) {}
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
-        // 首先，转发所有消息到 NotificationCenter
-        DispatchQueue.main.async {
-            // 只打印控制消息的日志，不打印传感器数据
-            if let type = message["type"] as? String,
-               type != "batch_data" && type != "sensor_data" && type != "gesture_result" {
-                print("iPhone收到消息:", message)
-            }
-            
-            // 处理手势识别结果
-            if message["type"] as? String == "gesture_result",
-               let timestamp = message["timestamp"] as? Double,
-               let gesture = message["gesture"] as? String,
-               let confidence = message["confidence"] as? Double,
-               let peakValue = message["peakValue"] as? Double,
-               let id = message["id"] as? String {
+        // 首先，检查消息类型
+        let messageType = message["type"] as? String
+        
+        // 只处理非传感器数据的消息通知
+        if messageType != "batch_data" && messageType != "sensor_data" {
+            DispatchQueue.main.async {
+                // 只打印非传感器数据的消息
+                if messageType != nil {
+                    print("iPhone收到消息: \(messageType!)")
+                }
                 
-                DispatchQueue.main.async {
+                // 处理手势识别结果
+                if messageType == "gesture_result",
+                   let timestamp = message["timestamp"] as? Double,
+                   let gesture = message["gesture"] as? String,
+                   let confidence = message["confidence"] as? Double,
+                   let peakValue = message["peakValue"] as? Double,
+                   let id = message["id"] as? String {
+                    
                     let result = GestureResult(
                         id: id,
                         timestamp: timestamp,
                         gesture: gesture,
                         confidence: confidence,
                         peakValue: peakValue,
-                        trueGesture: gesture  // 初始时使用识别的手势作为真实手势
+                        trueGesture: gesture
                     )
                     self.gestureResults.append(result)
+                } else if messageType == "stop_collection" {
+                    self.resetState()
                 }
-            }
-            
-            NotificationCenter.default.post(
-                name: NSNotification.Name("ReceivedWatchMessage"),
-                object: nil,
-                userInfo: message
-            )
-        }
-        
-        // 然后处理传感器数据
-        if message["type"] as? String == "batch_data",
-           let batchData = message["data"] as? [[String: Any]] {
-            
-            // 检查丢帧（只在丢帧时打印日志）
-            for i in 1..<batchData.count {
-                if let prevTimestamp = batchData[i-1]["timestamp"] as? UInt64,
-                   let currTimestamp = batchData[i]["timestamp"] as? UInt64 {
-                    let timeDiff = Double(currTimestamp - prevTimestamp) / 1_000_000.0 // 转换为毫秒
-                    if timeDiff > 13.0 { // 超过13ms认为丢帧
-                        print("丢帧: \(String(format: "%.2f", timeDiff))ms between frames")
-                    }
-                }
-            }
-            
-            // 直接转发批量数据到Mac
-            do {
-                let macMessage: [String: Any] = [
-                    "type": "batch_data",
-                    "data": batchData
-                ]
                 
-                let jsonData = try JSONSerialization.data(withJSONObject: macMessage)
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ReceivedWatchMessage"),
+                    object: nil,
+                    userInfo: message
+                )
+            }
+        } else if messageType == "batch_data",
+                  let batchData = message["data"] as? [[String: Any]] {
+            // 静默处理传感器数据，不打印任何日志
+            do {
+                let macMessage = ["type": "batch_data", "data": batchData] as [String : Any]
+                let jsonData = try JSONSerialization.data(withJSONObject: macMessage, options: [.fragmentsAllowed])
                 var dataWithNewline = jsonData
                 dataWithNewline.append("\n".data(using: .utf8)!)
                 sendDataToMac(dataWithNewline)
+                
+                // 只更新UI，不打印日志
+                if let lastData = batchData.last {
+                    if let accX = lastData["acc_x"] as? Double,
+                       let accY = lastData["acc_y"] as? Double,
+                       let accZ = lastData["acc_z"] as? Double,
+                       let gyroX = lastData["gyro_x"] as? Double,
+                       let gyroY = lastData["gyro_y"] as? Double,
+                       let gyroZ = lastData["gyro_z"] as? Double {
+                        
+                        DispatchQueue.main.async {
+                            self.lastReceivedData = [
+                                "acc_x": accX,
+                                "acc_y": accY,
+                                "acc_z": accZ,
+                                "gyro_x": gyroX,
+                                "gyro_y": gyroY,
+                                "gyro_z": gyroZ
+                            ]
+                            self.lastUpdateTime = Date()
+                            
+                            // 静默发送通知
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("ReceivedWatchMessage"),
+                                object: nil,
+                                userInfo: message
+                            )
+                        }
+                    }
+                }
             } catch {
                 print("数据转换失败: \(error)")
             }
-            
-            // UI 更新代码保持不变
-            if let lastData = batchData.last {
-                if let accX = lastData["acc_x"] as? Double,
-                   let accY = lastData["acc_y"] as? Double,
-                   let accZ = lastData["acc_z"] as? Double,
-                   let gyroX = lastData["gyro_x"] as? Double,
-                   let gyroY = lastData["gyro_y"] as? Double,
-                   let gyroZ = lastData["gyro_z"] as? Double {
-                    
-                    DispatchQueue.main.async {
-                        self.lastReceivedData = [
-                            "acc_x": accX,
-                            "acc_y": accY,
-                            "acc_z": accZ,
-                            "gyro_x": gyroX,
-                            "gyro_y": gyroY,
-                            "gyro_z": gyroZ
-                        ]
-                        self.lastUpdateTime = Date()
-                    }
-                }
-            }
-        } else if message["type"] as? String == "stop_collection" {
-            resetState()
         }
     }
     
