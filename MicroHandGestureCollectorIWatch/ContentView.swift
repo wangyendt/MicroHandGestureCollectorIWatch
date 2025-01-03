@@ -295,7 +295,7 @@ struct ContentView: View {
                                 // 表头
                                 HStack(spacing: 0) {
                                     Text("时间")
-                                        .frame(width: 70, alignment: .leading)
+                                        .frame(width: 80, alignment: .leading)
                                         .font(.system(size: 17))
                                     Text("手势")
                                         .frame(width: 50, alignment: .leading)
@@ -329,7 +329,7 @@ struct ContentView: View {
                                                     HStack(spacing: 0) {
                                                         // 时间列
                                                         Text(String(format: "%.2fs", result.timestamp))
-                                                            .frame(width: 70, height: 32, alignment: .leading)
+                                                            .frame(width: 80, height: 32, alignment: .leading)
                                                             .font(.system(size: 17, design: .monospaced))
                                                         
                                                         // 手势列
@@ -348,6 +348,7 @@ struct ContentView: View {
                                                         Text(String(format: "%.2f", result.peakValue))
                                                             .frame(width: 50, height: 32, alignment: .leading)
                                                             .font(.system(size: 17))
+                                                            .foregroundColor(getPeakValueColor(result.peakValue))
                                                         
                                                         // 真实手势下拉菜单
                                                         Menu {
@@ -581,6 +582,18 @@ struct ContentView: View {
                 break
             }
         }
+    }
+    
+    // 添加获取峰值颜色的函数
+    private func getPeakValueColor(_ value: Double) -> Color {
+        let normalizedValue = min(value, 3.0) / 3.0  // 将值标准化到0~1范围
+        
+        // 使用从蓝色到红色的渐变
+        return Color(
+            red: normalizedValue,
+            green: 0.3,
+            blue: 1.0 - normalizedValue
+        )
     }
 }
 
