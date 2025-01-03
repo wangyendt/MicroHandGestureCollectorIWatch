@@ -21,6 +21,9 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     
     private var currentFolderURL: URL?
     
+    // 添加一个字典来存储更新的真实手势
+    private var updatedTrueGestures: [String: String] = [:]
+    
     private override init() {
         super.init()
         
@@ -303,6 +306,15 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         print("Watch收到消息:", message)
         
+        // 处理真实手势更新消息
+        if let type = message["type"] as? String,
+           type == "update_true_gesture",
+           let id = message["id"] as? String,
+           let trueGesture = message["true_gesture"] as? String {
+            print("收到真实手势更新，ID: \(id), 真实手势: \(trueGesture)")
+            updatedTrueGestures[id] = trueGesture
+        }
+        
         // 处理删除消息
         if let type = message["type"] as? String,
            type == "delete_result",
@@ -383,8 +395,9 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                 if components.count >= 6 {
                     let id = components[5]
                     let isDeleted = deletedIds.contains(id) ? "1" : "0"
-                    // 添加true_gesture和is_deleted列
-                    manualResultContent += "\(line),\(components[2]),\(isDeleted)\n" // 暂时用识别的手势作为真实手势的默认值
+                    // 使用更新后的真实手势，如果没有更新则使用原始手势
+                    let trueGesture = updatedTrueGestures[id] ?? components[2]
+                    manualResultContent += "\(line),\(trueGesture),\(isDeleted)\n"
                 }
             }
             
