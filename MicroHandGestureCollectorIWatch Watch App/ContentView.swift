@@ -522,6 +522,14 @@ struct ContentView: View {
                         }
                     }
                 }
+            case "request_export":
+                print("收到导出请求") // 添加调试输出
+                if message["trigger_export"] as? Bool == true {
+                    print("准备导出数据") // 添加调试输出
+                    DispatchQueue.main.async {
+                        motionManager.exportData()
+                    }
+                }
             default:
                 break
             }
