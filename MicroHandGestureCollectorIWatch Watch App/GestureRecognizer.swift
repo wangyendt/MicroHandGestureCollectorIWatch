@@ -3,27 +3,85 @@ import CoreML
 import Accelerate
 
 public class GestureRecognizer {
-    private let gestureNames = ["单击", "双击", "握拳", "左滑", "右滑", "鼓掌", "抖腕", "拍打", "日常"]
-    private var gestureClassifier: GestureClassifier?
+    // 模型参数配置
+    private struct ModelParams {
+        let modelType: Any.Type
+        let gestureNames: [String]
+        let halfWindowSize: Int
+        let inputShape: [NSNumber]
+        let outputKey: String
+    }
+    
+    private let modelConfigs: [String: ModelParams] = [
+        "wayne": ModelParams(
+            modelType: GestureClassifier.self,
+            gestureNames: ["单击", "双击", "握拳", "左滑", "右滑", "鼓掌", "抖腕", "拍打", "日常"],
+            halfWindowSize: 30,
+            inputShape: [1, 6, 60],
+            outputKey: "output"
+        ),
+        "haili": ModelParams(
+            modelType: GestureModel_1.self,
+            gestureNames: ["单击", "双击", "左摆", "右摆", "握拳"],
+            halfWindowSize: 50,
+            inputShape: [1, 6, 1, 100],
+            outputKey: "linear_3"
+        )
+    ]
+    
+    // 定义模型处理器类型
+    private typealias ModelProcessor = (MLMultiArray) throws -> MLMultiArray
+    
+    // 模型处理器字典
+    private let modelProcessors: [String: ModelProcessor] = [
+        "wayne": { inputArray in
+            let model = try GestureClassifier(configuration: MLModelConfiguration())
+            let input = GestureClassifierInput(input: inputArray)
+            let output = try model.prediction(input: input)
+            return output.output
+        },
+        "haili": { inputArray in
+            let model = try GestureModel_1(configuration: MLModelConfiguration())
+            let input = GestureModel_1Input(input: inputArray)
+            let output = try model.prediction(input: input)
+            return output.linear_3
+        }
+    ]
+    
+    private let whoseModel: String
+    private var gestureClassifier: Any?
+    private var currentModelParams: ModelParams
+    
     private var imuBuffer: [(timestamp: TimeInterval, acc: SIMD3<Double>, gyro: SIMD3<Double>)] = []
     private var saveGestureData = false
     private var currentFolderURL: URL?
-    private var gestureCount = 0  // 添加计数器
-    private let halfWindowSize = 30  // 可以根据需要调整这个值
+    private var gestureCount = 0
     
     // 将依赖于 halfWindowSize 的属性改为计算属性
     private var modelInputLength: Int {
-        return 2 * halfWindowSize
+        return 2 * currentModelParams.halfWindowSize
     }
     
     private var bufferCapacity: Int {
         return 2 * modelInputLength
     }
     
-    public init() {
+    public init(whoseModel: String = "haili") {
+        self.whoseModel = whoseModel
+        guard let params = modelConfigs[whoseModel] else {
+            fatalError("不支持的模型类型: \(whoseModel)")
+        }
+        self.currentModelParams = params
+        
         do {
             let config = MLModelConfiguration()
-            gestureClassifier = try GestureClassifier(configuration: config)
+            if let processor = modelProcessors[whoseModel] {
+                if whoseModel == "wayne" {
+                    gestureClassifier = try GestureClassifier(configuration: config)
+                } else if whoseModel == "haili" {
+                    gestureClassifier = try GestureModel_1(configuration: config)
+                }
+            }
         } catch {
             print("Error loading model: \(error)")
         }
@@ -43,14 +101,14 @@ public class GestureRecognizer {
         }
         
         // 确保有足够的前后数据
-        if peakIndex < halfWindowSize || imuBuffer.count - peakIndex < halfWindowSize {
-            print("峰值位置不满足前后\(halfWindowSize)帧的要求")
+        if peakIndex < currentModelParams.halfWindowSize || imuBuffer.count - peakIndex < currentModelParams.halfWindowSize {
+            print("峰值位置不满足前后\(currentModelParams.halfWindowSize)帧的要求")
             return nil
         }
         
         // 提取前后数据
-        let startIndex = peakIndex - halfWindowSize
-        let endIndex = peakIndex + (halfWindowSize - 1)
+        let startIndex = peakIndex - currentModelParams.halfWindowSize
+        let endIndex = peakIndex + (currentModelParams.halfWindowSize - 1)
         let data = Array(imuBuffer[startIndex...endIndex])
         
         // 确保正好所需帧数
@@ -97,10 +155,8 @@ public class GestureRecognizer {
     }
     
     private func predict(processedData: [Double]) -> (gesture: String, confidence: Double)? {
-        guard let model = gestureClassifier else { return nil }
-        
-        // 创建模型输入
-        guard let inputArray = try? MLMultiArray(shape: [1, 6, 60], dataType: .float32) else {
+        guard let inputArray = try? MLMultiArray(shape: currentModelParams.inputShape,
+                                               dataType: .float32) else {
             print("Failed to create input array")
             return nil
         }
@@ -112,50 +168,55 @@ public class GestureRecognizer {
         
         // 进行预测
         do {
-            let input = GestureClassifierInput(input: inputArray)
-            let output = try model.prediction(input: input)
-            
-            // 获取原始输出并转换为 Float 数组
-            var logits = [Float]()
-            for i in 0..<gestureNames.count {
-                logits.append(output.output[i].floatValue)
+            guard let processor = modelProcessors[whoseModel] else {
+                print("No processor found for model: \(whoseModel)")
+                return nil
             }
             
-            // 应用 softmax
-            let probabilities = softmax(logits)
-            
-            // 打印完整的概率向量和原始logits
-            print("原始 logits 值:")
-            for i in 0..<gestureNames.count {
-                print("类别 \(i) (\(gestureNames[i])): \(logits[i])")
-            }
-            
-            print("\n完整预测概率向量:")
-            for i in 0..<gestureNames.count {
-                print("类别 \(i) (\(gestureNames[i])): \(probabilities[i])")
-            }
-            
-            // 获取最高概率的类别
-            var maxProb: Float = 0
-            var predictedClass = 0
-            
-            for i in 0..<gestureNames.count {
-                let prob = probabilities[i]
-                if prob > maxProb {
-                    maxProb = prob
-                    predictedClass = i
-                }
-            }
-            
-            let predictedGesture = gestureNames[predictedClass]
-            
-            print("预测结果: \(predictedGesture) (类别 \(predictedClass)), 置信度: \(maxProb)")
-            
-            return (gesture: predictedGesture, confidence: Double(maxProb))
+            let output = try processor(inputArray)
+            return processOutput(output, gestureNames: currentModelParams.gestureNames)
         } catch {
             print("Prediction error: \(error)")
             return nil
         }
+    }
+    
+    // 添加处理输出的辅助函数
+    private func processOutput(_ output: MLMultiArray, gestureNames: [String]) -> (gesture: String, confidence: Double) {
+        var logits = [Float]()
+        for i in 0..<gestureNames.count {
+            logits.append(output[i].floatValue)
+        }
+        
+        let probabilities = softmax(logits)
+        
+        // 打印完整的概率向量和原始logits
+        print("原始 logits 值:")
+        for i in 0..<gestureNames.count {
+            print("类别 \(i) (\(gestureNames[i])): \(logits[i])")
+        }
+        
+        print("\n完整预测概率向量:")
+        for i in 0..<gestureNames.count {
+            print("类别 \(i) (\(gestureNames[i])): \(probabilities[i])")
+        }
+        
+        // 获取最高概率的类别
+        var maxProb: Float = 0
+        var predictedClass = 0
+        
+        for i in 0..<gestureNames.count {
+            let prob = probabilities[i]
+            if prob > maxProb {
+                maxProb = prob
+                predictedClass = i
+            }
+        }
+        
+        let predictedGesture = gestureNames[predictedClass]
+        print("预测结果: \(predictedGesture) (类别 \(predictedClass)), 置信度: \(maxProb)")
+        
+        return (gesture: predictedGesture, confidence: Double(maxProb))
     }
     
     // 添加滤波器类型枚举

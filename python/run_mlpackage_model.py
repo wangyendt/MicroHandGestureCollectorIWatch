@@ -1,6 +1,9 @@
 import numpy as np
 import coremltools as ct
 import os
+import matplotlib.pyplot as plt
+from butterworth_filter import ButterworthFilter
+from scipy.signal import butter
 
 class MLPackageInference:
     def __init__(self, model_path):
@@ -62,26 +65,68 @@ class MLPackageInference:
 def main():
     # 示例用法
     # MODEL_PATH = "/Users/wayne/Documents/work/code/project/ffalcon/micro-hand-gesture/MicroHandGestureCollectorIWatch/MicroHandGestureCollectorIWatch Watch App/GestureModel_1.mlpackage"
-    MODEL_PATH = "/Users/wayne/Documents/work/code/project/ffalcon/micro-hand-gesture/MicroHandGestureCollectorIWatch/python/GestureClassifier.mlpackage"
+    MODEL_PATH = params[whose_model]['model_path']
     
     # 创建推理器实例
     inferencer = MLPackageInference(MODEL_PATH)
     
     # 准备示例输入数据
     # sample_input = np.random.randn(10)  # 假设输入是10维向量
-    sample_input = np.loadtxt(
-        '/Users/wayne/Downloads/2025_01_03_11_18_10_王也_左手_单击[正]_轻_静坐/gesture_model_data_2.txt',
-        skiprows=2,
-        delimiter=','
-	)[:, 7:].reshape(1, 6, 60)
-    print(sample_input.shape)
+    # sample_input = np.loadtxt(
+    #     '/Users/wayne/Downloads/2025_01_03_11_18_10_王也_左手_单击[正]_轻_静坐/gesture_model_data_2.txt',
+    #     skiprows=2,
+    #     delimiter=','
+	# )[:, 7:].reshape(1, 6, 60)
+    # print(sample_input.shape)
     
     # 执行推理
     try:
-        result = inferencer.predict(sample_input)
+        result = inferencer.predict(data_selected)
         print("推理结果:", result)
     except Exception as e:
         print(f"推理过程中出错: {str(e)}")
 
 if __name__ == "__main__":
+    whose_model = 'wayne'
+    whose_model = 'haili'
+    params = {
+        'wayne': {
+            'half_window_size': 30,
+            'model_path': '/Users/wayne/Documents/work/code/project/ffalcon/micro-hand-gesture/MicroHandGestureCollectorIWatch/MicroHandGestureCollectorIWatch Watch App/GestureClassifier.mlpackage',
+            'shape': (1, 6, 60)
+		},
+        'haili': {
+            'half_window_size': 50,
+            'model_path': '/Users/wayne/Documents/work/code/project/ffalcon/micro-hand-gesture/MicroHandGestureCollectorIWatch/MicroHandGestureCollectorIWatch Watch App/GestureModel_1.mlpackage',
+            'shape': (1, 6, 1, 100)
+		}
+	}
+    root = '/Users/wayne/Downloads/2025_01_03_15_53_37_王也_左手_单击[正]_轻_静坐'
+    acc_path = os.path.join(root, 'acc.txt')
+    gyro_path = os.path.join(root, 'gyro.txt')
+    result_path = os.path.join(root, 'result.txt')
+    acc_data = np.loadtxt(acc_path, skiprows=1, delimiter=',')
+    gyro_data = np.loadtxt(gyro_path, skiprows=1, delimiter=',')
+    with open(result_path, encoding='utf-8', mode='r') as f:
+         lines = f.readlines()[1:]
+         result_data = [int(line.strip().split(',')[0]) for line in lines]
+    acc_peak_indices = np.where(np.isin(acc_data[:, 0], result_data))[0]
+    data_selected = []
+    b, a = butter(N=2, Wn=[0.1 / (100.0 / 2), 40.0 / (100.0 / 2)], btype='bandpass')
+    bwf = ButterworthFilter(b, a)
+    for idx in acc_peak_indices:
+        data_selected.append(
+            np.c_[
+                np.apply_along_axis(
+                    lambda x: bwf.filter(x.tolist()),
+                    axis=0,
+                    arr=acc_data[idx-params[whose_model]['half_window_size']:idx+params[whose_model]['half_window_size'], 1:]
+				) / 9.81,
+                gyro_data[idx-params[whose_model]['half_window_size']:idx+params[whose_model]['half_window_size'], 1:]
+			].T.reshape(params[whose_model]['shape'])
+        )
+    data_selected = np.array(data_selected)[2]
+    print(data_selected.shape)
+    # plt.plot(data_selected.squeeze().T)
+    # plt.show()
     main()
