@@ -10,6 +10,7 @@ public class GestureRecognizer {
         let halfWindowSize: Int
         let inputShape: [NSNumber]
         let outputKey: String
+        let reshapeData: ([Double], MLMultiArray) -> Void
     }
     
     private let modelConfigs: [String: ModelParams] = [
@@ -18,14 +19,31 @@ public class GestureRecognizer {
             gestureNames: ["单击", "双击", "握拳", "左滑", "右滑", "鼓掌", "抖腕", "拍打", "日常"],
             halfWindowSize: 30,
             inputShape: [1, 6, 60],
-            outputKey: "output"
+            outputKey: "output",
+            reshapeData: { processedData, inputArray in
+                // wayne模型的数据排列方式
+                for i in 0..<processedData.count {
+                    inputArray[i] = NSNumber(value: Float(processedData[i]))
+                }
+            }
         ),
         "haili": ModelParams(
             modelType: GestureModel_1.self,
             gestureNames: ["单击", "双击", "左摆", "右摆", "握拳"],
             halfWindowSize: 50,
             inputShape: [1, 6, 1, 100],
-            outputKey: "linear_3"
+            outputKey: "linear_3",
+            reshapeData: { processedData, inputArray in
+                // haili模型的数据排列方式
+                let channelSize = processedData.count / 6
+                for c in 0..<6 {
+                    for t in 0..<channelSize {
+                        let sourceIdx = t * 6 + c
+                        let targetIdx = c * channelSize + t
+                        inputArray[targetIdx] = NSNumber(value: Float(processedData[sourceIdx]))
+                    }
+                }
+            }
         )
     ]
     
@@ -161,10 +179,12 @@ public class GestureRecognizer {
             return nil
         }
         
-        // 填充数据
-        for i in 0..<processedData.count {
-            inputArray[i] = NSNumber(value: Float(processedData[i]))
-        }
+        // 使用配置中的重排列函数
+        currentModelParams.reshapeData(processedData, inputArray)
+        
+        // 打印数据形状和部分值以便调试
+//        print("输入数据形状: \(currentModelParams.inputShape)")
+//        print("输入数据前几个值: \(Array(processedData.prefix(10)))")
         
         // 进行预测
         do {
