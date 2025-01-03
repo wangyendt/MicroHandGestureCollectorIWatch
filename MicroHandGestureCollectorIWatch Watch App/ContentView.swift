@@ -313,12 +313,31 @@ struct ContentView: View {
                             force: selectedForce,
                             note: noteText
                         )
+                        // 向iPhone发送开始采集的消息
+                        if WCSession.default.isReachable {
+                            let message: [String: Any] = [
+                                "type": "start_collection" as String,
+                                "trigger_collection": true as Bool
+                            ]
+                            WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                                print("发送开始采集消息失败: \(error.localizedDescription)")
+                            }
+                        }
                     } else {
                         FeedbackManager.playFeedback(
                             style: .stop,
                             speak: "停止采集"
                         )
-                        WatchConnectivityManager.shared.sendStopSignal()
+                        // 向iPhone发送停止采集的消息
+                        if WCSession.default.isReachable {
+                            let message: [String: Any] = [
+                                "type": "stop_collection" as String,
+                                "trigger_collection": true as Bool
+                            ]
+                            WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                                print("发送停止采集消息失败: \(error.localizedDescription)")
+                            }
+                        }
                         motionManager.stopDataCollection()
                     }
                 }) {
