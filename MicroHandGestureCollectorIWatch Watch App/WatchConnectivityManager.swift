@@ -237,13 +237,32 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             print("❌ No current folder set")
             return
         }
-        
+
         let resultFileURL = folderURL.appendingPathComponent("result.txt")
+        let manualDeletedFileURL = folderURL.appendingPathComponent("manual_deleted.txt")
+        
         print("🔍 Looking for record in file: \(resultFileURL.path)")
         
         guard FileManager.default.fileExists(atPath: resultFileURL.path) else {
             print("❌ Result file not found at path: \(resultFileURL.path)")
             return
+        }
+        
+        // 首先检查是否已经在manual_deleted.txt中
+        if FileManager.default.fileExists(atPath: manualDeletedFileURL.path) {
+            do {
+                let deletedContent = try String(contentsOf: manualDeletedFileURL, encoding: .utf8)
+                let deletedLines = deletedContent.components(separatedBy: .newlines)
+                for line in deletedLines {
+                    let components = line.components(separatedBy: ",")
+                    if components.count > 0 && components[0] == id {
+                        print("⚠️ Record already marked as deleted: \(id)")
+                        return
+                    }
+                }
+            } catch {
+                print("❌ Error checking manual_deleted.txt: \(error)")
+            }
         }
         
         do {
