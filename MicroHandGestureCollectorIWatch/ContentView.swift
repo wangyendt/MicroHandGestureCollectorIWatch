@@ -34,6 +34,9 @@ struct ContentView: View {
     @State private var showingVisualFeedback = false
     @State private var lastGestureResult: (gesture: String, confidence: Double)?
     
+    // 添加一个属性来跟踪当前使用的模型
+    @AppStorage("whoseModel") private var whoseModel = "haili"
+    
     var body: some View {
         NavigationView {
             ZStack {  // 添加ZStack来显示视觉反馈
@@ -286,25 +289,27 @@ struct ContentView: View {
                                 .padding(.vertical, 8)
                                 
                                 // 表头
-                                HStack {
+                                HStack(spacing: 0) {
                                     Text("时间")
                                         .frame(width: 70, alignment: .leading)
-                                        .font(.caption)
+                                        .font(.system(size: 17))
                                     Text("手势")
-                                        .frame(width: 80, alignment: .leading)
-                                        .font(.caption)
+                                        .frame(width: 50, alignment: .leading)
+                                        .font(.system(size: 17))
                                     Text("置信度")
-                                        .frame(width: 70, alignment: .leading)
-                                        .font(.caption)
+                                        .frame(width: 60, alignment: .leading)
+                                        .font(.system(size: 17))
                                     Text("峰值")
+                                        .frame(width: 50, alignment: .leading)
+                                        .font(.system(size: 17))
+                                    Text("真实手势")
                                         .frame(width: 70, alignment: .leading)
-                                        .font(.caption)
-                                    Spacer()
+                                        .font(.system(size: 17))
+                                    Spacer(minLength: 0)
                                 }
-                                .font(.caption)
                                 .foregroundColor(.secondary)
-                                .padding(.horizontal)
-                                .padding(.vertical, 8)
+                                .padding(.horizontal, 2)
+                                .padding(.vertical, 6)
                                 .background(Color(.systemGray6))
                                 
                                 // 结果列表
@@ -317,27 +322,49 @@ struct ContentView: View {
                                         ScrollView {
                                             LazyVStack(spacing: 0) {
                                                 ForEach(sensorManager.gestureResults) { result in
-                                                    HStack {
+                                                    HStack(spacing: 0) {
                                                         // 时间列
                                                         Text(String(format: "%.2fs", result.timestamp))
-                                                            .frame(width: 70, alignment: .leading)
-                                                            .font(.system(.body, design: .monospaced))
+                                                            .frame(width: 70, height: 32, alignment: .leading)
+                                                            .font(.system(size: 17, design: .monospaced))
                                                         
                                                         // 手势列
                                                         Text(result.gesture)
-                                                            .frame(width: 80, alignment: .leading)
+                                                            .frame(width: 50, height: 32, alignment: .leading)
+                                                            .font(.system(size: 17))
                                                             .bold()
                                                         
                                                         // 置信度列
                                                         Text(String(format: "%.2f", result.confidence))
-                                                            .frame(width: 70, alignment: .leading)
+                                                            .frame(width: 60, height: 32, alignment: .leading)
+                                                            .font(.system(size: 17))
                                                             .foregroundColor(result.confidence > 0.8 ? .green : .orange)
                                                         
                                                         // 峰值列
                                                         Text(String(format: "%.2f", result.peakValue))
-                                                            .frame(width: 70, alignment: .leading)
+                                                            .frame(width: 50, height: 32, alignment: .leading)
+                                                            .font(.system(size: 17))
                                                         
-                                                        Spacer()
+                                                        // 真实手势下拉菜单
+                                                        Menu {
+                                                            let gestureNames = whoseModel == "haili" ? GestureNames.haili : GestureNames.wayne
+                                                            ForEach(gestureNames, id: \.self) { gesture in
+                                                                Button(action: {
+                                                                    if let index = sensorManager.gestureResults.firstIndex(where: { $0.id == result.id }) {
+                                                                        sensorManager.gestureResults[index].trueGesture = gesture
+                                                                    }
+                                                                }) {
+                                                                    Text(gesture)
+                                                                        .font(.system(size: 17))
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Text(result.trueGesture)
+                                                                .font(.system(size: 17))
+                                                                .foregroundColor(.blue)
+                                                                .frame(width: 50, height: 32, alignment: .leading)
+                                                        }
+                                                        .frame(width: 50, height: 32)
                                                         
                                                         // 删除按钮
                                                         Button(action: {
@@ -348,22 +375,21 @@ struct ContentView: View {
                                                             Image(systemName: "trash")
                                                                 .foregroundColor(.red)
                                                                 .imageScale(.small)
+                                                                .font(.system(size: 17))
                                                         }
+                                                        .frame(width: 30, height: 32)
+                                                        .padding(.leading, 8)
                                                     }
-                                                    .id(result.id)  // 添加 id
-                                                    .padding(.horizontal)
-                                                    .padding(.vertical, 12)
-                                                    .background(
-                                                        Rectangle()
-                                                            .fill(Color(.systemBackground))
-                                                            .shadow(color: Color.black.opacity(0.05), radius: 1, x: 0, y: 1)
-                                                    )
-                                                    .transition(.opacity)
+                                                    .frame(height: 32)
+                                                    .id(result.id)
+                                                    .padding(.horizontal, 2)
+                                                    .padding(.vertical, 2)
+                                                    .background(Color(.systemBackground))
                                                 }
                                             }
                                         }
-                                        .frame(height: 350)
                                         .background(Color(.systemGray6))
+                                        .frame(height: 350)
                                         .onChange(of: sensorManager.gestureResults.count) { _ in
                                             // 当有新结果时，自动滚动到最后一个结果
                                             if let lastId = sensorManager.gestureResults.last?.id {

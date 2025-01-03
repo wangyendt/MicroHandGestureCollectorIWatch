@@ -129,48 +129,28 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
         DispatchQueue.main.async {
             // 只打印控制消息的日志，不打印传感器数据
             if let type = message["type"] as? String,
-               type != "batch_data" && type != "sensor_data" {
+               type != "batch_data" && type != "sensor_data" && type != "gesture_result" {
                 print("iPhone收到消息:", message)
             }
             
-            // 处理设置更新消息
-            if let type = message["type"] as? String, type == "update_settings" {
-                // 更新本地设置
-                if let feedbackType = message["feedbackType"] as? String {
-                    UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
-                }
-                if let peakThreshold = message["peakThreshold"] as? Double {
-                    UserDefaults.standard.set(peakThreshold, forKey: "peakThreshold")
-                }
-                if let peakWindow = message["peakWindow"] as? Double {
-                    UserDefaults.standard.set(peakWindow, forKey: "peakWindow")
-                }
-                if let saveGestureData = message["saveGestureData"] as? Bool {
-                    UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
-                }
-                if let savePeaks = message["savePeaks"] as? Bool {
-                    UserDefaults.standard.set(savePeaks, forKey: "savePeaks")
-                }
-                if let saveValleys = message["saveValleys"] as? Bool {
-                    UserDefaults.standard.set(saveValleys, forKey: "saveValleys")
-                }
-                if let saveSelectedPeaks = message["saveSelectedPeaks"] as? Bool {
-                    UserDefaults.standard.set(saveSelectedPeaks, forKey: "saveSelectedPeaks")
-                }
-                if let saveQuaternions = message["saveQuaternions"] as? Bool {
-                    UserDefaults.standard.set(saveQuaternions, forKey: "saveQuaternions")
-                }
-                if let saveResultFile = message["saveResultFile"] as? Bool {
-                    UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
-                }
-                if let enableVisualFeedback = message["enableVisualFeedback"] as? Bool {
-                    UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
-                }
-                if let enableHapticFeedback = message["enableHapticFeedback"] as? Bool {
-                    UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
-                }
-                if let enableVoiceFeedback = message["enableVoiceFeedback"] as? Bool {
-                    UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
+            // 处理手势识别结果
+            if message["type"] as? String == "gesture_result",
+               let timestamp = message["timestamp"] as? Double,
+               let gesture = message["gesture"] as? String,
+               let confidence = message["confidence"] as? Double,
+               let peakValue = message["peakValue"] as? Double,
+               let id = message["id"] as? String {
+                
+                DispatchQueue.main.async {
+                    let result = GestureResult(
+                        id: id,
+                        timestamp: timestamp,
+                        gesture: gesture,
+                        confidence: confidence,
+                        peakValue: peakValue,
+                        trueGesture: gesture  // 初始时使用识别的手势作为真实手势
+                    )
+                    self.gestureResults.append(result)
                 }
             }
             
@@ -235,23 +215,6 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
             }
         } else if message["type"] as? String == "stop_collection" {
             resetState()
-        } else if message["type"] as? String == "gesture_result",
-                  let timestamp = message["timestamp"] as? Double,
-                  let gesture = message["gesture"] as? String,
-                  let confidence = message["confidence"] as? Double,
-                  let peakValue = message["peakValue"] as? Double,
-                  let id = message["id"] as? String {
-            
-            DispatchQueue.main.async {
-                let result = GestureResult(
-                    id: id,
-                    timestamp: timestamp,
-                    gesture: gesture,
-                    confidence: confidence,
-                    peakValue: peakValue
-                )
-                self.gestureResults.append(result)
-            }
         }
     }
     

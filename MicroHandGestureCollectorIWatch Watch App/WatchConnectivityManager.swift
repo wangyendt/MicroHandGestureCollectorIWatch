@@ -167,6 +167,9 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             }
         }
         
+        // 生成 manual_result.txt
+        generateManualResult()
+        
         // 然后清除本地状态
         DispatchQueue.main.async {
             self.timestampHistory.removeAll()
@@ -332,6 +335,65 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             WCSession.default.sendMessage(message, replyHandler: nil) { error in
                 print("发送消息失败: \(error.localizedDescription)")
             }
+        }
+    }
+    
+    private func generateManualResult() {
+        guard let folderURL = currentFolderURL else {
+            print("❌ No current folder set")
+            return
+        }
+        
+        let resultFileURL = folderURL.appendingPathComponent("result.txt")
+        let manualResultFileURL = folderURL.appendingPathComponent("manual_result.txt")
+        
+        guard FileManager.default.fileExists(atPath: resultFileURL.path) else {
+            print("❌ Result file not found")
+            return
+        }
+        
+        do {
+            // 读取 result.txt
+            let content = try String(contentsOf: resultFileURL, encoding: .utf8)
+            let lines = content.components(separatedBy: .newlines)
+            
+            // 读取 manual_deleted.txt 中的已删除ID
+            var deletedIds = Set<String>()
+            let manualDeletedFileURL = folderURL.appendingPathComponent("manual_deleted.txt")
+            if FileManager.default.fileExists(atPath: manualDeletedFileURL.path) {
+                let deletedContent = try String(contentsOf: manualDeletedFileURL, encoding: .utf8)
+                let deletedLines = deletedContent.components(separatedBy: .newlines)
+                for line in deletedLines.dropFirst() { // 跳过表头
+                    if !line.isEmpty {
+                        let components = line.components(separatedBy: ",")
+                        if components.count > 0 {
+                            deletedIds.insert(components[0]) // ID是第一列
+                        }
+                    }
+                }
+            }
+            
+            // 创建 manual_result.txt
+            var manualResultContent = "timestamp_ns,relative_timestamp_s,gesture,confidence,peak_value,id,true_gesture,is_deleted\n"
+            
+            for line in lines.dropFirst() { // 跳过表头
+                if line.isEmpty { continue }
+                
+                let components = line.components(separatedBy: ",")
+                if components.count >= 6 {
+                    let id = components[5]
+                    let isDeleted = deletedIds.contains(id) ? "1" : "0"
+                    // 添加true_gesture和is_deleted列
+                    manualResultContent += "\(line),\(components[2]),\(isDeleted)\n" // 暂时用识别的手势作为真实手势的默认值
+                }
+            }
+            
+            // 写入文件
+            try manualResultContent.write(to: manualResultFileURL, atomically: true, encoding: .utf8)
+            print("✅ Successfully generated manual_result.txt")
+            
+        } catch {
+            print("❌ Error generating manual_result.txt: \(error)")
         }
     }
 } 
