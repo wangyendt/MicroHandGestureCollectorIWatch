@@ -184,6 +184,31 @@ struct ContentView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(10)
                             }
+                            
+                            // 添加导入按钮
+                            Button(action: {
+                                if WCSession.default.isReachable {
+                                    WCSession.default.sendMessage([
+                                        "type": "request_export",
+                                        "trigger_export": true
+                                    ], replyHandler: nil) { error in
+                                        print("发送导出请求失败: \(error.localizedDescription)")
+                                    }
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.down")
+                                        .font(.title2)
+                                    Text("从Watch导入数据")
+                                        .font(.headline)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                            }
+                            .disabled(!WCSession.default.isReachable)
                         }
                         .padding(.vertical, 8)
                     }
@@ -320,6 +345,11 @@ struct ContentView: View {
             idleTimer?.invalidate()
             idleTimer = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ReceivedWatchMessage"))) { notification in
+            if let message = notification.userInfo as? [String: Any] {
+                handleMessage(message)
+            }
+        }
     }
     
     private func timeAgoString(from date: Date) -> String {
@@ -380,6 +410,28 @@ struct ContentView: View {
                 return num >= 0 && num <= 255
             }
             return false
+        }
+    }
+    
+    private func handleMessage(_ message: [String: Any]) {
+        if let type = message["type"] as? String {
+            switch type {
+            case "start_collection":
+                if message["trigger_collection"] as? Bool == true {
+                    DispatchQueue.main.async {
+                        isCollecting = true
+                    }
+                }
+            case "stop_collection":
+                if message["trigger_collection"] as? Bool == true {
+                    DispatchQueue.main.async {
+                        isCollecting = false
+                        sensorManager.resetState()
+                    }
+                }
+            default:
+                break
+            }
         }
     }
 }
