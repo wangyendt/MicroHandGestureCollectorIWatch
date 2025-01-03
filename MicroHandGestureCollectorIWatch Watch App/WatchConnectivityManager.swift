@@ -291,4 +291,12 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             }
         }
     }
+    
+    func sendMessage(_ message: [String: Any]) {
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                print("发送消息失败: \(error.localizedDescription)")
+            }
+        }
+    }
 } 

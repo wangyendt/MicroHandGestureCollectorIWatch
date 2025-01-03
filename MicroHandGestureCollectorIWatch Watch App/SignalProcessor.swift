@@ -268,12 +268,12 @@ public class SignalProcessor {
                             
                             // 发送到 iPhone，使用相对时间
                             let result: [String: Any] = [
-                                "type": "gesture_result",
-                                "timestamp": relativeTimeS,
-                                "gesture": gesture,
-                                "confidence": confidence,
-                                "peakValue": peak_val,
-                                "id": resultId
+                                "type": "gesture_result" as String,
+                                "timestamp": relativeTimeS as Double,
+                                "gesture": gesture as String,
+                                "confidence": confidence as Double,
+                                "peakValue": peak_val as Double,
+                                "id": resultId as String
                             ]
                             
                             // 保存结果到文件

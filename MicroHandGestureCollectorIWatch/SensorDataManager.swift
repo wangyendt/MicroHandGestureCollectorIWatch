@@ -127,11 +127,53 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         // 首先，转发所有消息到 NotificationCenter
         DispatchQueue.main.async {
-            // 只打印控制消息的日志
+            // 只打印控制消息的日志，不打印传感器数据
             if let type = message["type"] as? String,
-               type != "batch_data" {
+               type != "batch_data" && type != "sensor_data" {
                 print("iPhone收到消息:", message)
             }
+            
+            // 处理设置更新消息
+            if let type = message["type"] as? String, type == "update_settings" {
+                // 更新本地设置
+                if let feedbackType = message["feedbackType"] as? String {
+                    UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
+                }
+                if let peakThreshold = message["peakThreshold"] as? Double {
+                    UserDefaults.standard.set(peakThreshold, forKey: "peakThreshold")
+                }
+                if let peakWindow = message["peakWindow"] as? Double {
+                    UserDefaults.standard.set(peakWindow, forKey: "peakWindow")
+                }
+                if let saveGestureData = message["saveGestureData"] as? Bool {
+                    UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
+                }
+                if let savePeaks = message["savePeaks"] as? Bool {
+                    UserDefaults.standard.set(savePeaks, forKey: "savePeaks")
+                }
+                if let saveValleys = message["saveValleys"] as? Bool {
+                    UserDefaults.standard.set(saveValleys, forKey: "saveValleys")
+                }
+                if let saveSelectedPeaks = message["saveSelectedPeaks"] as? Bool {
+                    UserDefaults.standard.set(saveSelectedPeaks, forKey: "saveSelectedPeaks")
+                }
+                if let saveQuaternions = message["saveQuaternions"] as? Bool {
+                    UserDefaults.standard.set(saveQuaternions, forKey: "saveQuaternions")
+                }
+                if let saveResultFile = message["saveResultFile"] as? Bool {
+                    UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
+                }
+                if let enableVisualFeedback = message["enableVisualFeedback"] as? Bool {
+                    UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
+                }
+                if let enableHapticFeedback = message["enableHapticFeedback"] as? Bool {
+                    UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
+                }
+                if let enableVoiceFeedback = message["enableVoiceFeedback"] as? Bool {
+                    UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
+                }
+            }
+            
             NotificationCenter.default.post(
                 name: NSNotification.Name("ReceivedWatchMessage"),
                 object: nil,
