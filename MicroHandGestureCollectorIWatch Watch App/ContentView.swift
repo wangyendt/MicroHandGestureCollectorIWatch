@@ -276,7 +276,7 @@ struct ContentView: View {
                     }
                 }
                 .sheet(isPresented: $showingSettings) {
-                    SettingsView(
+                    WatchAppSettingsView(
                         peakThreshold: $peakThreshold,
                         peakWindow: $peakWindow,
                         motionManager: motionManager,
@@ -547,6 +547,58 @@ struct ContentView: View {
                     print("准备导出数据") // 添加调试输出
                     DispatchQueue.main.async {
                         motionManager.exportData()
+                    }
+                }
+            case "update_settings":
+                print("收到设置更新") // 添加调试输出
+                DispatchQueue.main.async {
+                    // 更新本地设置
+                    if let feedbackType = message["feedbackType"] as? String {
+                        UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
+                    }
+                    if let peakThreshold = message["peakThreshold"] as? Double {
+                        self.peakThreshold = peakThreshold
+                        motionManager.signalProcessor.updateSettings(peakThreshold: peakThreshold)
+                    }
+                    if let peakWindow = message["peakWindow"] as? Double {
+                        self.peakWindow = peakWindow
+                        motionManager.signalProcessor.updateSettings(peakWindow: peakWindow)
+                    }
+                    if let saveGestureData = message["saveGestureData"] as? Bool {
+                        UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
+                        motionManager.updateSaveSettings(gestureData: saveGestureData)
+                    }
+                    if let savePeaks = message["savePeaks"] as? Bool {
+                        UserDefaults.standard.set(savePeaks, forKey: "savePeaks")
+                        motionManager.updateSaveSettings(peaks: savePeaks)
+                    }
+                    if let saveValleys = message["saveValleys"] as? Bool {
+                        UserDefaults.standard.set(saveValleys, forKey: "saveValleys")
+                        motionManager.updateSaveSettings(valleys: saveValleys)
+                    }
+                    if let saveSelectedPeaks = message["saveSelectedPeaks"] as? Bool {
+                        UserDefaults.standard.set(saveSelectedPeaks, forKey: "saveSelectedPeaks")
+                        motionManager.updateSaveSettings(selectedPeaks: saveSelectedPeaks)
+                    }
+                    if let saveQuaternions = message["saveQuaternions"] as? Bool {
+                        UserDefaults.standard.set(saveQuaternions, forKey: "saveQuaternions")
+                        motionManager.updateSaveSettings(quaternions: saveQuaternions)
+                    }
+                    if let saveResultFile = message["saveResultFile"] as? Bool {
+                        UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
+                        motionManager.updateSaveSettings(resultFile: saveResultFile)
+                    }
+                    if let enableVisualFeedback = message["enableVisualFeedback"] as? Bool {
+                        UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
+                        FeedbackManager.enableVisualFeedback = enableVisualFeedback
+                    }
+                    if let enableHapticFeedback = message["enableHapticFeedback"] as? Bool {
+                        UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
+                        FeedbackManager.enableHapticFeedback = enableHapticFeedback
+                    }
+                    if let enableVoiceFeedback = message["enableVoiceFeedback"] as? Bool {
+                        UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
+                        FeedbackManager.enableVoiceFeedback = enableVoiceFeedback
                     }
                 }
             default:

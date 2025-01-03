@@ -11,6 +11,7 @@ import Charts
 
 struct ContentView: View {
     @StateObject private var sensorManager = SensorDataManager.shared
+    @StateObject private var feedbackManager = FeedbackManager.shared
     @State private var accDataX: [(Double, Double)] = [] // (seconds, value)
     @State private var accDataY: [(Double, Double)] = []
     @State private var accDataZ: [(Double, Double)] = []
@@ -26,300 +27,368 @@ struct ContentView: View {
     @State private var idleTimer: Timer?
     @State private var isCollecting = false
     @State private var showingDataManagement = false
+    @State private var showingFeedbackSettings = false
+    @State private var showingWatchSettings = false
+    
+    // 添加视觉反馈状态
+    @State private var showingVisualFeedback = false
+    @State private var lastGestureResult: (gesture: String, confidence: Double)?
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 30) {
-                    // 连接设置区域
-                    GroupBox(label: Text("连接设置").font(.headline)) {
-                        VStack(spacing: 15) {
-                            // IP地址设置
-                            HStack {
-                                if isEditingIP {
-                                    TextField("输入Mac的IP地址", text: $tempIP)
-                                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                                        .keyboardType(.numbersAndPunctuation)
-                                    Button("保存") {
-                                        if isValidIP(tempIP) {
-                                            sensorManager.serverHost = tempIP
-                                            isEditingIP = false
+            ZStack {  // 添加ZStack来显示视觉反馈
+                ScrollView {
+                    VStack(spacing: 30) {
+                        // 连接设置区域
+                        GroupBox(label: Text("连接设置").font(.headline)) {
+                            VStack(spacing: 15) {
+                                // IP地址设置
+                                HStack {
+                                    if isEditingIP {
+                                        TextField("输入Mac的IP地址", text: $tempIP)
+                                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                                            .keyboardType(.numbersAndPunctuation)
+                                        Button("保存") {
+                                            if isValidIP(tempIP) {
+                                                sensorManager.serverHost = tempIP
+                                                isEditingIP = false
+                                            }
+                                        }
+                                        .disabled(!isValidIP(tempIP))
+                                    } else {
+                                        Text("Mac IP: \(sensorManager.serverHost)")
+                                        Spacer()
+                                        Button("编辑") {
+                                            tempIP = sensorManager.serverHost
+                                            isEditingIP = true
                                         }
                                     }
-                                    .disabled(!isValidIP(tempIP))
-                                } else {
-                                    Text("Mac IP: \(sensorManager.serverHost)")
+                                }
+                                
+                                // 连接状态
+                                HStack {
+                                    Image(systemName: sensorManager.isConnected ? "circle.fill" : "circle")
+                                        .foregroundColor(sensorManager.isConnected ? .green : .red)
+                                    Text(sensorManager.isConnected ? "已连接到Mac" : "未连接到Mac")
+                                }
+                                
+                                // Watch连接状态
+                                Group {
+                                    if WCSession.default.isReachable {
+                                        HStack {
+                                            Image(systemName: "applewatch.radiowaves.left.and.right")
+                                                .foregroundColor(.green)
+                                            Text("Watch已连接")
+                                        }
+                                    } else {
+                                        HStack {
+                                            Image(systemName: "applewatch.slash")
+                                                .foregroundColor(.red)
+                                            Text("Watch未连接")
+                                        }
+                                    }
+                                }
+                                
+                                // 最后更新时间
+                                Text("最后更新: \(timeAgoString(from: sensorManager.lastUpdateTime))")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                // 状态消息
+                                if !sensorManager.lastMessage.isEmpty {
+                                    Text(sensorManager.lastMessage)
+                                        .font(.footnote)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        
+                        // 传感器数据区域
+                        GroupBox(label: Text("传感器数据").font(.headline)) {
+                            VStack(spacing: 20) {
+                                // 加速度计图表
+                                ChartView(
+                                    title: "加速度计 (m/s²)",
+                                    dataX: accDataX,
+                                    dataY: accDataY,
+                                    dataZ: accDataZ,
+                                    xData: sensorManager.lastReceivedData["acc_x"] ?? 0,
+                                    yData: sensorManager.lastReceivedData["acc_y"] ?? 0,
+                                    zData: sensorManager.lastReceivedData["acc_z"] ?? 0
+                                )
+                                .frame(height: 350)
+                                
+                                // 陀螺仪图表
+                                ChartView(
+                                    title: "陀螺仪 (rad/s)",
+                                    dataX: gyroDataX,
+                                    dataY: gyroDataY,
+                                    dataZ: gyroDataZ,
+                                    xData: sensorManager.lastReceivedData["gyro_x"] ?? 0,
+                                    yData: sensorManager.lastReceivedData["gyro_y"] ?? 0,
+                                    zData: sensorManager.lastReceivedData["gyro_z"] ?? 0
+                                )
+                                .frame(height: 350)
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        
+                        // 控制区域
+                        GroupBox(label: Text("数据采集").font(.headline)) {
+                            VStack(spacing: 15) {
+                                // 开始/停止采集按钮
+                                Button(action: {
+                                    isCollecting.toggle()
+                                    if isCollecting {
+                                        // 发送开始采集消息到 Watch
+                                        if WCSession.default.isReachable {
+                                            WCSession.default.sendMessage([
+                                                "type": "start_collection",
+                                                "trigger_collection": true
+                                            ], replyHandler: nil) { error in
+                                                print("发送开始采集消息失败: \(error.localizedDescription)")
+                                            }
+                                        }
+                                    } else {
+                                        // 发送停止采集消息到 Watch
+                                        if WCSession.default.isReachable {
+                                            WCSession.default.sendMessage([
+                                                "type": "stop_collection",
+                                                "trigger_collection": true
+                                            ], replyHandler: nil) { error in
+                                                print("发送停止采集消息失败: \(error.localizedDescription)")
+                                            }
+                                        }
+                                        sensorManager.resetState()
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: isCollecting ? "stop.circle.fill" : "play.circle.fill")
+                                            .font(.title2)
+                                        Text(isCollecting ? "停止采集" : "开始采集")
+                                            .font(.headline)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(isCollecting ? Color.red : Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                }
+                                
+                                // 数据管理按钮
+                                Button(action: {
+                                    showingDataManagement = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "folder")
+                                            .font(.title2)
+                                        Text("数据管理")
+                                            .font(.headline)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.gray)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                }
+                                
+                                // 导入数据按钮
+                                Button(action: {
+                                    if WCSession.default.isReachable {
+                                        WCSession.default.sendMessage([
+                                            "type": "request_export",
+                                            "trigger_export": true
+                                        ], replyHandler: nil) { error in
+                                            print("发送导出请求失败: \(error.localizedDescription)")
+                                        }
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "square.and.arrow.down")
+                                            .font(.title2)
+                                        Text("从Watch导入数据")
+                                            .font(.headline)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.green)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                }
+                                .disabled(!WCSession.default.isReachable)
+                                
+                                // 设置按钮行
+                                HStack(spacing: 10) {
+                                    // 手机设置按钮
+                                    Button(action: {
+                                        showingFeedbackSettings = true
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "iphone")
+                                                .font(.title2)
+                                            Text("手机设置")
+                                                .font(.headline)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(Color.purple)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                    }
+                                    .sheet(isPresented: $showingFeedbackSettings) {
+                                        FeedbackSettingsView()
+                                    }
+                                    
+                                    // 手表设置按钮
+                                    Button(action: {
+                                        showingWatchSettings = true
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "applewatch")
+                                                .font(.title2)
+                                            Text("手表设置")
+                                                .font(.headline)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(Color.orange)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                    }
+                                    .sheet(isPresented: $showingWatchSettings) {
+                                        WatchSettingsView(onComplete: { settings in
+                                            // 同步设置到手表
+                                            if WCSession.default.isReachable {
+                                                var message = settings
+                                                message["type"] = "update_settings"
+                                                WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                                                    print("发送设置更新失败: \(error.localizedDescription)")
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        
+                        // 手势识别结果区域
+                        GroupBox(label: Text("手势识别结果").font(.headline)) {
+                            VStack(spacing: 0) {
+                                // 标题栏
+                                HStack {
+                                    Text("\(sensorManager.gestureResults.count) 个结果")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
                                     Spacer()
-                                    Button("编辑") {
-                                        tempIP = sensorManager.serverHost
-                                        isEditingIP = true
-                                    }
                                 }
-                            }
-                            
-                            // 连接状态
-                            HStack {
-                                Image(systemName: sensorManager.isConnected ? "circle.fill" : "circle")
-                                    .foregroundColor(sensorManager.isConnected ? .green : .red)
-                                Text(sensorManager.isConnected ? "已连接到Mac" : "未连接到Mac")
-                            }
-                            
-                            // Watch连接状态
-                            Group {
-                                if WCSession.default.isReachable {
-                                    HStack {
-                                        Image(systemName: "applewatch.radiowaves.left.and.right")
-                                            .foregroundColor(.green)
-                                        Text("Watch已连接")
-                                    }
-                                } else {
-                                    HStack {
-                                        Image(systemName: "applewatch.slash")
-                                            .foregroundColor(.red)
-                                        Text("Watch未连接")
-                                    }
+                                .padding(.vertical, 8)
+                                
+                                // 表头
+                                HStack {
+                                    Text("时间")
+                                        .frame(width: 70, alignment: .leading)
+                                        .font(.caption)
+                                    Text("手势")
+                                        .frame(width: 80, alignment: .leading)
+                                        .font(.caption)
+                                    Text("置信度")
+                                        .frame(width: 70, alignment: .leading)
+                                        .font(.caption)
+                                    Text("峰值")
+                                        .frame(width: 70, alignment: .leading)
+                                        .font(.caption)
+                                    Spacer()
                                 }
-                            }
-                            
-                            // 最后更新时间
-                            Text("最后更新: \(timeAgoString(from: sensorManager.lastUpdateTime))")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
-                            // 状态消息
-                            if !sensorManager.lastMessage.isEmpty {
-                                Text(sensorManager.lastMessage)
-                                    .font(.footnote)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    
-                    // 传感器数据区域
-                    GroupBox(label: Text("传感器数据").font(.headline)) {
-                        VStack(spacing: 20) {
-                            // 加速度计图表
-                            ChartView(
-                                title: "加速度计 (m/s²)",
-                                dataX: accDataX,
-                                dataY: accDataY,
-                                dataZ: accDataZ,
-                                xData: sensorManager.lastReceivedData["acc_x"] ?? 0,
-                                yData: sensorManager.lastReceivedData["acc_y"] ?? 0,
-                                zData: sensorManager.lastReceivedData["acc_z"] ?? 0
-                            )
-                            .frame(height: 350)
-                            
-                            // 陀螺仪图表
-                            ChartView(
-                                title: "陀螺仪 (rad/s)",
-                                dataX: gyroDataX,
-                                dataY: gyroDataY,
-                                dataZ: gyroDataZ,
-                                xData: sensorManager.lastReceivedData["gyro_x"] ?? 0,
-                                yData: sensorManager.lastReceivedData["gyro_y"] ?? 0,
-                                zData: sensorManager.lastReceivedData["gyro_z"] ?? 0
-                            )
-                            .frame(height: 350)
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    
-                    // 控制区域
-                    GroupBox(label: Text("数据采集").font(.headline)) {
-                        VStack(spacing: 15) {
-                            // 开始/停止采集按钮
-                            Button(action: {
-                                isCollecting.toggle()
-                                if isCollecting {
-                                    // 发送开始采集消息到 Watch
-                                    if WCSession.default.isReachable {
-                                        WCSession.default.sendMessage([
-                                            "type": "start_collection",
-                                            "trigger_collection": true
-                                        ], replyHandler: nil) { error in
-                                            print("发送开始采集消息失败: \(error.localizedDescription)")
-                                        }
-                                    }
+                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+                                .background(Color(.systemGray6))
+                                
+                                // 结果列表
+                                if sensorManager.gestureResults.isEmpty {
+                                    Text("暂无识别结果")
+                                        .foregroundColor(.secondary)
+                                        .padding()
                                 } else {
-                                    // 发送停止采集消息到 Watch
-                                    if WCSession.default.isReachable {
-                                        WCSession.default.sendMessage([
-                                            "type": "stop_collection",
-                                            "trigger_collection": true
-                                        ], replyHandler: nil) { error in
-                                            print("发送停止采集消息失败: \(error.localizedDescription)")
-                                        }
-                                    }
-                                    sensorManager.resetState()
-                                }
-                            }) {
-                                HStack {
-                                    Image(systemName: isCollecting ? "stop.circle.fill" : "play.circle.fill")
-                                        .font(.title2)
-                                    Text(isCollecting ? "停止采集" : "开始采集")
-                                        .font(.headline)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(isCollecting ? Color.red : Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                            }
-                            
-                            // 数据管理按钮
-                            Button(action: {
-                                showingDataManagement = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "folder")
-                                        .font(.title2)
-                                    Text("数据管理")
-                                        .font(.headline)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.gray)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                            }
-                            
-                            // 添加导入按钮
-                            Button(action: {
-                                if WCSession.default.isReachable {
-                                    WCSession.default.sendMessage([
-                                        "type": "request_export",
-                                        "trigger_export": true
-                                    ], replyHandler: nil) { error in
-                                        print("发送导出请求失败: \(error.localizedDescription)")
-                                    }
-                                }
-                            }) {
-                                HStack {
-                                    Image(systemName: "square.and.arrow.down")
-                                        .font(.title2)
-                                    Text("从Watch导入数据")
-                                        .font(.headline)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.green)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                            }
-                            .disabled(!WCSession.default.isReachable)
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    
-                    // 手势识别结果区域
-                    GroupBox(label: Text("手势识别结果").font(.headline)) {
-                        VStack(spacing: 0) {
-                            // 标题栏
-                            HStack {
-                                Text("\(sensorManager.gestureResults.count) 个结果")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                            }
-                            .padding(.vertical, 8)
-                            
-                            // 表头
-                            HStack {
-                                Text("时间")
-                                    .frame(width: 70, alignment: .leading)
-                                    .font(.caption)
-                                Text("手势")
-                                    .frame(width: 80, alignment: .leading)
-                                    .font(.caption)
-                                Text("置信度")
-                                    .frame(width: 70, alignment: .leading)
-                                    .font(.caption)
-                                Text("峰值")
-                                    .frame(width: 70, alignment: .leading)
-                                    .font(.caption)
-                                Spacer()
-                            }
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(Color(.systemGray6))
-                            
-                            // 结果列表
-                            if sensorManager.gestureResults.isEmpty {
-                                Text("暂无识别结果")
-                                    .foregroundColor(.secondary)
-                                    .padding()
-                            } else {
-                                ScrollViewReader { proxy in
-                                    ScrollView {
-                                        LazyVStack(spacing: 0) {
-                                            ForEach(sensorManager.gestureResults) { result in
-                                                HStack {
-                                                    // 时间列
-                                                    Text(String(format: "%.2fs", result.timestamp))
-                                                        .frame(width: 70, alignment: .leading)
-                                                        .font(.system(.body, design: .monospaced))
-                                                    
-                                                    // 手势列
-                                                    Text(result.gesture)
-                                                        .frame(width: 80, alignment: .leading)
-                                                        .bold()
-                                                    
-                                                    // 置信度列
-                                                    Text(String(format: "%.2f", result.confidence))
-                                                        .frame(width: 70, alignment: .leading)
-                                                        .foregroundColor(result.confidence > 0.8 ? .green : .orange)
-                                                    
-                                                    // 峰值列
-                                                    Text(String(format: "%.2f", result.peakValue))
-                                                        .frame(width: 70, alignment: .leading)
-                                                    
-                                                    Spacer()
-                                                    
-                                                    // 删除按钮
-                                                    Button(action: {
-                                                        withAnimation {
-                                                            sensorManager.deleteResult(result)
+                                    ScrollViewReader { proxy in
+                                        ScrollView {
+                                            LazyVStack(spacing: 0) {
+                                                ForEach(sensorManager.gestureResults) { result in
+                                                    HStack {
+                                                        // 时间列
+                                                        Text(String(format: "%.2fs", result.timestamp))
+                                                            .frame(width: 70, alignment: .leading)
+                                                            .font(.system(.body, design: .monospaced))
+                                                        
+                                                        // 手势列
+                                                        Text(result.gesture)
+                                                            .frame(width: 80, alignment: .leading)
+                                                            .bold()
+                                                        
+                                                        // 置信度列
+                                                        Text(String(format: "%.2f", result.confidence))
+                                                            .frame(width: 70, alignment: .leading)
+                                                            .foregroundColor(result.confidence > 0.8 ? .green : .orange)
+                                                        
+                                                        // 峰值列
+                                                        Text(String(format: "%.2f", result.peakValue))
+                                                            .frame(width: 70, alignment: .leading)
+                                                        
+                                                        Spacer()
+                                                        
+                                                        // 删除按钮
+                                                        Button(action: {
+                                                            withAnimation {
+                                                                sensorManager.deleteResult(result)
+                                                            }
+                                                        }) {
+                                                            Image(systemName: "trash")
+                                                                .foregroundColor(.red)
+                                                                .imageScale(.small)
                                                         }
-                                                    }) {
-                                                        Image(systemName: "trash")
-                                                            .foregroundColor(.red)
-                                                            .imageScale(.small)
                                                     }
+                                                    .id(result.id)  // 添加 id
+                                                    .padding(.horizontal)
+                                                    .padding(.vertical, 12)
+                                                    .background(
+                                                        Rectangle()
+                                                            .fill(Color(.systemBackground))
+                                                            .shadow(color: Color.black.opacity(0.05), radius: 1, x: 0, y: 1)
+                                                    )
+                                                    .transition(.opacity)
                                                 }
-                                                .id(result.id)  // 添加 id
-                                                .padding(.horizontal)
-                                                .padding(.vertical, 12)
-                                                .background(
-                                                    Rectangle()
-                                                        .fill(Color(.systemBackground))
-                                                        .shadow(color: Color.black.opacity(0.05), radius: 1, x: 0, y: 1)
-                                                )
-                                                .transition(.opacity)
                                             }
                                         }
-                                    }
-                                    .frame(height: 350)
-                                    .background(Color(.systemGray6))
-                                    .onChange(of: sensorManager.gestureResults.count) { _ in
-                                        // 当有新结果时，自动滚动到最后一个结果
-                                        if let lastId = sensorManager.gestureResults.last?.id {
-                                            withAnimation {
-                                                proxy.scrollTo(lastId, anchor: .bottom)
+                                        .frame(height: 350)
+                                        .background(Color(.systemGray6))
+                                        .onChange(of: sensorManager.gestureResults.count) { _ in
+                                            // 当有新结果时，自动滚动到最后一个结果
+                                            if let lastId = sensorManager.gestureResults.last?.id {
+                                                withAnimation {
+                                                    proxy.scrollTo(lastId, anchor: .bottom)
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                    }
+                    .padding()
+                    .sheet(isPresented: $showingDataManagement) {
+                        DataManagementView()
                     }
                 }
-                .padding()
-                .sheet(isPresented: $showingDataManagement) {
-                    DataManagementView()
+                
+                // 视觉反馈覆盖层
+                if showingVisualFeedback {
+                    Color.green
+                        .opacity(0.3)
+                        .edgesIgnoringSafeArea(.all)
+                        .transition(.opacity)
                 }
             }
             .navigationTitle("传感器数据监控")
@@ -433,6 +502,29 @@ struct ContentView: View {
                         isCollecting = false
                         sensorManager.resetState()
                         resetChartData() // 重置图表数据
+                    }
+                }
+            case "gesture_result":
+                print("收到手势识别结果") // 添加调试输出
+                if let gesture = message["gesture"] as? String,
+                   let confidence = message["confidence"] as? Double {
+                    print("识别到手势: \(gesture), 置信度: \(confidence)") // 添加调试输出
+                    DispatchQueue.main.async {
+                        // 播放反馈
+                        feedbackManager.playFeedback(gesture: gesture, confidence: confidence)
+                        
+                        // 显示视觉反馈
+                        if feedbackManager.isVisualEnabled {
+                            withAnimation {
+                                showingVisualFeedback = true
+                                // 0.5秒后隐藏视觉反馈
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    withAnimation {
+                                        showingVisualFeedback = false
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             default:
