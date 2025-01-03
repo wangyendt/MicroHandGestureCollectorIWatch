@@ -183,6 +183,49 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
         print("Set current folder to: \(url.path)")
     }
     
+    private func saveManualDeletedRecord(id: String, timestamp: UInt64, relativeTime: Double, gesture: String, confidence: Double) {
+        guard let folderURL = currentFolderURL else {
+            print("❌ No current folder set")
+            return
+        }
+        
+        let manualDeletedFileURL = folderURL.appendingPathComponent("manual_deleted.txt")
+        print("📝 Saving manual deleted record to: \(manualDeletedFileURL.path)")
+        
+        // 如果文件不存在，创建文件并写入表头
+        if !FileManager.default.fileExists(atPath: manualDeletedFileURL.path) {
+            let header = "id,timestamp_ns,relative_timestamp_s,gesture,confidence\n"
+            do {
+                try header.write(to: manualDeletedFileURL, atomically: true, encoding: .utf8)
+                print("Created new manual_deleted.txt file")
+            } catch {
+                print("Error creating manual_deleted.txt: \(error)")
+                return
+            }
+        }
+        
+        // 构造记录字符串
+        let recordString = String(format: "%@,%llu,%.3f,%@,%.3f\n",
+                                id,
+                                timestamp,
+                                relativeTime,
+                                gesture,
+                                confidence)
+        
+        // 追加记录到文件
+        if let data = recordString.data(using: .utf8) {
+            do {
+                let fileHandle = try FileHandle(forWritingTo: manualDeletedFileURL)
+                fileHandle.seekToEndOfFile()
+                fileHandle.write(data)
+                fileHandle.closeFile()
+                print("✅ Successfully saved manual deleted record")
+            } catch {
+                print("❌ Error saving manual deleted record: \(error)")
+            }
+        }
+    }
+    
     private func deleteResultFromFile(id: String) {
         guard let folderURL = currentFolderURL else {
             print("❌ No current folder set")
@@ -190,7 +233,7 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
         }
         
         let resultFileURL = folderURL.appendingPathComponent("result.txt")
-        print("🔍 Attempting to delete from file: \(resultFileURL.path)")
+        print("🔍 Looking for record in file: \(resultFileURL.path)")
         
         guard FileManager.default.fileExists(atPath: resultFileURL.path) else {
             print("❌ Result file not found at path: \(resultFileURL.path)")
@@ -199,55 +242,38 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
         
         do {
             print("📝 Processing result file...")
-            print("🗑️ Looking for ID to delete: \(id)")
+            print("🗑 Looking for ID: \(id)")
             
             // 读取文件内容
             let content = try String(contentsOf: resultFileURL, encoding: .utf8)
             let lines = content.components(separatedBy: .newlines)
             print("📊 Total lines in file: \(lines.count)")
             
-            // 过滤掉要删除的行，保留表头和其他行
-            var newLines = [String]()
-            var foundMatch = false
-            
-            // 打印所有行的ID
-            print("📋 All IDs in file:")
+            // 查找要删除的记录
             for (index, line) in lines.enumerated() {
-                if index == 0 {
-                    // 保留表头
-                    newLines.append(line)
-                    print("Header: \(line)")
-                } else if !line.isEmpty {
-                    // 提取并打印每行的ID
-                    let components = line.components(separatedBy: ",")
-                    if components.count >= 6 {
-                        let lineId = components[5]
-                        print("Line \(index): ID = \(lineId)")
-                        
-                        // 检查是否是要删除的行
-                        if line.contains(id) {
-                            foundMatch = true
-                            print("✅ Found line to delete: \(line)")
-                        } else {
-                            newLines.append(line)
-                        }
-                    } else {
-                        print("⚠️ Invalid line format at line \(index): \(line)")
+                if index == 0 || line.isEmpty { continue }
+                
+                let components = line.components(separatedBy: ",")
+                if components.count >= 6 && components[5] == id {
+                    // 找到匹配的记录，保存到manual_deleted.txt
+                    if let timestamp = UInt64(components[0]),
+                       let relativeTime = Double(components[1]),
+                       let confidence = Double(components[3]) {
+                        saveManualDeletedRecord(
+                            id: id,
+                            timestamp: timestamp,
+                            relativeTime: relativeTime,
+                            gesture: components[2],
+                            confidence: confidence
+                        )
+                        print("✅ Found and processed record to delete")
+                        return
                     }
                 }
             }
-            
-            // 只有在找到匹配行时才重写文件
-            if foundMatch {
-                print("✍️ Rewriting file with \(newLines.count) lines")
-                let newContent = newLines.joined(separator: "\n") + "\n"
-                try newContent.write(to: resultFileURL, atomically: true, encoding: .utf8)
-                print("✅ Successfully deleted record with ID: \(id)")
-            } else {
-                print("❌ No matching record found for ID: \(id)")
-            }
+            print("❌ No matching record found for ID: \(id)")
         } catch {
-            print("❌ Error deleting result: \(error)")
+            print("❌ Error processing result file: \(error)")
         }
     }
     
@@ -273,6 +299,15 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         print("Watch收到消息:", message)
+        
+        // 处理删除消息
+        if let type = message["type"] as? String,
+           type == "delete_result",
+           let id = message["id"] as? String {
+            print("收到删除请求，ID: \(id)")
+            deleteResultFromFile(id: id)
+        }
+        
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: NSNotification.Name("ReceivedWatchMessage"),
