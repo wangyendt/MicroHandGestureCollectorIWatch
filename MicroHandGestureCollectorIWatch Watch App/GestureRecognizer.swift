@@ -3,12 +3,22 @@ import CoreML
 import Accelerate
 
 public class GestureRecognizer {
+    private let gestureNames = ["单击", "双击", "握拳", "左滑", "右滑", "鼓掌", "抖腕", "拍打", "日常"]
     private var gestureClassifier: GestureClassifier?
     private var imuBuffer: [(timestamp: TimeInterval, acc: SIMD3<Double>, gyro: SIMD3<Double>)] = []
-    private let bufferCapacity = 100  // 保存1秒的数据
     private var saveGestureData = false
     private var currentFolderURL: URL?
     private var gestureCount = 0  // 添加计数器
+    private let halfWindowSize = 30  // 可以根据需要调整这个值
+    
+    // 将依赖于 halfWindowSize 的属性改为计算属性
+    private var modelInputLength: Int {
+        return 2 * halfWindowSize
+    }
+    
+    private var bufferCapacity: Int {
+        return 2 * modelInputLength
+    }
     
     public init() {
         do {
@@ -33,18 +43,18 @@ public class GestureRecognizer {
         }
         
         // 确保有足够的前后数据
-        if peakIndex < 30 || imuBuffer.count - peakIndex < 30 {
-            print("峰值位置不满足前后30帧的要求")
+        if peakIndex < halfWindowSize || imuBuffer.count - peakIndex < halfWindowSize {
+            print("峰值位置不满足前后\(halfWindowSize)帧的要求")
             return nil
         }
         
-        // 提取前后30帧数据
-        let startIndex = peakIndex - 30
-        let endIndex = peakIndex + 29
+        // 提取前后数据
+        let startIndex = peakIndex - halfWindowSize
+        let endIndex = peakIndex + (halfWindowSize - 1)
         let data = Array(imuBuffer[startIndex...endIndex])
         
-        // 确保正好60帧
-        guard data.count == 60 else {
+        // 确保正好所需帧数
+        guard data.count == modelInputLength else {
             print("数据帧数不正确: \(data.count)")
             return nil
         }
@@ -68,7 +78,7 @@ public class GestureRecognizer {
         
         // 组合处理后的数据用于模型输入
         var modelInputData = [Double]()
-        for i in 0..<60 {
+        for i in 0..<modelInputLength {
             modelInputData.append(contentsOf: accFiltered[i])
             modelInputData.append(contentsOf: gyroData[i])
         }
@@ -104,23 +114,42 @@ public class GestureRecognizer {
         do {
             let input = GestureClassifierInput(input: inputArray)
             let output = try model.prediction(input: input)
-            let probabilities = output.output
+            
+            // 获取原始输出并转换为 Float 数组
+            var logits = [Float]()
+            for i in 0..<gestureNames.count {
+                logits.append(output.output[i].floatValue)
+            }
+            
+            // 应用 softmax
+            let probabilities = softmax(logits)
+            
+            // 打印完整的概率向量和原始logits
+            print("原始 logits 值:")
+            for i in 0..<gestureNames.count {
+                print("类别 \(i) (\(gestureNames[i])): \(logits[i])")
+            }
+            
+            print("\n完整预测概率向量:")
+            for i in 0..<gestureNames.count {
+                print("类别 \(i) (\(gestureNames[i])): \(probabilities[i])")
+            }
             
             // 获取最高概率的类别
             var maxProb: Float = 0
             var predictedClass = 0
             
-            for i in 0..<9 {
-                let prob = probabilities[i].floatValue
+            for i in 0..<gestureNames.count {
+                let prob = probabilities[i]
                 if prob > maxProb {
                     maxProb = prob
                     predictedClass = i
                 }
             }
             
-            // 获取预测结果
-            let gestureNames = ["单击", "双击", "握拳", "左滑", "右滑", "鼓掌", "抖腕", "拍打", "日常"]
             let predictedGesture = gestureNames[predictedClass]
+            
+            print("预测结果: \(predictedGesture) (类别 \(predictedClass)), 置信度: \(maxProb)")
             
             return (gesture: predictedGesture, confidence: Double(maxProb))
         } catch {
@@ -364,7 +393,7 @@ public class GestureRecognizer {
         fileContent += "# 数据格式：frame_idx,raw_acc_x,raw_acc_y,raw_acc_z,raw_gyro_x,raw_gyro_y,raw_gyro_z,filtered_acc_x,filtered_acc_y,filtered_acc_z,raw_gyro_x,raw_gyro_y,raw_gyro_z\n"
         
         // 组合原始数据和处理后的数据
-        for i in 0..<60 {
+        for i in 0..<modelInputLength {
             let raw = rawData[i]
             let processed = processedData[i]
             
@@ -388,5 +417,18 @@ public class GestureRecognizer {
         } catch {
             print("保存手势数据失败: \(error)")
         }
+    }
+    
+    // 添加 softmax 函数
+    private func softmax(_ x: [Float]) -> [Float] {
+        // 找到最大值用于数值稳定性
+        let max = x.max() ?? 0
+        
+        // 计算 exp 并求和
+        let exps = x.map { exp($0 - max) }
+        let sum = exps.reduce(0, +)
+        
+        // 计算 softmax
+        return exps.map { $0 / sum }
     }
 }
