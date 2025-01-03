@@ -37,6 +37,10 @@ struct ContentView: View {
     // 添加一个属性来跟踪当前使用的模型
     @AppStorage("whoseModel") private var whoseModel = "haili"
     
+    // 添加防抖动属性
+    @State private var lastDeleteTime: Date = Date(timeIntervalSince1970: 0)
+    private let deleteDebounceInterval: TimeInterval = 0.3  // 1秒内不重复删除
+    
     var body: some View {
         NavigationView {
             ZStack {  // 添加ZStack来显示视觉反馈
@@ -379,8 +383,13 @@ struct ContentView: View {
                                                         
                                                         // 删除按钮
                                                         Button(action: {
-                                                            withAnimation {
-                                                                sensorManager.deleteResult(result)
+                                                            let now = Date()
+                                                            // 检查是否在防抖动时间内
+                                                            if now.timeIntervalSince(lastDeleteTime) > deleteDebounceInterval {
+                                                                withAnimation {
+                                                                    sensorManager.deleteResult(result)
+                                                                    lastDeleteTime = now
+                                                                }
                                                             }
                                                         }) {
                                                             Image(systemName: "trash")
