@@ -30,6 +30,7 @@ struct ContentView: View {
     @State private var showingPhoneSettings = false
     @State private var showingWatchSettings = false
     @State private var showingCloudDataManagement = false
+    @State private var showingChatView = false
     
     // 添加视觉反馈状态
     @State private var showingVisualFeedback = false
@@ -222,6 +223,26 @@ struct ContentView: View {
                                 }
                                 .sheet(isPresented: $showingCloudDataManagement) {
                                     CloudDataManagementView()
+                                }
+                                
+                                // AI助手按钮
+                                Button(action: {
+                                    showingChatView = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "message.circle.fill")
+                                            .font(.title2)
+                                        Text("AI 助手")
+                                            .font(.headline)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.purple)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                }
+                                .sheet(isPresented: $showingChatView) {
+                                    ChatView()
                                 }
                                 
                                 // 导入数据按钮

@@ -10,6 +10,10 @@ struct PhoneSettingsView: View {
     @AppStorage("ossApiKey") private var ossApiKey = ""
     @AppStorage("ossApiSecret") private var ossApiSecret = ""
     
+    // AI API设置
+    @AppStorage("aiApiKey") private var aiApiKey = ""
+    @AppStorage("aiBaseURL") private var aiBaseURL = "https://api.deepseek.com/v1"
+    
     // 飞书机器人设置
     @AppStorage("larkAppId") private var larkAppId = ""
     @AppStorage("larkAppSecret") private var larkAppSecret = ""
@@ -43,6 +47,15 @@ struct PhoneSettingsView: View {
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                     SecureField("API Secret", text: $ossApiSecret)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                }
+                
+                Section(header: Text("AI API设置")) {
+                    SecureField("API Key", text: $aiApiKey)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                    TextField("Base URL", text: $aiBaseURL)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                 }
