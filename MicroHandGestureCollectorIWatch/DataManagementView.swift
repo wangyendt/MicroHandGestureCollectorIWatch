@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import ios_tools_lib
 
 struct DataFile: Identifiable {
     let id = UUID()
@@ -16,6 +17,36 @@ struct DataManagementView: View {
     @State private var selectedFiles: Set<UUID> = []
     @State private var showingShareSheet = false
     @State private var selectedURLsToShare: [URL] = []
+    @State private var isUploading = false
+    @State private var showingUploadAlert = false
+    @State private var uploadMessage = ""
+    @State private var showingSettingsAlert = false
+    
+    // 从UserDefaults读取设置
+    @AppStorage("ossEndpoint") private var ossEndpoint = "oss-cn-hangzhou.aliyuncs.com"
+    @AppStorage("ossBucketName") private var ossBucketName = "wayne-data"
+    @AppStorage("ossApiKey") private var ossApiKey = ""
+    @AppStorage("ossApiSecret") private var ossApiSecret = ""
+    @AppStorage("larkAppId") private var larkAppId = ""
+    @AppStorage("larkAppSecret") private var larkAppSecret = ""
+    @AppStorage("larkGroupName") private var larkGroupName = "测试群"
+    
+    private var oss: AliyunOSS {
+        AliyunOSS(
+            endpoint: ossEndpoint,
+            bucketName: ossBucketName,
+            apiKey: ossApiKey,
+            apiSecret: ossApiSecret,
+            verbose: true
+        )
+    }
+    
+    private var bot: LarkBot {
+        LarkBot(
+            appId: larkAppId,
+            appSecret: larkAppSecret
+        )
+    }
     
     var body: some View {
         NavigationView {
@@ -108,6 +139,21 @@ struct DataManagementView: View {
                         Spacer()
                         
                         Button {
+                            if ossApiKey.isEmpty || ossApiSecret.isEmpty || larkAppId.isEmpty || larkAppSecret.isEmpty {
+                                showingSettingsAlert = true
+                            } else {
+                                Task {
+                                    await uploadToCloud()
+                                }
+                            }
+                        } label: {
+                            Label("上传", systemImage: "icloud.and.arrow.up")
+                        }
+                        .disabled(selectedFiles.isEmpty || isUploading)
+                        
+                        Spacer()
+                        
+                        Button {
                             prepareAndShare()
                         } label: {
                             Label("分享", systemImage: "square.and.arrow.up")
@@ -124,11 +170,37 @@ struct DataManagementView: View {
             } message: {
                 Text("确定要删除选中的\(selectedFiles.count)个文件吗？")
             }
+            .alert("上传状态", isPresented: $showingUploadAlert) {
+                Button("确定", role: .cancel) { }
+            } message: {
+                Text(uploadMessage)
+            }
+            .alert("设置缺失", isPresented: $showingSettingsAlert) {
+                Button("取消", role: .cancel) { }
+                Button("去设置") {
+                    // 打开设置页面
+                    showWatchSettings()
+                }
+            } message: {
+                Text("请先在设置中配置阿里云OSS和飞书机器人的API凭证")
+            }
             .sheet(isPresented: $showingShareSheet, content: {
                 if !selectedURLsToShare.isEmpty {
                     ShareSheet(activityItems: selectedURLsToShare)
                 }
             })
+            .overlay {
+                if isUploading {
+                    Color.black.opacity(0.3)
+                        .edgesIgnoringSafeArea(.all)
+                        .overlay {
+                            ProgressView("正在上传...")
+                                .padding()
+                                .background(Color(.systemBackground))
+                                .cornerRadius(10)
+                        }
+                }
+            }
         }
         .onAppear {
             loadDataFiles()
@@ -213,6 +285,52 @@ struct DataManagementView: View {
             print("Error getting file modification date: \(error)")
         }
         return nil
+    }
+    
+    private func uploadToCloud() async {
+        guard !selectedFiles.isEmpty else { return }
+        
+        isUploading = true
+        var uploadedFolders: [String] = []
+        
+        do {
+            for fileId in selectedFiles {
+                if let file = dataFiles.first(where: { $0.id == fileId }) {
+                    let success = try await oss.uploadDirectory(
+                        localPath: file.url.path,
+                        prefix: "micro_hand_gesture/raw_data/\(file.name)"
+                    )
+                    
+                    if success {
+                        uploadedFolders.append(file.name)
+                    }
+                }
+            }
+            
+            // 发送飞书消息
+            if !uploadedFolders.isEmpty {
+                let message = "已上传\(uploadedFolders.count)条记录，分别为：\n" + uploadedFolders.joined(separator: "\n")
+                let groupChatIds = try await bot.getGroupChatIdByName(larkGroupName)
+                if let groupChatId = groupChatIds.first {
+                    _ = try await bot.sendTextToChat(chatId: groupChatId, text: message)
+                }
+                
+                uploadMessage = "上传成功！\n" + message
+            } else {
+                uploadMessage = "上传失败，请重试"
+            }
+        } catch {
+            uploadMessage = "上传出错：\(error.localizedDescription)"
+        }
+        
+        isUploading = false
+        showingUploadAlert = true
+    }
+    
+    private func showWatchSettings() {
+        let settingsView = PhoneSettingsView()
+        let hostingController = UIHostingController(rootView: settingsView)
+        UIApplication.shared.windows.first?.rootViewController?.present(hostingController, animated: true)
     }
 }
 

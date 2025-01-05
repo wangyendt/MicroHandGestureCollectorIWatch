@@ -8,10 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		B096274E2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B0B811012D2AB3FA000C8A95 /* AliyunOSSDemo in Frameworks */ = {isa = PBXBuildFile; productRef = B0B811002D2AB3FA000C8A95 /* AliyunOSSDemo */; };
-		B0B811032D2AB3FA000C8A95 /* LarkBotDemo in Frameworks */ = {isa = PBXBuildFile; productRef = B0B811022D2AB3FA000C8A95 /* LarkBotDemo */; };
-		B0B811052D2AB3FA000C8A95 /* LarkCustomBotDemo in Frameworks */ = {isa = PBXBuildFile; productRef = B0B811042D2AB3FA000C8A95 /* LarkCustomBotDemo */; };
-		B0B811072D2AB3FA000C8A95 /* WaynePrintDemo in Frameworks */ = {isa = PBXBuildFile; productRef = B0B811062D2AB3FA000C8A95 /* WaynePrintDemo */; };
+		B0B811132D2ABE43000C8A95 /* ios_tools_lib in Frameworks */ = {isa = PBXBuildFile; productRef = B0B811122D2ABE43000C8A95 /* ios_tools_lib */; };
 		B0FCE81A2D2277D500DEDC4A /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0FCE8192D2277D500DEDC4A /* Accelerate.framework */; };
 /* End PBXBuildFile section */
 
@@ -115,10 +112,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B0B811072D2AB3FA000C8A95 /* WaynePrintDemo in Frameworks */,
-				B0B811012D2AB3FA000C8A95 /* AliyunOSSDemo in Frameworks */,
-				B0B811052D2AB3FA000C8A95 /* LarkCustomBotDemo in Frameworks */,
-				B0B811032D2AB3FA000C8A95 /* LarkBotDemo in Frameworks */,
+				B0B811132D2ABE43000C8A95 /* ios_tools_lib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -218,10 +212,7 @@
 			);
 			name = MicroHandGestureCollectorIWatch;
 			packageProductDependencies = (
-				B0B811002D2AB3FA000C8A95 /* AliyunOSSDemo */,
-				B0B811022D2AB3FA000C8A95 /* LarkBotDemo */,
-				B0B811042D2AB3FA000C8A95 /* LarkCustomBotDemo */,
-				B0B811062D2AB3FA000C8A95 /* WaynePrintDemo */,
+				B0B811122D2ABE43000C8A95 /* ios_tools_lib */,
 			);
 			productName = MicroHandGestureCollectorIWatch;
 			productReference = B09627272D02CFA50015F052 /* MicroHandGestureCollectorIWatch.app */;
@@ -385,7 +376,7 @@
 			mainGroup = B096271E2D02CFA50015F052;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				B0B810FF2D2AB3FA000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */,
+				B0B811112D2ABE43000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B09627282D02CFA50015F052 /* Products */;
@@ -1011,36 +1002,21 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		B0B810FF2D2AB3FA000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */ = {
+		B0B811112D2ABE43000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/wangyendt/ios_tools";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.5;
+				minimumVersion = 1.0.7;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		B0B811002D2AB3FA000C8A95 /* AliyunOSSDemo */ = {
+		B0B811122D2ABE43000C8A95 /* ios_tools_lib */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = B0B810FF2D2AB3FA000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */;
-			productName = AliyunOSSDemo;
-		};
-		B0B811022D2AB3FA000C8A95 /* LarkBotDemo */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B0B810FF2D2AB3FA000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */;
-			productName = LarkBotDemo;
-		};
-		B0B811042D2AB3FA000C8A95 /* LarkCustomBotDemo */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B0B810FF2D2AB3FA000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */;
-			productName = LarkCustomBotDemo;
-		};
-		B0B811062D2AB3FA000C8A95 /* WaynePrintDemo */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B0B810FF2D2AB3FA000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */;
-			productName = WaynePrintDemo;
+			package = B0B811112D2ABE43000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */;
+			productName = ios_tools_lib;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

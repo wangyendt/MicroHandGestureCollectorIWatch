@@ -27,7 +27,7 @@ struct ContentView: View {
     @State private var idleTimer: Timer?
     @State private var isCollecting = false
     @State private var showingDataManagement = false
-    @State private var showingFeedbackSettings = false
+    @State private var showingPhoneSettings = false
     @State private var showingWatchSettings = false
     
     // 添加视觉反馈状态
@@ -229,10 +229,10 @@ struct ContentView: View {
                                 HStack(spacing: 10) {
                                     // 手机设置按钮
                                     Button(action: {
-                                        showingFeedbackSettings = true
+                                        showingPhoneSettings = true
                                     }) {
                                         HStack {
-                                            Image(systemName: "iphone")
+                                            Image(systemName: "iphone.gen2")
                                                 .font(.title2)
                                             Text("手机设置")
                                                 .font(.headline)
@@ -243,8 +243,8 @@ struct ContentView: View {
                                         .foregroundColor(.white)
                                         .cornerRadius(10)
                                     }
-                                    .sheet(isPresented: $showingFeedbackSettings) {
-                                        FeedbackSettingsView()
+                                    .sheet(isPresented: $showingPhoneSettings) {
+                                        PhoneSettingsView()
                                     }
                                     
                                     // 手表设置按钮
