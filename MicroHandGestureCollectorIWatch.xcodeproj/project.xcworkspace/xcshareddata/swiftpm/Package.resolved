@@ -1,0 +1,15 @@
+{
+  "originHash" : "c747624aad96a0631cd45a7ad1f2d96d53fd3340512ee95c8d77fa6300e739d1",
+  "pins" : [
+    {
+      "identity" : "ios_tools",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/wangyendt/ios_tools",
+      "state" : {
+        "revision" : "f5c9e006c15bed9058d597fca6bfad1091240c47",
+        "version" : "1.0.5"
+      }
+    }
+  ],
+  "version" : 3
+}
