@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/wangyendt/ios_tools",
       "state" : {
-        "revision" : "7db3bb6c6fce233d49d643b4d008719699b15ac6",
-        "version" : "1.0.7"
+        "revision" : "d63fd7d3c5e8442776655504ae0a2fdd04ece238",
+        "version" : "1.0.8"
       }
     }
   ],

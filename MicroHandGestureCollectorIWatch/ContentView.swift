@@ -29,6 +29,7 @@ struct ContentView: View {
     @State private var showingDataManagement = false
     @State private var showingPhoneSettings = false
     @State private var showingWatchSettings = false
+    @State private var showingCloudDataManagement = false
     
     // 添加视觉反馈状态
     @State private var showingVisualFeedback = false
@@ -183,14 +184,14 @@ struct ContentView: View {
                                     .cornerRadius(10)
                                 }
                                 
-                                // 数据管理按钮
+                                // 本地数据管理按钮
                                 Button(action: {
                                     showingDataManagement = true
                                 }) {
                                     HStack {
                                         Image(systemName: "folder")
                                             .font(.title2)
-                                        Text("数据管理")
+                                        Text("本地数据")
                                             .font(.headline)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -198,6 +199,29 @@ struct ContentView: View {
                                     .background(Color.gray)
                                     .foregroundColor(.white)
                                     .cornerRadius(10)
+                                }
+                                .sheet(isPresented: $showingDataManagement) {
+                                    DataManagementView()
+                                }
+                                
+                                // 云端数据管理按钮
+                                Button(action: {
+                                    showingCloudDataManagement = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "cloud.fill")
+                                            .font(.title2)
+                                        Text("云端数据")
+                                            .font(.headline)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                }
+                                .sheet(isPresented: $showingCloudDataManagement) {
+                                    CloudDataManagementView()
                                 }
                                 
                                 // 导入数据按钮
