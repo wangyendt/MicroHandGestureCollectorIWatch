@@ -337,6 +337,27 @@ struct ContentView: View {
                                 }
                                 .padding(.vertical, 8)
                                 
+                                // 统计信息
+                                VStack(alignment: .leading, spacing: 4) {
+                                    let stats = calculateGestureStats(results: sensorManager.gestureResults)
+                                    ForEach(stats.gestureCounts.sorted(by: { $0.key < $1.key }), id: \.key) { gesture, count in
+                                        if let accuracy = stats.gestureAccuracy[gesture] {
+                                            Text("\(gesture): \(count)次 (准确率: \(String(format: "%.1f%%", accuracy * 100)))")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    if !stats.gestureCounts.isEmpty {
+                                        Text("整体准确率: \(String(format: "%.1f%%", stats.overallAccuracy * 100))")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(.secondary)
+                                            .padding(.top, 4)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 2)
+                                .padding(.bottom, 6)
+                                
                                 // 表头
                                 HStack(spacing: 0) {
                                     Text("时间")
@@ -638,6 +659,46 @@ struct ContentView: View {
             red: normalizedValue,
             green: 0.3,
             blue: 1.0 - normalizedValue
+        )
+    }
+    
+    struct GestureStats {
+        var gestureCounts: [String: Int]
+        var gestureAccuracy: [String: Double]
+        var overallAccuracy: Double
+    }
+    
+    private func calculateGestureStats(results: [GestureResult]) -> GestureStats {
+        var gestureCounts: [String: Int] = [:]
+        var correctCounts: [String: Int] = [:]
+        var totalCorrect = 0
+        
+        // 统计每种真实手势的数量和正确识别的数量
+        for result in results {
+            // 使用真实手势作为统计基准
+            gestureCounts[result.trueGesture, default: 0] += 1
+            
+            // 如果识别结果与真实手势相同，增加正确计数
+            if result.gesture == result.trueGesture {
+                correctCounts[result.trueGesture, default: 0] += 1
+                totalCorrect += 1
+            }
+        }
+        
+        // 计算每种手势的准确率
+        var gestureAccuracy: [String: Double] = [:]
+        for (gesture, count) in gestureCounts {
+            let correct = correctCounts[gesture] ?? 0
+            gestureAccuracy[gesture] = Double(correct) / Double(count)
+        }
+        
+        // 计算整体准确率
+        let overallAccuracy = results.isEmpty ? 0.0 : Double(totalCorrect) / Double(results.count)
+        
+        return GestureStats(
+            gestureCounts: gestureCounts,
+            gestureAccuracy: gestureAccuracy,
+            overallAccuracy: overallAccuracy
         )
     }
 }

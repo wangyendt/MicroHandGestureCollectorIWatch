@@ -374,15 +374,16 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             print("❌ No current folder set")
             return
         }
-        
+
         let resultFileURL = folderURL.appendingPathComponent("result.txt")
         let manualResultFileURL = folderURL.appendingPathComponent("manual_result.txt")
+        let statisticsFileURL = folderURL.appendingPathComponent("statistics.yaml")
         
         guard FileManager.default.fileExists(atPath: resultFileURL.path) else {
             print("❌ Result file not found")
             return
         }
-        
+
         do {
             // 读取 result.txt
             let content = try String(contentsOf: resultFileURL, encoding: .utf8)
@@ -407,25 +408,62 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             // 创建 manual_result.txt
             var manualResultContent = "timestamp_ns,relative_timestamp_s,gesture,confidence,peak_value,id,true_gesture,is_deleted\n"
             
+            // 统计变量
+            var gestureCounts: [String: Int] = [:]
+            var correctCounts: [String: Int] = [:]
+            var totalCount = 0
+            var totalCorrect = 0
+            
             for line in lines.dropFirst() { // 跳过表头
                 if line.isEmpty { continue }
                 
                 let components = line.components(separatedBy: ",")
                 if components.count >= 6 {
                     let id = components[5]
-                    let isDeleted = deletedIds.contains(id) ? "1" : "0"
+                    let isDeleted = deletedIds.contains(id)
                     // 使用更新后的真实手势，如果没有更新则使用原始手势
-                    let trueGesture = updatedTrueGestures[id] ?? components[2]
-                    manualResultContent += "\(line),\(trueGesture),\(isDeleted)\n"
+                    let predictedGesture = components[2]
+                    let trueGesture = updatedTrueGestures[id] ?? predictedGesture
+                    
+                    manualResultContent += "\(line),\(trueGesture),\(isDeleted ? "1" : "0")\n"
+                    
+                    // 只统计未删除的结果
+                    if !isDeleted {
+                        gestureCounts[trueGesture, default: 0] += 1
+                        totalCount += 1
+                        if predictedGesture == trueGesture {
+                            correctCounts[trueGesture, default: 0] += 1
+                            totalCorrect += 1
+                        }
+                    }
                 }
+            }
+            
+            // 生成统计信息的YAML内容
+            var statisticsContent = "statistics:\n"
+            statisticsContent += "  total_samples: \(totalCount)\n"
+            statisticsContent += "  total_correct: \(totalCorrect)\n"
+            statisticsContent += "  overall_accuracy: \(String(format: "%.4f", totalCount > 0 ? Double(totalCorrect) / Double(totalCount) : 0.0))\n"
+            statisticsContent += "  gestures:\n"
+            
+            // 按手势名称排序
+            for gesture in gestureCounts.keys.sorted() {
+                let count = gestureCounts[gesture] ?? 0
+                let correct = correctCounts[gesture] ?? 0
+                let accuracy = count > 0 ? Double(correct) / Double(count) : 0.0
+                statisticsContent += "    \(gesture):\n"
+                statisticsContent += "      count: \(count)\n"
+                statisticsContent += "      correct: \(correct)\n"
+                statisticsContent += "      accuracy: \(String(format: "%.4f", accuracy))\n"
             }
             
             // 写入文件
             try manualResultContent.write(to: manualResultFileURL, atomically: true, encoding: .utf8)
-            print("✅ Successfully generated manual_result.txt")
+            try statisticsContent.write(to: statisticsFileURL, atomically: true, encoding: .utf8)
+            print("✅ Successfully generated manual_result.txt and statistics.yaml")
             
         } catch {
-            print("❌ Error generating manual_result.txt: \(error)")
+            print("❌ Error generating result files: \(error)")
         }
     }
 } 
