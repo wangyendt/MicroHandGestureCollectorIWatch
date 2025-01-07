@@ -4,19 +4,22 @@
 <dict>
 	<key>OS_ACTIVITY_MODE</key>
 	<string>debug</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>accelerometer</string>
+		<string>gyroscope</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 		<string>processing</string>
-		<string>health-kit</string>
 	</array>
-	<key>WKAlwaysRunsInBackground</key>
-	<true/>
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>
-		<string>sensor-processing</string>
 	</array>
+	<key>WKAlwaysRunsInBackground</key>
+	<true/>
 	<key>WKExtendedRuntimeSessionEnabled</key>
 	<true/>
 	<key>WKExtendedRuntimeSessionWatchOSVersion</key>
@@ -27,5 +30,7 @@
 	<true/>
 	<key>WKSupportsAlwaysOnDisplay</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>我们需要访问运动和健身数据来识别手势</string>
 </dict>
 </plist>
