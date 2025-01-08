@@ -687,7 +687,7 @@
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "需要使用本地网络来传输传感器数据";
 				INFOPLIST_KEY_NSMotionUsageDescription = "需要访问运动数据以进行手势识别";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch.demo;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -699,6 +699,7 @@
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "MicroHandGestureCollectorIWatch Watch App/MicroHandGestureCollectorIWatch-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
