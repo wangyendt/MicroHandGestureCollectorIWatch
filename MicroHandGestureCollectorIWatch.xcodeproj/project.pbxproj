@@ -647,7 +647,6 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "需要更新健康数据以保持应用在后台运行";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "需要使用本地网络来传输传感器数据";
 				INFOPLIST_KEY_NSMotionUsageDescription = "需要访问运动数据以进行手势识别";
-				INFOPLIST_KEY_UIRequiredDeviceCapabilities = "gyroscope accelerometer";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
@@ -687,7 +686,6 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "需要更新健康数据以保持应用在后台运行";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "需要使用本地网络来传输传感器数据";
 				INFOPLIST_KEY_NSMotionUsageDescription = "需要访问运动数据以进行手势识别";
-				INFOPLIST_KEY_UIRequiredDeviceCapabilities = "gyroscope accelerometer";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = wayne.MicroHandGestureCollectorIWatch.demo;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;

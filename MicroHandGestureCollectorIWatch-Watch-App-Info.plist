@@ -4,19 +4,10 @@
 <dict>
 	<key>OS_ACTIVITY_MODE</key>
 	<string>debug</string>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>accelerometer</string>
-		<string>gyroscope</string>
-	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 		<string>processing</string>
-	</array>
-	<key>WKBackgroundModes</key>
-	<array>
-		<string>workout-processing</string>
 	</array>
 	<key>WKAlwaysRunsInBackground</key>
 	<true/>
