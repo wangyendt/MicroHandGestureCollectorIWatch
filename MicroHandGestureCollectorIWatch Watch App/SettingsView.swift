@@ -12,6 +12,7 @@ struct WatchAppSettingsView: View {
     @AppStorage("saveQuaternions") private var saveQuaternions = false
     @AppStorage("saveGestureData") private var saveGestureData = false
     @AppStorage("saveResultFile") private var saveResultFile = true
+    @AppStorage("enableRealtimeData") private var enableRealtimeData = false
     
     // 添加反馈设置
     @AppStorage("enableVisualFeedback") private var enableVisualFeedback = true
@@ -64,6 +65,7 @@ struct WatchAppSettingsView: View {
                 Section(header: Text("手势识别设置")) {
                     Toggle("保存手势数据", isOn: $saveGestureData.animation())
                     Toggle("保存识别结果", isOn: $saveResultFile.animation())
+                    Toggle("发送实时数据", isOn: $enableRealtimeData.animation())
                 }
                 
                 Section(header: Text("反馈设置")) {
@@ -122,7 +124,8 @@ struct WatchAppSettingsView: View {
                                 "saveResultFile": saveResultFile,
                                 "enableVisualFeedback": enableVisualFeedback,
                                 "enableHapticFeedback": enableHapticFeedback,
-                                "enableVoiceFeedback": enableVoiceFeedback
+                                "enableVoiceFeedback": enableVoiceFeedback,
+                                "enableRealtimeData": enableRealtimeData
                             ]
                             WCSession.default.sendMessage(settings, replyHandler: nil) { error in
                                 print("发送设置更新失败: \(error.localizedDescription)")

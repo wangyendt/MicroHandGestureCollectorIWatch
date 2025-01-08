@@ -453,6 +453,9 @@ struct ContentView: View {
             motionManager.stopDataCollection()
             WatchConnectivityManager.shared.sendStopSignal()
             
+            // 设置 MotionManager
+            WatchConnectivityManager.shared.setMotionManager(motionManager)
+            
             // 添加欢迎语音
             FeedbackManager.playFeedback(speak: " ")
         }

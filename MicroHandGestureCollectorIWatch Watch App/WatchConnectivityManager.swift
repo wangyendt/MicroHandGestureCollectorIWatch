@@ -24,6 +24,9 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     // 添加一个字典来存储更新的真实手势
     private var updatedTrueGestures: [String: String] = [:]
     
+    // 添加 MotionManager 引用
+    private var motionManager: MotionManager?
+    
     private override init() {
         super.init()
         
@@ -33,7 +36,17 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
         }
     }
     
+    // 添加设置 MotionManager 的方法
+    func setMotionManager(_ manager: MotionManager) {
+        self.motionManager = manager
+    }
+    
     func sendRealtimeData(accData: CMAcceleration, gyroData: CMRotationRate, timestamp: UInt64) {
+        // 检查是否启用了实时数据发送
+        guard UserDefaults.standard.bool(forKey: "enableRealtimeData") else {
+            return
+        }
+        
         // 使用异步方式更新时间戳历史
         DispatchQueue.main.async {
             // 更新时间戳历史，使用滑动窗口方式
@@ -325,21 +338,79 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         print("Watch收到消息:", message)
         
-        // 处理真实手势更新消息
-        if let type = message["type"] as? String,
-           type == "update_true_gesture",
-           let id = message["id"] as? String,
-           let trueGesture = message["true_gesture"] as? String {
-            print("收到真实手势更新，ID: \(id), 真实手势: \(trueGesture)")
-            updatedTrueGestures[id] = trueGesture
-        }
-        
-        // 处理删除消息
-        if let type = message["type"] as? String,
-           type == "delete_result",
-           let id = message["id"] as? String {
-            print("收到删除请求，ID: \(id)")
-            deleteResultFromFile(id: id)
+        if let type = message["type"] as? String {
+            switch type {
+            case "update_settings":
+                print("收到设置更新") // 添加调试输出
+                DispatchQueue.main.async {
+                    // 更新本地设置
+                    if let feedbackType = message["feedbackType"] as? String {
+                        UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
+                    }
+                    if let peakThreshold = message["peakThreshold"] as? Double {
+                        UserDefaults.standard.set(peakThreshold, forKey: "peakThreshold")
+                        self.motionManager?.signalProcessor.updateSettings(peakThreshold: peakThreshold)
+                    }
+                    if let peakWindow = message["peakWindow"] as? Double {
+                        UserDefaults.standard.set(peakWindow, forKey: "peakWindow")
+                        self.motionManager?.signalProcessor.updateSettings(peakWindow: peakWindow)
+                    }
+                    if let saveGestureData = message["saveGestureData"] as? Bool {
+                        UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
+                        self.motionManager?.updateSaveSettings(gestureData: saveGestureData)
+                    }
+                    if let savePeaks = message["savePeaks"] as? Bool {
+                        UserDefaults.standard.set(savePeaks, forKey: "savePeaks")
+                        self.motionManager?.updateSaveSettings(peaks: savePeaks)
+                    }
+                    if let saveValleys = message["saveValleys"] as? Bool {
+                        UserDefaults.standard.set(saveValleys, forKey: "saveValleys")
+                        self.motionManager?.updateSaveSettings(valleys: saveValleys)
+                    }
+                    if let saveSelectedPeaks = message["saveSelectedPeaks"] as? Bool {
+                        UserDefaults.standard.set(saveSelectedPeaks, forKey: "saveSelectedPeaks")
+                        self.motionManager?.updateSaveSettings(selectedPeaks: saveSelectedPeaks)
+                    }
+                    if let saveQuaternions = message["saveQuaternions"] as? Bool {
+                        UserDefaults.standard.set(saveQuaternions, forKey: "saveQuaternions")
+                        self.motionManager?.updateSaveSettings(quaternions: saveQuaternions)
+                    }
+                    if let saveResultFile = message["saveResultFile"] as? Bool {
+                        UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
+                        self.motionManager?.updateSaveSettings(resultFile: saveResultFile)
+                    }
+                    if let enableVisualFeedback = message["enableVisualFeedback"] as? Bool {
+                        UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
+                        FeedbackManager.enableVisualFeedback = enableVisualFeedback
+                    }
+                    if let enableHapticFeedback = message["enableHapticFeedback"] as? Bool {
+                        UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
+                        FeedbackManager.enableHapticFeedback = enableHapticFeedback
+                    }
+                    if let enableVoiceFeedback = message["enableVoiceFeedback"] as? Bool {
+                        UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
+                        FeedbackManager.enableVoiceFeedback = enableVoiceFeedback
+                    }
+                    if let enableRealtimeData = message["enableRealtimeData"] as? Bool {
+                        print("更新实时数据设置为: \(enableRealtimeData)")
+                        UserDefaults.standard.set(enableRealtimeData, forKey: "enableRealtimeData")
+                    }
+                }
+            case "update_true_gesture":
+                print("收到真实手势更新")
+                if let id = message["id"] as? String,
+                   let trueGesture = message["true_gesture"] as? String {
+                    print("收到真实手势更新，ID: \(id), 真实手势: \(trueGesture)")
+                    updatedTrueGestures[id] = trueGesture
+                }
+            case "delete_result":
+                print("收到删除请求")
+                if let id = message["id"] as? String {
+                    deleteResultFromFile(id: id)
+                }
+            default:
+                break
+            }
         }
         
         DispatchQueue.main.async {

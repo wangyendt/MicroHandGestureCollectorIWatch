@@ -16,6 +16,7 @@ struct WatchSettingsView: View {
     @AppStorage("enableHapticFeedback") private var enableHapticFeedback = true
     @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback = true
     @AppStorage("feedbackType") private var feedbackType = "peak"
+    @AppStorage("enableRealtimeData") private var enableRealtimeData = false
     
     let onComplete: ([String: Any]) -> Void
     
@@ -58,6 +59,7 @@ struct WatchSettingsView: View {
                 Section(header: Text("手势识别设置")) {
                     Toggle("保存手势数据", isOn: $saveGestureData)
                     Toggle("保存识别结果", isOn: $saveResultFile)
+                    Toggle("发送实时数据", isOn: $enableRealtimeData)
                 }
                 
                 Section(header: Text("反馈设置")) {
@@ -94,7 +96,8 @@ struct WatchSettingsView: View {
                             "saveResultFile": saveResultFile,
                             "enableVisualFeedback": enableVisualFeedback,
                             "enableHapticFeedback": enableHapticFeedback,
-                            "enableVoiceFeedback": enableVoiceFeedback
+                            "enableVoiceFeedback": enableVoiceFeedback,
+                            "enableRealtimeData": enableRealtimeData
                         ]
                         
                         onComplete(settings)
