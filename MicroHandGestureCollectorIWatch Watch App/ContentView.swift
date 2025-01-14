@@ -138,7 +138,10 @@ struct ContentView: View {
     @State private var showTightnessPicker = false
     
     let handOptions = ["左手", "右手"]
-    let gestureOptions = ["混合", "单击[正]", "双击[正]", "握拳[正]", "左滑[正]", "右滑[正]", "左摆[正]", "右摆[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
+    let gestureOptions = ["混合", "单击[正]", "双击[正]", "握拳[正]",
+                          "摊掌[正]", "转腕[正]", "摇手[正]",
+                          "左滑[正]", "右滑[正]", "左摆[正]", "右摆[正]",
+                          "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
     let forceOptions = ["轻", "中", "重"]
     let calculator = CalculatorBridge()
     let genderOptions = ["男", "女"]
