@@ -146,45 +146,6 @@ struct ContentView: View {
                         // 控制区域
                         GroupBox(label: Text("数据采集").font(.headline)) {
                             VStack(spacing: 15) {
-                                // 开始/停止采集按钮
-                                Button(action: {
-                                    isCollecting.toggle()
-                                    if isCollecting {
-                                        // 发送开始采集消息到 Watch
-                                        if WCSession.default.isReachable {
-                                            WCSession.default.sendMessage([
-                                                "type": "start_collection",
-                                                "trigger_collection": true
-                                            ], replyHandler: nil) { error in
-                                                print("发送开始采集消息失败: \(error.localizedDescription)")
-                                            }
-                                        }
-                                    } else {
-                                        // 发送停止采集消息到 Watch
-                                        if WCSession.default.isReachable {
-                                            WCSession.default.sendMessage([
-                                                "type": "stop_collection",
-                                                "trigger_collection": true
-                                            ], replyHandler: nil) { error in
-                                                print("发送停止采集消息失败: \(error.localizedDescription)")
-                                            }
-                                        }
-                                        sensorManager.resetState()
-                                    }
-                                }) {
-                                    HStack {
-                                        Image(systemName: isCollecting ? "stop.circle.fill" : "play.circle.fill")
-                                            .font(.title2)
-                                        Text(isCollecting ? "停止采集" : "开始采集")
-                                            .font(.headline)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(isCollecting ? Color.red : Color.blue)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(10)
-                                }
-                                
                                 // 本地数据管理按钮
                                 Button(action: {
                                     showingDataManagement = true
@@ -321,6 +282,46 @@ struct ContentView: View {
                                         })
                                     }
                                 }
+                                
+                                // 开始/停止采集按钮
+                                Button(action: {
+                                    isCollecting.toggle()
+                                    if isCollecting {
+                                        // 发送开始采集消息到 Watch
+                                        if WCSession.default.isReachable {
+                                            WCSession.default.sendMessage([
+                                                "type": "start_collection",
+                                                "trigger_collection": true
+                                            ], replyHandler: nil) { error in
+                                                print("发送开始采集消息失败: \(error.localizedDescription)")
+                                            }
+                                        }
+                                    } else {
+                                        // 发送停止采集消息到 Watch
+                                        if WCSession.default.isReachable {
+                                            WCSession.default.sendMessage([
+                                                "type": "stop_collection",
+                                                "trigger_collection": true
+                                            ], replyHandler: nil) { error in
+                                                print("发送停止采集消息失败: \(error.localizedDescription)")
+                                            }
+                                        }
+                                        sensorManager.resetState()
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: isCollecting ? "stop.circle.fill" : "play.circle.fill")
+                                            .font(.title2)
+                                        Text(isCollecting ? "停止采集" : "开始采集")
+                                            .font(.headline)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(isCollecting ? Color.red : Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                }
+                                
                             }
                             .padding(.vertical, 8)
                         }

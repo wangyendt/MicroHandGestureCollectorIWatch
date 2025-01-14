@@ -239,10 +239,19 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         print("识别到手势: \(gesture), 置信度: \(confidence)")
     }
     
-    public func startDataCollection(name: String, hand: String, gesture: String, force: String, note: String) {
+    public func startDataCollection(
+        name: String,
+        hand: String,
+        gesture: String,
+        force: String,
+        gender: String,
+        tightness: String,
+        note: String
+    ) {
         signalProcessor.resetCount()  // 重置计数
         signalProcessor.resetStartTime()  // 重置开始时间
         peakCount = 0
+        
         // 设置更新间隔
         motionManager.accelerometerUpdateInterval = 1.0 / 200.0  // 200Hz
         motionManager.gyroUpdateInterval = 1.0 / 200.0  // 200Hz
@@ -264,7 +273,16 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
             
             // 保存设备信息
-            saveDeviceInfo(to: folderURL)
+            saveDeviceInfo(
+                to: folderURL,
+                name: name,
+                hand: hand,
+                gesture: gesture,
+                force: force,
+                gender: gender,
+                tightness: tightness,
+                note: note
+            )
             
             // 创建必需的文件
             let accFileURL = folderURL.appendingPathComponent("acc.txt")
@@ -632,16 +650,38 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     // 在 MotionManager 类中添加新的方法
-    private func saveDeviceInfo(to folderURL: URL) {
-        let deviceInfo = collectDeviceInfo()
+    private func saveDeviceInfo(
+        to folderURL: URL,
+        name: String,
+        hand: String,
+        gesture: String,
+        force: String,
+        gender: String,
+        tightness: String,
+        note: String
+    ) {
+        var info = collectDeviceInfo()
+        
+        // 添加采集信息
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        info["collection_time"] = dateFormatter.string(from: Date())
+        info["participant_name"] = name
+        info["hand"] = hand
+        info["gesture"] = gesture
+        info["force"] = force
+        info["gender"] = gender
+        info["tightness"] = tightness
+        info["note"] = note
+        
         let infoFileURL = folderURL.appendingPathComponent("info.yaml")
         
         do {
-            let yamlString = generateYAMLString(from: deviceInfo)
+            let yamlString = generateYAMLString(from: info)
             try yamlString.write(to: infoFileURL, atomically: true, encoding: .utf8)
-            print("成功保存设备信息到: \(infoFileURL.path)")
+            print("成功保存信息到: \(infoFileURL.path)")
         } catch {
-            print("保存设备信息失败: \(error)")
+            print("保存信息失败: \(error)")
         }
     }
     
@@ -707,22 +747,22 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     private func generateYAMLString(from info: [String: String]) -> String {
-        var yamlString = "# 设备信息\n"
+        var yamlString = "# 采集信息\n"
+        yamlString += "collection:\n"
+        yamlString += "  time: \(info["collection_time"] ?? "")\n"
+        yamlString += "  participant_name: \(info["participant_name"] ?? "")\n"
+        yamlString += "  hand: \(info["hand"] ?? "")\n"
+        yamlString += "  gesture: \(info["gesture"] ?? "")\n"
+        yamlString += "  force: \(info["force"] ?? "")\n"
+        yamlString += "  gender: \(info["gender"] ?? "")\n"
+        yamlString += "  tightness: \(info["tightness"] ?? "")\n"
+        yamlString += "  note: \(info["note"] ?? "")\n\n"
         
-        // 对键进行排序以保持一致性
-        let sortedKeys = info.keys.sorted()
-        
-        for key in sortedKeys {
+        yamlString += "# 设备信息\n"
+        yamlString += "device:\n"
+        for key in info.keys.sorted() where !["collection_time", "participant_name", "hand", "gesture", "force", "gender", "tightness", "note"].contains(key) {
             if let value = info[key] {
-                // 处理多行值
-                if value.contains("\n") {
-                    yamlString += "\(key): |\n"
-                    value.split(separator: "\n").forEach { line in
-                        yamlString += "  \(line)\n"
-                    }
-                } else {
-                    yamlString += "\(key): \(value)\n"
-                }
+                yamlString += "  \(key): \(value)\n"
             }
         }
         

@@ -132,10 +132,17 @@ struct ContentView: View {
     @AppStorage("peakWindow") private var peakWindow: Double = 0.6
     @State private var showingSettings = false
     
+    @State private var selectedGender = "男"
+    @State private var selectedTightness = "松"
+    @State private var showGenderPicker = false
+    @State private var showTightnessPicker = false
+    
     let handOptions = ["左手", "右手"]
     let gestureOptions = ["混合", "单击[正]", "双击[正]", "握拳[正]", "左滑[正]", "右滑[正]", "左摆[正]", "右摆[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
     let forceOptions = ["轻", "中", "重"]
     let calculator = CalculatorBridge()
+    let genderOptions = ["男", "女"]
+    let tightnessOptions = ["松", "紧"]
     
     var body: some View {
         ScrollView {
@@ -165,6 +172,72 @@ struct ContentView: View {
                                     Text(option)
                                     Spacer()
                                     if selectedHand == option {
+                                        Text("✓")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Button(action: { showGenderPicker = true }) {
+                    HStack {
+                        Text("性别").font(.headline)
+                        Spacer()
+                        Text(selectedGender)
+                            .foregroundColor(.gray)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
+                }
+                .sheet(isPresented: $showGenderPicker) {
+                    List {
+                        ForEach(genderOptions, id: \.self) { option in
+                            Button(action: {
+                                selectedGender = option
+                                showGenderPicker = false
+                            }) {
+                                HStack {
+                                    Text(option)
+                                    Spacer()
+                                    if selectedGender == option {
+                                        Text("✓")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Button(action: { showTightnessPicker = true }) {
+                    HStack {
+                        Text("松紧").font(.headline)
+                        Spacer()
+                        Text(selectedTightness)
+                            .foregroundColor(.gray)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
+                }
+                .sheet(isPresented: $showTightnessPicker) {
+                    List {
+                        ForEach(tightnessOptions, id: \.self) { option in
+                            Button(action: {
+                                selectedTightness = option
+                                showTightnessPicker = false
+                            }) {
+                                HStack {
+                                    Text(option)
+                                    Spacer()
+                                    if selectedTightness == option {
                                         Text("✓")
                                             .foregroundColor(.blue)
                                     }
@@ -311,6 +384,8 @@ struct ContentView: View {
                             hand: selectedHand,
                             gesture: selectedGesture,
                             force: selectedForce,
+                            gender: selectedGender,
+                            tightness: selectedTightness,
                             note: noteText
                         )
                         // 向iPhone发送开始采集的消息
@@ -523,6 +598,8 @@ struct ContentView: View {
                                 hand: selectedHand,
                                 gesture: selectedGesture,
                                 force: selectedForce,
+                                gender: selectedGender,
+                                tightness: selectedTightness,
                                 note: noteText
                             )
                         }
