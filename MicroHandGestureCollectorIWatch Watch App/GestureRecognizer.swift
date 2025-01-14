@@ -62,7 +62,7 @@ public class GestureRecognizer {
             let model = try GestureModel_1(configuration: MLModelConfiguration())
             let input = GestureModel_1Input(input: inputArray)
             let output = try model.prediction(input: input)
-            return output.linear_3
+            return output.output
         }
     ]
     
