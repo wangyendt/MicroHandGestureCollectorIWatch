@@ -220,11 +220,32 @@ struct CloudDataManagementView: View {
         isLoading = true
         defer { isLoading = false }
         
+        var deletedFolders: [String] = []
+        var failedFolders: [String] = []
+        
         do {
             for fileId in selectedFiles {
                 if let file = dataFiles.first(where: { $0.id == fileId }) {
                     let prefix = cloudPrefix + file.name
-                    _ = try await oss.deleteFilesWithPrefix(prefix)
+                    let success = try await oss.deleteFilesWithPrefix(prefix)
+                    if success {
+                        deletedFolders.append(file.name)
+                    } else {
+                        failedFolders.append(file.name)
+                    }
+                }
+            }
+            
+            // 发送飞书消息
+            if !deletedFolders.isEmpty {
+                let message = "已从云端删除\(deletedFolders.count)条记录，分别为：\n" + deletedFolders.joined(separator: "\n")
+                do {
+                    let groupChatIds = try await bot.getGroupChatIdByName(settings.larkGroupName)
+                    if let groupChatId = groupChatIds.first {
+                        _ = try await bot.sendTextToChat(chatId: groupChatId, text: message)
+                    }
+                } catch {
+                    print("发送飞书消息失败: \(error)")
                 }
             }
             
