@@ -36,6 +36,8 @@ struct DataManagementView: View {
     @State private var showingUploadAlert = false
     @State private var uploadMessage = ""
     @State private var showingSettingsAlert = false
+    @State private var selectedDataFile: DataFile?
+    @State private var showingDetailView = false
     
     @ObservedObject private var settings = AppSettings.shared
     
@@ -125,6 +127,13 @@ struct DataManagementView: View {
                                 }
                             }
                             .padding(.vertical, 4)
+                            .contentShape(Rectangle())  // 确保整个区域可点击
+                            .onTapGesture {
+                                if !isEditing {
+                                    selectedDataFile = file
+                                    showingDetailView = true
+                                }
+                            }
                         }
                     }
                 }
@@ -206,6 +215,11 @@ struct DataManagementView: View {
                     ShareSheet(activityItems: selectedURLsToShare)
                 }
             })
+            .sheet(isPresented: $showingDetailView) {
+                if let dataFile = selectedDataFile {
+                    DataDetailView(dataFile: dataFile)
+                }
+            }
             .overlay {
                 if isUploading {
                     Color.black.opacity(0.3)
