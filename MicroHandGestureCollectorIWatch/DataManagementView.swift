@@ -38,6 +38,9 @@ struct DataManagementView: View {
     @State private var showingSettingsAlert = false
     @State private var selectedDataFile: DataFile?
     @State private var showingDetailView = false
+    @State private var showingRenameAlert = false
+    @State private var newFileName = ""
+    @State private var fileToRename: DataFile?
     
     @ObservedObject private var settings = AppSettings.shared
     
@@ -134,6 +137,15 @@ struct DataManagementView: View {
                                     showingDetailView = true
                                 }
                             }
+                            .contextMenu {
+                                Button(action: {
+                                    fileToRename = file
+                                    newFileName = file.name
+                                    showingRenameAlert = true
+                                }) {
+                                    Label("重命名", systemImage: "pencil")
+                                }
+                            }
                         }
                     }
                 }
@@ -209,6 +221,17 @@ struct DataManagementView: View {
                 }
             } message: {
                 Text("请先在设置中配置阿里云OSS和飞书机器人的API凭证")
+            }
+            .alert("重命名文件夹", isPresented: $showingRenameAlert) {
+                TextField("新文件名", text: $newFileName)
+                Button("取消", role: .cancel) { }
+                Button("确定") {
+                    if let file = fileToRename {
+                        renameFile(file)
+                    }
+                }
+            } message: {
+                Text("请输入新的文件名")
             }
             .sheet(isPresented: $showingShareSheet, content: {
                 if !selectedURLsToShare.isEmpty {
@@ -446,6 +469,19 @@ struct DataManagementView: View {
         let settingsView = PhoneSettingsView()
         let hostingController = UIHostingController(rootView: settingsView)
         UIApplication.shared.windows.first?.rootViewController?.present(hostingController, animated: true)
+    }
+    
+    private func renameFile(_ file: DataFile) {
+        let fileManager = FileManager.default
+        let oldPath = file.url
+        let newPath = oldPath.deletingLastPathComponent().appendingPathComponent(newFileName)
+        
+        do {
+            try fileManager.moveItem(at: oldPath, to: newPath)
+            loadDataFiles() // 重新加载文件列表
+        } catch {
+            print("重命名失败: \(error)")
+        }
     }
 }
 
