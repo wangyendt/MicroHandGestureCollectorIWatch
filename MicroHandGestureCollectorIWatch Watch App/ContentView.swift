@@ -27,7 +27,8 @@ struct FeedbackManager {
     static func playFeedback(
         style: WKHapticType? = nil,  // 改为可选类型
         withFlash: Bool? = nil,      // 改为可选类型
-        speak text: String? = nil
+        speak text: String? = nil,
+        forceSpeak: Bool = false     // 添加强制播报参数
     ) {
         // 振动反馈
         if let style = style, enableHapticFeedback {
@@ -40,7 +41,7 @@ struct FeedbackManager {
         }
         
         // 语音反馈
-        if let text = text, enableVoiceFeedback {
+        if let text = text, (enableVoiceFeedback || forceSpeak) {
             let utterance = AVSpeechUtterance(string: text)
             utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
             utterance.rate = 0.5
@@ -526,6 +527,19 @@ struct ContentView: View {
             .padding(.horizontal, 10)
         }
         .flashBorder()
+        .onTapGesture {
+            if isCollecting {
+                motionManager.updateLastTapTime()
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if isCollecting {
+                        motionManager.updateLastTapTime()
+                    }
+                }
+        )
         .onAppear {
             isCollecting = false
             motionManager.stopDataCollection()
