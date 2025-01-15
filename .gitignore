@@ -1,2 +1,4 @@
 *.mlpackage
 .build/
+*.so
+*.pt
