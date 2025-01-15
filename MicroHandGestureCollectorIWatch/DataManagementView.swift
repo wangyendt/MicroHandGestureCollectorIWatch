@@ -13,6 +13,15 @@ struct DataFile: Identifiable {
 struct WatchInfo {
     let chipset: String
     let deviceSize: String
+    let modelNumber: String
+    
+    var displayText: String {
+        var components: [String] = []
+        if !chipset.isEmpty { components.append(chipset) }
+        if !deviceSize.isEmpty { components.append(deviceSize) }
+        if !modelNumber.isEmpty { components.append("(\(modelNumber))") }
+        return components.joined(separator: " ")
+    }
 }
 
 struct DataManagementView: View {
@@ -108,7 +117,7 @@ struct DataManagementView: View {
                                 if let watchInfo = file.watchInfo {
                                     HStack {
                                         Image(systemName: "applewatch")
-                                        Text("\(watchInfo.chipset) \(watchInfo.deviceSize)")
+                                        Text(watchInfo.displayText)
                                     }
                                     .font(.caption)
                                     .foregroundColor(.blue)
@@ -216,13 +225,18 @@ struct DataManagementView: View {
     }
     
     private func loadDataFiles() {
-        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("无法获取文档路径")
+            return
+        }
         let watchDataPath = documentsPath.appendingPathComponent("WatchData")
+        print("WatchData路径：\(watchDataPath.path)")
         
         do {
             // 确保 WatchData 文件夹存在
             if !FileManager.default.fileExists(atPath: watchDataPath.path) {
                 try FileManager.default.createDirectory(at: watchDataPath, withIntermediateDirectories: true)
+                print("创建WatchData文件夹")
             }
             
             // 获取所有文件和文件夹
@@ -231,14 +245,21 @@ struct DataManagementView: View {
                 includingPropertiesForKeys: [.isDirectoryKey],
                 options: .skipsHiddenFiles
             )
+            print("找到\(fileURLs.count)个文件/文件夹")
             
             dataFiles = fileURLs.map { url in
+                print("\n处理文件：\(url.lastPathComponent)")
                 var dataFile = DataFile(name: url.lastPathComponent, url: url)
                 if let watchInfo = readWatchInfo(from: url) {
+                    print("成功读取设备信息：\(watchInfo.displayText)")
                     dataFile.watchInfo = watchInfo
+                } else {
+                    print("未能读取设备信息")
                 }
                 return dataFile
             }.sorted { $0.name > $1.name }
+            
+            print("总共处理了\(dataFiles.count)个文件")
             
         } catch {
             print("加载文件出错: \(error)")
@@ -247,20 +268,31 @@ struct DataManagementView: View {
     
     private func readWatchInfo(from folderURL: URL) -> WatchInfo? {
         let infoURL = folderURL.appendingPathComponent("info.yaml")
+        print("准备读取文件：\(infoURL.path)")
         
         do {
-            guard FileManager.default.fileExists(atPath: infoURL.path) else { return nil }
+            guard FileManager.default.fileExists(atPath: infoURL.path) else {
+                print("文件不存在：\(infoURL.path)")
+                return nil
+            }
             
             let infoContent = try String(contentsOf: infoURL, encoding: .utf8)
+            print("成功读取文件内容，长度：\(infoContent.count)字节")
+            
             let lines = infoContent.components(separatedBy: .newlines)
+            print("文件总行数：\(lines.count)")
+            print("文件内容：\n\(infoContent)")
+            
             var isInDeviceSection = false
             var chipset = ""
             var deviceSize = ""
+            var modelNumber = ""
             
             for line in lines {
                 let trimmedLine = line.trimmingCharacters(in: .whitespaces)
                 
                 if trimmedLine == "device:" {
+                    print("找到设备部分")
                     isInDeviceSection = true
                     continue
                 }
@@ -268,16 +300,33 @@ struct DataManagementView: View {
                 if isInDeviceSection {
                     if trimmedLine.hasPrefix("chipset:") {
                         chipset = trimmedLine.replacingOccurrences(of: "chipset:", with: "").trimmingCharacters(in: .whitespaces)
+                        print("读取到芯片：\(chipset)")
                     } else if trimmedLine.hasPrefix("deviceSize:") {
                         deviceSize = trimmedLine.replacingOccurrences(of: "deviceSize:", with: "").trimmingCharacters(in: .whitespaces)
-                    } else if !trimmedLine.hasPrefix("  ") && !trimmedLine.isEmpty {
+                        print("读取到尺寸：\(deviceSize)")
+                    } else if trimmedLine.hasPrefix("modelNumber:") {
+                        modelNumber = trimmedLine.replacingOccurrences(of: "modelNumber:", with: "").trimmingCharacters(in: .whitespaces)
+                        print("读取到型号：\(modelNumber)")
+                    } else if trimmedLine == "collection:" {
+                        print("遇到collection部分，退出设备部分解析")
                         isInDeviceSection = false
                     }
                 }
             }
             
-            if !chipset.isEmpty && !deviceSize.isEmpty {
-                return WatchInfo(chipset: chipset, deviceSize: deviceSize)
+            print("最终结果 - 芯片：[\(chipset)] 尺寸：[\(deviceSize)] 型号：[\(modelNumber)]")
+            
+            // 只要至少有一个字段不为空就创建 WatchInfo
+            if !chipset.isEmpty || !deviceSize.isEmpty || !modelNumber.isEmpty {
+                let watchInfo = WatchInfo(
+                    chipset: chipset,
+                    deviceSize: deviceSize,
+                    modelNumber: modelNumber
+                )
+                print("创建 WatchInfo 成功：\(watchInfo.displayText)")
+                return watchInfo
+            } else {
+                print("所有字段都为空，返回 nil")
             }
         } catch {
             print("读取info.yaml出错: \(error)")
