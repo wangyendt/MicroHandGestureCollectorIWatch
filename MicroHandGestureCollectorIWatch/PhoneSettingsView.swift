@@ -3,21 +3,11 @@ import SwiftUI
 struct PhoneSettingsView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var feedbackManager = FeedbackManager.shared
-    
-    // 阿里云OSS设置
-    @AppStorage("ossEndpoint") private var ossEndpoint = "oss-cn-hangzhou.aliyuncs.com"
-    @AppStorage("ossBucketName") private var ossBucketName = "wayne-data"
-    @AppStorage("ossApiKey") private var ossApiKey = ""
-    @AppStorage("ossApiSecret") private var ossApiSecret = ""
+    @ObservedObject var settings = AppSettings.shared
     
     // AI API设置
     @AppStorage("aiApiKey") private var aiApiKey = ""
     @AppStorage("aiBaseURL") private var aiBaseURL = "https://api.deepseek.com/v1"
-    
-    // 飞书机器人设置
-    @AppStorage("larkAppId") private var larkAppId = ""
-    @AppStorage("larkAppSecret") private var larkAppSecret = ""
-    @AppStorage("larkGroupName") private var larkGroupName = "测试群"
     
     var body: some View {
         NavigationView {
@@ -37,16 +27,28 @@ struct PhoneSettingsView: View {
                 }
                 
                 Section(header: Text("阿里云OSS设置")) {
-                    TextField("Endpoint", text: $ossEndpoint)
+                    TextField("Endpoint", text: Binding(
+                        get: { self.settings.ossEndpoint },
+                        set: { self.settings.ossEndpoint = $0 }
+                    ))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                    TextField("Bucket名称", text: $ossBucketName)
+                    TextField("Bucket名称", text: Binding(
+                        get: { self.settings.ossBucketName },
+                        set: { self.settings.ossBucketName = $0 }
+                    ))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                    SecureField("API Key", text: $ossApiKey)
+                    SecureField("API Key", text: Binding(
+                        get: { self.settings.ossApiKey },
+                        set: { self.settings.ossApiKey = $0 }
+                    ))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                    SecureField("API Secret", text: $ossApiSecret)
+                    SecureField("API Secret", text: Binding(
+                        get: { self.settings.ossApiSecret },
+                        set: { self.settings.ossApiSecret = $0 }
+                    ))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                 }
@@ -61,13 +63,22 @@ struct PhoneSettingsView: View {
                 }
                 
                 Section(header: Text("飞书机器人设置")) {
-                    SecureField("App ID", text: $larkAppId)
+                    SecureField("App ID", text: Binding(
+                        get: { self.settings.larkAppId },
+                        set: { self.settings.larkAppId = $0 }
+                    ))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                    SecureField("App Secret", text: $larkAppSecret)
+                    SecureField("App Secret", text: Binding(
+                        get: { self.settings.larkAppSecret },
+                        set: { self.settings.larkAppSecret = $0 }
+                    ))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                    TextField("群组名称", text: $larkGroupName)
+                    TextField("群组名称", text: Binding(
+                        get: { self.settings.larkGroupName },
+                        set: { self.settings.larkGroupName = $0 }
+                    ))
                 }
             }
             .navigationTitle("手机设置")

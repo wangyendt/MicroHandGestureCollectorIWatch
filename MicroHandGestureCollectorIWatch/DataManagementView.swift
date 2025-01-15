@@ -28,29 +28,22 @@ struct DataManagementView: View {
     @State private var uploadMessage = ""
     @State private var showingSettingsAlert = false
     
-    // 从UserDefaults读取设置
-    @AppStorage("ossEndpoint") private var ossEndpoint = "oss-cn-hangzhou.aliyuncs.com"
-    @AppStorage("ossBucketName") private var ossBucketName = "wayne-data"
-    @AppStorage("ossApiKey") private var ossApiKey = ""
-    @AppStorage("ossApiSecret") private var ossApiSecret = ""
-    @AppStorage("larkAppId") private var larkAppId = ""
-    @AppStorage("larkAppSecret") private var larkAppSecret = ""
-    @AppStorage("larkGroupName") private var larkGroupName = "测试群"
+    @ObservedObject private var settings = AppSettings.shared
     
     private var oss: AliyunOSS {
         AliyunOSS(
-            endpoint: ossEndpoint,
-            bucketName: ossBucketName,
-            apiKey: ossApiKey,
-            apiSecret: ossApiSecret,
+            endpoint: settings.ossEndpoint,
+            bucketName: settings.ossBucketName,
+            apiKey: settings.ossApiKey,
+            apiSecret: settings.ossApiSecret,
             verbose: true
         )
     }
     
     private var bot: LarkBot {
         LarkBot(
-            appId: larkAppId,
-            appSecret: larkAppSecret
+            appId: settings.larkAppId,
+            appSecret: settings.larkAppSecret
         )
     }
     
@@ -155,7 +148,7 @@ struct DataManagementView: View {
                         Spacer()
                         
                         Button {
-                            if ossApiKey.isEmpty || ossApiSecret.isEmpty || larkAppId.isEmpty || larkAppSecret.isEmpty {
+                            if settings.ossApiKey.isEmpty || settings.ossApiSecret.isEmpty || settings.larkAppId.isEmpty || settings.larkAppSecret.isEmpty {
                                 showingSettingsAlert = true
                             } else {
                                 Task {
@@ -369,7 +362,7 @@ struct DataManagementView: View {
             // 发送飞书消息
             if !uploadedFolders.isEmpty {
                 let message = "已上传\(uploadedFolders.count)条记录，分别为：\n" + uploadedFolders.joined(separator: "\n")
-                let groupChatIds = try await bot.getGroupChatIdByName(larkGroupName)
+                let groupChatIds = try await bot.getGroupChatIdByName(settings.larkGroupName)
                 if let groupChatId = groupChatIds.first {
                     _ = try await bot.sendTextToChat(chatId: groupChatId, text: message)
                 }

@@ -13,25 +13,34 @@ struct CloudDataManagementView: View {
     @State private var isEditing = false
     @State private var showingDeleteAlert = false
     @State private var selectedFiles: Set<UUID> = []
+    @State private var showingShareSheet = false
+    @State private var selectedURLsToShare: [URL] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var showingErrorAlert = false
+    @State private var isUploading = false
+    @State private var showingUploadAlert = false
+    @State private var uploadMessage = ""
+    @State private var showingSettingsAlert = false
     
-    // 从UserDefaults读取设置
-    @AppStorage("ossEndpoint") private var ossEndpoint = "oss-cn-hangzhou.aliyuncs.com"
-    @AppStorage("ossBucketName") private var ossBucketName = "wayne-data"
-    @AppStorage("ossApiKey") private var ossApiKey = ""
-    @AppStorage("ossApiSecret") private var ossApiSecret = ""
+    @ObservedObject private var settings = AppSettings.shared
     
     private let cloudPrefix = "micro_hand_gesture/raw_data/"
     
     private var oss: AliyunOSS {
         AliyunOSS(
-            endpoint: ossEndpoint,
-            bucketName: ossBucketName,
-            apiKey: ossApiKey,
-            apiSecret: ossApiSecret,
+            endpoint: settings.ossEndpoint,
+            bucketName: settings.ossBucketName,
+            apiKey: settings.ossApiKey,
+            apiSecret: settings.ossApiSecret,
             verbose: true
+        )
+    }
+    
+    private var bot: LarkBot {
+        LarkBot(
+            appId: settings.larkAppId,
+            appSecret: settings.larkAppSecret
         )
     }
     
