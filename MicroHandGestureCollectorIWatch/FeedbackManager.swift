@@ -27,9 +27,9 @@ class FeedbackManager: ObservableObject {
     private let generator = UINotificationFeedbackGenerator()
     
     private init() {
-        // 从UserDefaults读取设置，默认都开启
-        self.isVibrationEnabled = UserDefaults.standard.bool(forKey: "isVibrationEnabled", defaultValue: true)
-        self.isVisualEnabled = UserDefaults.standard.bool(forKey: "isVisualEnabled", defaultValue: true)
+        // 从UserDefaults读取设置，默认只开启语音播报
+        self.isVibrationEnabled = UserDefaults.standard.bool(forKey: "isVibrationEnabled", defaultValue: false)
+        self.isVisualEnabled = UserDefaults.standard.bool(forKey: "isVisualEnabled", defaultValue: false)
         self.isVoiceEnabled = UserDefaults.standard.bool(forKey: "isVoiceEnabled", defaultValue: true)
         
         // 预热触觉反馈生成器

@@ -19,9 +19,6 @@ struct PhoneSettingsView: View {
     @AppStorage("larkAppSecret") private var larkAppSecret = ""
     @AppStorage("larkGroupName") private var larkGroupName = "测试群"
     
-    // 添加实时数据设置
-    @AppStorage("enableRealtimeData") private var enableRealtimeData = false
-    
     var body: some View {
         NavigationView {
             Form {
@@ -36,10 +33,6 @@ struct PhoneSettingsView: View {
                     
                     Toggle(isOn: $feedbackManager.isVoiceEnabled) {
                         Label("语音播报", systemImage: "speaker.wave.2")
-                    }
-                    
-                    Toggle(isOn: $enableRealtimeData) {
-                        Label("实时数据", systemImage: "chart.line.uptrend.xyaxis")
                     }
                 }
                 
