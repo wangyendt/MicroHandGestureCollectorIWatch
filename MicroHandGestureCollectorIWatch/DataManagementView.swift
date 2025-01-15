@@ -7,6 +7,12 @@ struct DataFile: Identifiable {
     let name: String
     let url: URL
     var isSelected: Bool = false
+    var watchInfo: WatchInfo? // 添加手表信息
+}
+
+struct WatchInfo {
+    let chipset: String
+    let deviceSize: String
 }
 
 struct DataManagementView: View {
@@ -105,6 +111,16 @@ struct DataManagementView: View {
                                             .foregroundColor(.secondary)
                                     }
                                 }
+                                
+                                if let watchInfo = file.watchInfo {
+                                    HStack {
+                                        Image(systemName: "applewatch")
+                                        Text("\(watchInfo.chipset) \(watchInfo.deviceSize)")
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                    .padding(.top, 2)
+                                }
                             }
                             .padding(.vertical, 4)
                         }
@@ -178,7 +194,6 @@ struct DataManagementView: View {
             .alert("设置缺失", isPresented: $showingSettingsAlert) {
                 Button("取消", role: .cancel) { }
                 Button("去设置") {
-                    // 打开设置页面
                     showWatchSettings()
                 }
             } message: {
@@ -225,12 +240,56 @@ struct DataManagementView: View {
             )
             
             dataFiles = fileURLs.map { url in
-                DataFile(name: url.lastPathComponent, url: url)
+                var dataFile = DataFile(name: url.lastPathComponent, url: url)
+                if let watchInfo = readWatchInfo(from: url) {
+                    dataFile.watchInfo = watchInfo
+                }
+                return dataFile
             }.sorted { $0.name > $1.name }
             
         } catch {
-            print("Error loading files: \(error)")
+            print("加载文件出错: \(error)")
         }
+    }
+    
+    private func readWatchInfo(from folderURL: URL) -> WatchInfo? {
+        let infoURL = folderURL.appendingPathComponent("info.yaml")
+        
+        do {
+            guard FileManager.default.fileExists(atPath: infoURL.path) else { return nil }
+            
+            let infoContent = try String(contentsOf: infoURL, encoding: .utf8)
+            let lines = infoContent.components(separatedBy: .newlines)
+            var isInDeviceSection = false
+            var chipset = ""
+            var deviceSize = ""
+            
+            for line in lines {
+                let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+                
+                if trimmedLine == "device:" {
+                    isInDeviceSection = true
+                    continue
+                }
+                
+                if isInDeviceSection {
+                    if trimmedLine.hasPrefix("chipset:") {
+                        chipset = trimmedLine.replacingOccurrences(of: "chipset:", with: "").trimmingCharacters(in: .whitespaces)
+                    } else if trimmedLine.hasPrefix("deviceSize:") {
+                        deviceSize = trimmedLine.replacingOccurrences(of: "deviceSize:", with: "").trimmingCharacters(in: .whitespaces)
+                    } else if !trimmedLine.hasPrefix("  ") && !trimmedLine.isEmpty {
+                        isInDeviceSection = false
+                    }
+                }
+            }
+            
+            if !chipset.isEmpty && !deviceSize.isEmpty {
+                return WatchInfo(chipset: chipset, deviceSize: deviceSize)
+            }
+        } catch {
+            print("读取info.yaml出错: \(error)")
+        }
+        return nil
     }
     
     private func deleteSelectedFiles() {
@@ -361,3 +420,4 @@ struct ShareSheet: UIViewControllerRepresentable {
     
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 } 
+
