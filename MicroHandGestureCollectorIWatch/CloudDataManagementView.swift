@@ -22,6 +22,9 @@ struct CloudDataManagementView: View {
     @State private var showingUploadAlert = false
     @State private var uploadMessage = ""
     @State private var showingSettingsAlert = false
+    @State private var isDownloading = false
+    @State private var showingDownloadAlert = false
+    @State private var downloadMessage = ""
     
     @ObservedObject private var settings = AppSettings.shared
     
@@ -100,6 +103,17 @@ struct CloudDataManagementView: View {
                     ProgressView("加载中...")
                         .progressViewStyle(CircularProgressViewStyle())
                 }
+                
+                if isDownloading {
+                    Color.black.opacity(0.3)
+                        .edgesIgnoringSafeArea(.all)
+                        .overlay {
+                            ProgressView("正在下载...")
+                                .padding()
+                                .background(Color(.systemBackground))
+                                .cornerRadius(10)
+                        }
+                }
             }
             .navigationTitle("云端数据管理")
             .navigationBarTitleDisplayMode(.inline)
@@ -120,13 +134,24 @@ struct CloudDataManagementView: View {
                     }
                 }
                 if isEditing {
-                    ToolbarItem(placement: .bottomBar) {
+                    ToolbarItemGroup(placement: .bottomBar) {
                         Button(role: .destructive) {
                             showingDeleteAlert = true
                         } label: {
                             Label("删除", systemImage: "trash")
                         }
                         .disabled(selectedFiles.isEmpty)
+                        
+                        Spacer()
+                        
+                        Button {
+                            Task {
+                                await downloadSelectedFiles()
+                            }
+                        } label: {
+                            Label("下载", systemImage: "icloud.and.arrow.down")
+                        }
+                        .disabled(selectedFiles.isEmpty || isDownloading)
                     }
                 }
             }
@@ -144,6 +169,11 @@ struct CloudDataManagementView: View {
                 Button("确定", role: .cancel) { }
             } message: {
                 Text(errorMessage ?? "未知错误")
+            }
+            .alert("下载状态", isPresented: $showingDownloadAlert) {
+                Button("确定", role: .cancel) { }
+            } message: {
+                Text(downloadMessage)
             }
         }
         .task {
@@ -206,6 +236,122 @@ struct CloudDataManagementView: View {
                 isEditing = false
                 selectedFiles.removeAll()
             }
+        } catch {
+            DispatchQueue.main.async {
+                errorMessage = error.localizedDescription
+                showingErrorAlert = true
+            }
+        }
+    }
+    
+    private func downloadSelectedFiles() async {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            errorMessage = "无法获取文档路径"
+            showingErrorAlert = true
+            return
+        }
+        
+        let watchDataPath = documentsPath.appendingPathComponent("WatchData")
+        
+        do {
+            // 确保 WatchData 文件夹存在
+            if !FileManager.default.fileExists(atPath: watchDataPath.path) {
+                try FileManager.default.createDirectory(at: watchDataPath, withIntermediateDirectories: true)
+            }
+        } catch {
+            errorMessage = "创建目录失败：\(error.localizedDescription)"
+            showingErrorAlert = true
+            return
+        }
+        
+        DispatchQueue.main.async {
+            isDownloading = true
+        }
+        
+        defer {
+            DispatchQueue.main.async {
+                isDownloading = false
+            }
+        }
+        
+        var downloadedFolders: [String] = []
+        var failedFolders: [String] = []
+        
+        do {
+            for fileId in selectedFiles {
+                if let file = dataFiles.first(where: { $0.id == fileId }) {
+                    // 创建临时下载目录
+                    let tempDownloadPath = watchDataPath.appendingPathComponent("temp_download").path
+                    if FileManager.default.fileExists(atPath: tempDownloadPath) {
+                        try FileManager.default.removeItem(atPath: tempDownloadPath)
+                    }
+                    try FileManager.default.createDirectory(atPath: tempDownloadPath, withIntermediateDirectories: true)
+                    
+                    let prefix = cloudPrefix + file.name
+                    
+                    do {
+                        let success = try await oss.downloadFilesWithPrefix(
+                            prefix,
+                            rootDir: tempDownloadPath
+                        )
+                        
+                        if success {
+                            // 构建源文件夹路径（包含完整的云端路径结构）
+                            let sourcePath = (tempDownloadPath as NSString).appendingPathComponent("micro_hand_gesture/raw_data/\(file.name)")
+                            // 构建目标路径（直接在 WatchData 下）
+                            let destinationPath = (watchDataPath.path as NSString).appendingPathComponent(file.name)
+                            
+                            // 如果目标文件夹已存在，先删除
+                            if FileManager.default.fileExists(atPath: destinationPath) {
+                                try FileManager.default.removeItem(atPath: destinationPath)
+                            }
+                            
+                            // 移动文件夹到目标位置
+                            try FileManager.default.moveItem(atPath: sourcePath, toPath: destinationPath)
+                            
+                            // 清理临时下载目录
+                            try FileManager.default.removeItem(atPath: tempDownloadPath)
+                            
+                            downloadedFolders.append(file.name)
+                        } else {
+                            failedFolders.append(file.name)
+                        }
+                    } catch {
+                        failedFolders.append(file.name)
+                        print("下载失败 \(file.name): \(error)")
+                    }
+                }
+            }
+            
+            // 构建下载状态消息
+            var message = ""
+            if !downloadedFolders.isEmpty {
+                message += "成功下载：\n" + downloadedFolders.joined(separator: "\n") + "\n"
+            }
+            if !failedFolders.isEmpty {
+                message += "\n下载失败：\n" + failedFolders.joined(separator: "\n")
+            }
+            
+            // 发送飞书消息
+            if !downloadedFolders.isEmpty {
+                let larkMessage = "已从云端下载\(downloadedFolders.count)条记录，分别为：\n" + downloadedFolders.joined(separator: "\n")
+                do {
+                    let groupChatIds = try await bot.getGroupChatIdByName(settings.larkGroupName)
+                    if let groupChatId = groupChatIds.first {
+                        _ = try await bot.sendTextToChat(chatId: groupChatId, text: larkMessage)
+                    }
+                } catch {
+                    print("发送飞书消息失败: \(error)")
+                }
+            }
+            
+            DispatchQueue.main.async {
+                downloadMessage = message
+                showingDownloadAlert = true
+                isEditing = false
+                selectedFiles.removeAll()
+            }
+            
         } catch {
             DispatchQueue.main.async {
                 errorMessage = error.localizedDescription
