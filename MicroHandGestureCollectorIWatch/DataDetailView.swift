@@ -15,6 +15,8 @@ struct StatsSummary {
     let totalSamples: Int
     let totalCorrect: Int
     let overallAccuracy: Double
+    let positiveRecall: Double
+    let positivePrecision: Double
     let gestureStats: [GestureStats]
 }
 
@@ -56,10 +58,23 @@ struct DataDetailView: View {
                                         )
                                     }
                                     
+                                    HStack(spacing: 12) {
+                                        StatCard(
+                                            title: "整体准确率",
+                                            value: String(format: "%.1f%%", stats.overallAccuracy * 100),
+                                            color: .purple
+                                        )
+                                        StatCard(
+                                            title: "正样本召回率",
+                                            value: String(format: "%.1f%%", stats.positiveRecall * 100),
+                                            color: .orange
+                                        )
+                                    }
+                                    
                                     StatCard(
-                                        title: "整体准确率",
-                                        value: String(format: "%.1f%%", stats.overallAccuracy * 100),
-                                        color: .purple
+                                        title: "正样本精确率",
+                                        value: String(format: "%.1f%%", stats.positivePrecision * 100),
+                                        color: .pink
                                     )
                                 }
                                 
@@ -146,6 +161,8 @@ struct DataDetailView: View {
             var totalSamples = 0
             var totalCorrect = 0
             var overallAccuracy: Double = 0
+            var positiveRecall: Double = 0
+            var positivePrecision: Double = 0
             var gestureStats: [GestureStats] = []
             var currentGestureData: [String: String] = [:]
             
@@ -153,7 +170,6 @@ struct DataDetailView: View {
                 let trimmedLine = line.trimmingCharacters(in: .whitespaces)
                 let indentLevel = line.prefix(while: { $0 == " " }).count
                 
-                // 检查是否在 statistics 部分
                 if trimmedLine == "statistics:" {
                     isInStatistics = true
                     continue
@@ -167,6 +183,10 @@ struct DataDetailView: View {
                             totalCorrect = Int(trimmedLine.replacingOccurrences(of: "total_correct:", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
                         } else if trimmedLine.hasPrefix("overall_accuracy:") {
                             overallAccuracy = Double(trimmedLine.replacingOccurrences(of: "overall_accuracy:", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
+                        } else if trimmedLine.hasPrefix("positive_recall:") {
+                            positiveRecall = Double(trimmedLine.replacingOccurrences(of: "positive_recall:", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
+                        } else if trimmedLine.hasPrefix("positive_precision:") {
+                            positivePrecision = Double(trimmedLine.replacingOccurrences(of: "positive_precision:", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
                         } else if trimmedLine == "gestures:" {
                             isInGestures = true
                         }
@@ -217,6 +237,8 @@ struct DataDetailView: View {
                 totalSamples: totalSamples,
                 totalCorrect: totalCorrect,
                 overallAccuracy: overallAccuracy,
+                positiveRecall: positiveRecall,
+                positivePrecision: positivePrecision,
                 gestureStats: gestureStats
             )
         }

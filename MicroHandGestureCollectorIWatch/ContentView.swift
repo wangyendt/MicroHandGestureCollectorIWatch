@@ -9,6 +9,15 @@ import SwiftUI
 import WatchConnectivity
 import Charts
 
+// 添加数组分块扩展
+extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0 ..< Swift.min($0 + size, count)])
+        }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var sensorManager = SensorDataManager.shared
     @StateObject private var feedbackManager = FeedbackManager.shared
@@ -339,25 +348,51 @@ struct ContentView: View {
                                 .padding(.vertical, 8)
                                 
                                 // 统计信息
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: 2) {
                                     let stats = calculateGestureStats(results: sensorManager.gestureResults)
-                                    ForEach(stats.gestureCounts.sorted(by: { $0.key < $1.key }), id: \.key) { gesture, count in
-                                        if let accuracy = stats.gestureAccuracy[gesture] {
-                                            Text("\(gesture): \(count)次 (准确率: \(String(format: "%.1f%%", accuracy * 100)))")
-                                                .font(.system(size: 14))
+                                    if !stats.gestureCounts.isEmpty {
+                                        HStack(spacing: 8) {
+                                            Text("整体准确率: \(String(format: "%.1f%%", stats.overallAccuracy * 100))")
+                                                .font(.system(size: 13))
+                                                .foregroundColor(.secondary)
+                                            Text("召回率: \(String(format: "%.1f%%", stats.positiveRecall * 100))")
+                                                .font(.system(size: 13))
+                                                .foregroundColor(.secondary)
+                                            Text("精确率: \(String(format: "%.1f%%", stats.positivePrecision * 100))")
+                                                .font(.system(size: 13))
                                                 .foregroundColor(.secondary)
                                         }
-                                    }
-                                    if !stats.gestureCounts.isEmpty {
-                                        Text("整体准确率: \(String(format: "%.1f%%", stats.overallAccuracy * 100))")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(.secondary)
-                                            .padding(.top, 4)
+                                        
+                                        // 手势统计
+                                        HStack(alignment: .top, spacing: 12) {
+                                            let sortedGestures = Array(stats.gestureCounts.keys.sorted())
+                                            let midIndex = (sortedGestures.count + 1) / 2
+                                            
+                                            // 左列
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                ForEach(sortedGestures[..<midIndex], id: \.self) { gesture in
+                                                    if let accuracy = stats.gestureAccuracy[gesture] {
+                                                        Text("\(gesture): \(stats.gestureCounts[gesture] ?? 0)次 (\(String(format: "%.0f%%", accuracy * 100)))")
+                                                            .font(.system(size: 13))
+                                                            .foregroundColor(.secondary)
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // 右列
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                ForEach(sortedGestures[midIndex...], id: \.self) { gesture in
+                                                    if let accuracy = stats.gestureAccuracy[gesture] {
+                                                        Text("\(gesture): \(stats.gestureCounts[gesture] ?? 0)次 (\(String(format: "%.0f%%", accuracy * 100)))")
+                                                            .font(.system(size: 13))
+                                                            .foregroundColor(.secondary)
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 2)
-                                .padding(.bottom, 6)
+                                .padding(.vertical, 4)
                                 
                                 // 表头
                                 HStack(spacing: 0) {
@@ -663,44 +698,61 @@ struct ContentView: View {
         )
     }
     
-    struct GestureStats {
-        var gestureCounts: [String: Int]
-        var gestureAccuracy: [String: Double]
-        var overallAccuracy: Double
-    }
-    
-    private func calculateGestureStats(results: [GestureResult]) -> GestureStats {
+    // 计算手势统计
+    private func calculateGestureStats(results: [GestureResult]) -> (
+        gestureCounts: [String: Int],
+        gestureAccuracy: [String: Double],
+        overallAccuracy: Double,
+        positiveRecall: Double,
+        positivePrecision: Double
+    ) {
         var gestureCounts: [String: Int] = [:]
         var correctCounts: [String: Int] = [:]
-        var totalCorrect = 0
+        let negativeGestures = ["其它"]  // 定义负样本列表
         
-        // 统计每种真实手势的数量和正确识别的数量
+        var totalCount = 0
+        var totalCorrect = 0
+        var positiveCount = 0  // 正样本总数
+        var predictedPositiveCount = 0  // 预测为正样本的总数
+        var truePositiveCount = 0  // 预测正确的正样本数
+        
         for result in results {
-            // 使用真实手势作为统计基准
-            gestureCounts[result.trueGesture, default: 0] += 1
+            let trueGesture = result.trueGesture
+            let predictedGesture = result.gesture
             
-            // 如果识别结果与真实手势相同，增加正确计数
-            if result.gesture == result.trueGesture {
-                correctCounts[result.trueGesture, default: 0] += 1
+            gestureCounts[trueGesture, default: 0] += 1
+            totalCount += 1
+            
+            // 计算正负样本相关统计
+            if !negativeGestures.contains(trueGesture) {
+                positiveCount += 1  // 真实标签为正样本
+            }
+            if !negativeGestures.contains(predictedGesture) {
+                predictedPositiveCount += 1  // 预测为正样本
+                if predictedGesture == trueGesture {
+                    truePositiveCount += 1  // 预测正确的正样本
+                }
+            }
+            
+            if predictedGesture == trueGesture {
+                correctCounts[trueGesture, default: 0] += 1
                 totalCorrect += 1
             }
         }
         
-        // 计算每种手势的准确率
+        // 计算每个手势的准确率
         var gestureAccuracy: [String: Double] = [:]
         for (gesture, count) in gestureCounts {
             let correct = correctCounts[gesture] ?? 0
             gestureAccuracy[gesture] = Double(correct) / Double(count)
         }
         
-        // 计算整体准确率
-        let overallAccuracy = results.isEmpty ? 0.0 : Double(totalCorrect) / Double(results.count)
+        // 计算整体准确率、召回率和精确率
+        let overallAccuracy = totalCount > 0 ? Double(totalCorrect) / Double(totalCount) : 0.0
+        let positiveRecall = positiveCount > 0 ? Double(truePositiveCount) / Double(positiveCount) : 0.0
+        let positivePrecision = predictedPositiveCount > 0 ? Double(truePositiveCount) / Double(predictedPositiveCount) : 0.0
         
-        return GestureStats(
-            gestureCounts: gestureCounts,
-            gestureAccuracy: gestureAccuracy,
-            overallAccuracy: overallAccuracy
-        )
+        return (gestureCounts, gestureAccuracy, overallAccuracy, positiveRecall, positivePrecision)
     }
 }
 

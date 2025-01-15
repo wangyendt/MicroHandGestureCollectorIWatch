@@ -27,6 +27,9 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     // 添加 MotionManager 引用
     private var motionManager: MotionManager?
     
+    // 定义负样本列表
+    private let negativeGestures = ["其它"]
+    
     private override init() {
         super.init()
         
@@ -484,6 +487,9 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             var correctCounts: [String: Int] = [:]
             var totalCount = 0
             var totalCorrect = 0
+            var positiveCount = 0  // 正样本总数
+            var predictedPositiveCount = 0  // 预测为正样本的总数
+            var truePositiveCount = 0  // 预测正确的正样本数
             
             for line in lines.dropFirst() { // 跳过表头
                 if line.isEmpty { continue }
@@ -492,7 +498,6 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                 if components.count >= 6 {
                     let id = components[5]
                     let isDeleted = deletedIds.contains(id)
-                    // 使用更新后的真实手势，如果没有更新则使用原始手势
                     let predictedGesture = components[2]
                     let trueGesture = updatedTrueGestures[id] ?? predictedGesture
                     
@@ -502,6 +507,18 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                     if !isDeleted {
                         gestureCounts[trueGesture, default: 0] += 1
                         totalCount += 1
+                        
+                        // 计算正负样本相关统计
+                        if !negativeGestures.contains(trueGesture) {
+                            positiveCount += 1  // 真实标签为正样本
+                        }
+                        if !negativeGestures.contains(predictedGesture) {
+                            predictedPositiveCount += 1  // 预测为正样本
+                            if predictedGesture == trueGesture {
+                                truePositiveCount += 1  // 预测正确的正样本
+                            }
+                        }
+                        
                         if predictedGesture == trueGesture {
                             correctCounts[trueGesture, default: 0] += 1
                             totalCorrect += 1
@@ -510,11 +527,18 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                 }
             }
             
+            // 计算各项指标
+            let accuracy = totalCount > 0 ? Double(totalCorrect) / Double(totalCount) : 0.0
+            let recall = positiveCount > 0 ? Double(truePositiveCount) / Double(positiveCount) : 0.0
+            let precision = predictedPositiveCount > 0 ? Double(truePositiveCount) / Double(predictedPositiveCount) : 0.0
+            
             // 生成统计信息的YAML内容
             var statisticsContent = "statistics:\n"
             statisticsContent += "  total_samples: \(totalCount)\n"
             statisticsContent += "  total_correct: \(totalCorrect)\n"
-            statisticsContent += "  overall_accuracy: \(String(format: "%.4f", totalCount > 0 ? Double(totalCorrect) / Double(totalCount) : 0.0))\n"
+            statisticsContent += "  overall_accuracy: \(String(format: "%.4f", accuracy))\n"
+            statisticsContent += "  positive_recall: \(String(format: "%.4f", recall))\n"
+            statisticsContent += "  positive_precision: \(String(format: "%.4f", precision))\n"
             statisticsContent += "  gestures:\n"
             
             // 按手势名称排序
