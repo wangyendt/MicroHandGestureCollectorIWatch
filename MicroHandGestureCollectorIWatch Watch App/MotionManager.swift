@@ -119,40 +119,48 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         "Watch6,7": ("Apple Watch Series 7", "45mm", "GPS", "S7", "A2474"),
         
         "Watch6,8_NA": ("Apple Watch Series 7", "41mm", "GPS+Cellular", "S7", "A2475"), // 北美洲
-        "Watch6,8_EU": ("Apple Watch Series 7", "41mm", "GPS+Cellular", "S7", "A2476"), // 欧洲、亚太地区和中国大陆
+        "Watch6,8_EU": ("Apple Watch Series 7", "41mm", "GPS+Cellular", "S7", "A2476"), // 欧洲、亚太地区
+        "Watch6,8_CN": ("Apple Watch Series 7", "41mm", "GPS+Cellular", "S7", "A2476"), // 中国大陆
         
         "Watch6,9_NA": ("Apple Watch Series 7", "45mm", "GPS+Cellular", "S7", "A2477"), // 北美洲
-        "Watch6,9_EU": ("Apple Watch Series 7", "45mm", "GPS+Cellular", "S7", "A2478"), // 欧洲、亚太地区和中国大陆
+        "Watch6,9_EU": ("Apple Watch Series 7", "45mm", "GPS+Cellular", "S7", "A2478"), // 欧洲、亚太地区
+        "Watch6,9_CN": ("Apple Watch Series 7", "45mm", "GPS+Cellular", "S7", "A2478"), // 中国大陆
 
         // Apple Watch Series 6
         "Watch6,1": ("Apple Watch Series 6", "40mm", "GPS", "S6", "A2291"),
         "Watch6,2": ("Apple Watch Series 6", "44mm", "GPS", "S6", "A2292"),
         
         "Watch6,3_NA": ("Apple Watch Series 6", "40mm", "GPS+Cellular", "S6", "A2293"), // 北美洲
-        "Watch6,3_EU": ("Apple Watch Series 6", "40mm", "GPS+Cellular", "S6", "A2375"), // 欧洲、亚太地区和中国大陆
+        "Watch6,3_EU": ("Apple Watch Series 6", "40mm", "GPS+Cellular", "S6", "A2375"), // 欧洲、亚太地区
+        "Watch6,3_CN": ("Apple Watch Series 6", "40mm", "GPS+Cellular", "S6", "A2375"), // 中国大陆
         
         "Watch6,4_NA": ("Apple Watch Series 6", "44mm", "GPS+Cellular", "S6", "A2294"), // 北美洲
-        "Watch6,4_EU": ("Apple Watch Series 6", "44mm", "GPS+Cellular", "S6", "A2376"), // 欧洲、亚太地区和中国大陆
+        "Watch6,4_EU": ("Apple Watch Series 6", "44mm", "GPS+Cellular", "S6", "A2376"), // 欧洲、亚太地区
+        "Watch6,4_CN": ("Apple Watch Series 6", "44mm", "GPS+Cellular", "S6", "A2376"), // 中国大陆
 
         // Apple Watch Series 5
         "Watch5,1": ("Apple Watch Series 5", "40mm", "GPS", "S5", "A2092"),
         "Watch5,2": ("Apple Watch Series 5", "44mm", "GPS", "S5", "A2093"),
         
         "Watch5,3_NA": ("Apple Watch Series 5", "40mm", "GPS+Cellular", "S5", "A2094"), // 北美洲
-        "Watch5,3_EU": ("Apple Watch Series 5", "40mm", "GPS+Cellular", "S5", "A2156"), // 欧洲、亚太地区和中国大陆
+        "Watch5,3_EU": ("Apple Watch Series 5", "40mm", "GPS+Cellular", "S5", "A2156"), // 欧洲、亚太地区
+        "Watch5,3_CN": ("Apple Watch Series 5", "40mm", "GPS+Cellular", "S5", "A2156"), // 中国大陆
         
         "Watch5,4_NA": ("Apple Watch Series 5", "44mm", "GPS+Cellular", "S5", "A2095"), // 北美洲
-        "Watch5,4_EU": ("Apple Watch Series 5", "44mm", "GPS+Cellular", "S5", "A2157"), // 欧洲、亚太地区和中国大陆
+        "Watch5,4_EU": ("Apple Watch Series 5", "44mm", "GPS+Cellular", "S5", "A2157"), // 欧洲、亚太地区
+        "Watch5,4_CN": ("Apple Watch Series 5", "44mm", "GPS+Cellular", "S5", "A2157"), // 中国大陆
 
         // Apple Watch Series 4
         "Watch4,1": ("Apple Watch Series 4", "40mm", "GPS", "S4", "A1977"),
         "Watch4,2": ("Apple Watch Series 4", "44mm", "GPS", "S4", "A1978"),
         
         "Watch4,3_NA": ("Apple Watch Series 4", "40mm", "GPS+Cellular", "S4", "A1975"), // 北美洲
-        "Watch4,3_EU": ("Apple Watch Series 4", "40mm", "GPS+Cellular", "S4", "A2007"), // 欧洲、亚太地区和中国大陆
+        "Watch4,3_EU": ("Apple Watch Series 4", "40mm", "GPS+Cellular", "S4", "A2007"), // 欧洲、亚太地区
+        "Watch4,3_CN": ("Apple Watch Series 4", "40mm", "GPS+Cellular", "S4", "A2007"), // 中国大陆
         
         "Watch4,4_NA": ("Apple Watch Series 4", "44mm", "GPS+Cellular", "S4", "A1976"), // 北美洲
-        "Watch4,4_EU": ("Apple Watch Series 4", "44mm", "GPS+Cellular", "S4", "A2008"), // 欧洲、亚太地区和中国大陆
+        "Watch4,4_EU": ("Apple Watch Series 4", "44mm", "GPS+Cellular", "S4", "A2008"), // 欧洲、亚太地区
+        "Watch4,4_CN": ("Apple Watch Series 4", "44mm", "GPS+Cellular", "S4", "A2008"), // 中国大陆
 
         // Apple Watch Series 3
         "Watch3,1_NA": ("Apple Watch Series 3", "38mm", "GPS+Cellular", "S3", "A1860"), // 美洲
