@@ -527,19 +527,19 @@ struct ContentView: View {
             .padding(.horizontal, 10)
         }
         .flashBorder()
-        .onTapGesture {
-            if isCollecting {
-                motionManager.updateLastTapTime()
-            }
-        }
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if isCollecting {
-                        motionManager.updateLastTapTime()
-                    }
-                }
-        )
+//        .onTapGesture {
+//            if isCollecting {
+//                motionManager.updateLastTapTime()
+//            }
+//        }
+//        .gesture(
+//            DragGesture(minimumDistance: 0)
+//                .onChanged { _ in
+//                    if isCollecting {
+//                        motionManager.updateLastTapTime()
+//                    }
+//                }
+//        )
         .onAppear {
             isCollecting = false
             motionManager.stopDataCollection()
