@@ -109,9 +109,10 @@ struct ContentView: View {
     @StateObject private var motionManager = MotionManager()
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @State private var isCollecting = false
-    @State private var selectedHand = "左手"
-    @State private var selectedGesture = "混合"
-    @State private var selectedForce = "轻"
+    @AppStorage("selectedHand") private var selectedHand = "左手"
+    @AppStorage("selectedGesture") private var selectedGesture = "混合"
+    @AppStorage("selectedForce") private var selectedForce = "轻"
+    @AppStorage("noteText") private var noteText = "静坐"
     
     @State private var showHandPicker = false
     @State private var showGesturePicker = false
@@ -123,18 +124,16 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     
-    @State private var noteText = "静坐"
-    
     @AppStorage("userName") private var userName = "王也"
     @State private var showingNameInput = false
     
     // 添加设置相关的状态
-    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.3
+    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.5
     @AppStorage("peakWindow") private var peakWindow: Double = 0.6
     @State private var showingSettings = false
     
-    @State private var selectedGender = "男"
-    @State private var selectedTightness = "松"
+    @AppStorage("selectedGender") private var selectedGender = "男"
+    @AppStorage("selectedTightness") private var selectedTightness = "松"
     @State private var showGenderPicker = false
     @State private var showTightnessPicker = false
     
