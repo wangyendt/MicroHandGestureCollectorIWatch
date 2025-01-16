@@ -91,6 +91,10 @@ public class GestureRecognizer {
         }
         self.currentModelParams = params
         
+        // 从 UserDefaults 读取设置
+        self.saveGestureData = UserDefaults.standard.bool(forKey: "saveGestureData")
+        print("GestureRecognizer: 初始化时读取 saveGestureData = \(self.saveGestureData)")
+        
         do {
             let config = MLModelConfiguration()
             if let processor = modelProcessors[whoseModel] {
