@@ -128,6 +128,55 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
         // 首先，检查消息类型
         let messageType = message["type"] as? String
         
+        // 处理设置更新消息
+        if messageType == "update_settings" {
+            DispatchQueue.main.async {
+                // 更新 UserDefaults 中的设置
+                if let feedbackType = message["feedbackType"] as? String {
+                    UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
+                }
+                if let peakThreshold = message["peakThreshold"] as? Double {
+                    UserDefaults.standard.set(peakThreshold, forKey: "peakThreshold")
+                }
+                if let peakWindow = message["peakWindow"] as? Double {
+                    UserDefaults.standard.set(peakWindow, forKey: "peakWindow")
+                }
+                if let saveGestureData = message["saveGestureData"] as? Bool {
+                    UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
+                }
+                if let savePeaks = message["savePeaks"] as? Bool {
+                    UserDefaults.standard.set(savePeaks, forKey: "savePeaks")
+                }
+                if let saveValleys = message["saveValleys"] as? Bool {
+                    UserDefaults.standard.set(saveValleys, forKey: "saveValleys")
+                }
+                if let saveSelectedPeaks = message["saveSelectedPeaks"] as? Bool {
+                    UserDefaults.standard.set(saveSelectedPeaks, forKey: "saveSelectedPeaks")
+                }
+                if let saveQuaternions = message["saveQuaternions"] as? Bool {
+                    UserDefaults.standard.set(saveQuaternions, forKey: "saveQuaternions")
+                }
+                if let saveResultFile = message["saveResultFile"] as? Bool {
+                    UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
+                }
+                if let enableVisualFeedback = message["enableVisualFeedback"] as? Bool {
+                    UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
+                }
+                if let enableHapticFeedback = message["enableHapticFeedback"] as? Bool {
+                    UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
+                }
+                if let enableVoiceFeedback = message["enableVoiceFeedback"] as? Bool {
+                    UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
+                }
+                if let enableRealtimeData = message["enableRealtimeData"] as? Bool {
+                    UserDefaults.standard.set(enableRealtimeData, forKey: "enableRealtimeData")
+                }
+                
+                // 发送通知以更新设置视图
+                NotificationCenter.default.post(name: NSNotification.Name("WatchSettingsUpdated"), object: nil, userInfo: message)
+            }
+        }
+        
         // 只处理非传感器数据的消息通知
         if messageType != "batch_data" && messageType != "sensor_data" {
             DispatchQueue.main.async {

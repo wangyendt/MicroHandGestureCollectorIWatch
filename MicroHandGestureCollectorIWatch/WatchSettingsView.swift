@@ -106,5 +106,54 @@ struct WatchSettingsView: View {
                 }
             }
         }
+        .onAppear {
+            NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("WatchSettingsUpdated"),
+                object: nil,
+                queue: .main
+            ) { notification in
+                if let settings = notification.userInfo {
+                    if let value = settings["peakThreshold"] as? Double {
+                        peakThreshold = value
+                    }
+                    if let value = settings["peakWindow"] as? Double {
+                        peakWindow = value
+                    }
+                    if let value = settings["savePeaks"] as? Bool {
+                        savePeaks = value
+                    }
+                    if let value = settings["saveValleys"] as? Bool {
+                        saveValleys = value
+                    }
+                    if let value = settings["saveSelectedPeaks"] as? Bool {
+                        saveSelectedPeaks = value
+                    }
+                    if let value = settings["saveQuaternions"] as? Bool {
+                        saveQuaternions = value
+                    }
+                    if let value = settings["saveGestureData"] as? Bool {
+                        saveGestureData = value
+                    }
+                    if let value = settings["saveResultFile"] as? Bool {
+                        saveResultFile = value
+                    }
+                    if let value = settings["enableVisualFeedback"] as? Bool {
+                        enableVisualFeedback = value
+                    }
+                    if let value = settings["enableHapticFeedback"] as? Bool {
+                        enableHapticFeedback = value
+                    }
+                    if let value = settings["enableVoiceFeedback"] as? Bool {
+                        enableVoiceFeedback = value
+                    }
+                    if let value = settings["feedbackType"] as? String {
+                        feedbackType = value
+                    }
+                    if let value = settings["enableRealtimeData"] as? Bool {
+                        enableRealtimeData = value
+                    }
+                }
+            }
+        }
     }
 } 
