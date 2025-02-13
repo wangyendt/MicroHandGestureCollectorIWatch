@@ -84,130 +84,143 @@ struct ActionDemoView: View {
             // 信息提示控件
             VStack(spacing: 8) {
                 if let group = currentGroup {
-                    Text("第 \(currentGroupIndex + 1)/\(allGroups.count) 组")
-                        .font(.system(size: 15))
-                        .foregroundColor(.blue)
+                    HStack(spacing: 20) {
+                        Text("第 \(currentGroupIndex + 1)/\(allGroups.count) 组")
+                            .font(.system(size: 15))
+                            .foregroundColor(.blue)
+                        
+                        Text("种子：\(shuffleSeed)")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.bottom, 4)
                     
-                    Text("随机种子：\(shuffleSeed)")
+                    Text("手臂\(resourceStats["arm_gesture"] ?? 0)个 · 身体\(resourceStats["body_gesture"] ?? 0)个 · 手指\(resourceStats["finger_gesture"] ?? 0)个")
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
-                        .padding(.bottom, 4)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("手臂动作：\(group.armGesture) (共\(resourceStats["arm_gesture"] ?? 0)个)")
-                        Text("身体动作：\(group.bodyGesture) (共\(resourceStats["body_gesture"] ?? 0)个)")
-                        Text("手指动作：\(group.fingerGesture) (共\(resourceStats["finger_gesture"] ?? 0)个)")
-                    }
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
                     
                     // 资源显示区域
                     VStack(spacing: 15) {
                         // 手臂动作视频
-                        if let videoURL = currentArmVideoURL {
-                            VideoPlayer(player: videoPlayer)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 200)
-                                .cornerRadius(10)
-                                .onChange(of: videoURL) { newURL in
-                                    // 当URL改变时，重新创建播放器
-                                    videoPlayer?.pause()
-                                    NotificationCenter.default.removeObserver(self)
-                                    videoPlayer = AVPlayer(url: newURL)
-                                    videoPlayer?.actionAtItemEnd = .none
-                                    videoPlayer?.play()
-                                    
-                                    // 重新添加循环播放观察者
-                                    NotificationCenter.default.addObserver(
-                                        forName: .AVPlayerItemDidPlayToEndTime,
-                                        object: videoPlayer?.currentItem,
-                                        queue: .main
-                                    ) { _ in
-                                        videoPlayer?.seek(to: .zero)
-                                        videoPlayer?.play()
-                                    }
-                                }
-                                .onAppear {
-                                    videoPlayer = AVPlayer(url: videoURL)
-                                    videoPlayer?.actionAtItemEnd = .none
-                                    videoPlayer?.play()
-                                    
-                                    // 添加循环播放观察者
-                                    NotificationCenter.default.addObserver(
-                                        forName: .AVPlayerItemDidPlayToEndTime,
-                                        object: videoPlayer?.currentItem,
-                                        queue: .main
-                                    ) { _ in
-                                        videoPlayer?.seek(to: .zero)
-                                        videoPlayer?.play()
-                                    }
-                                }
-                                .onDisappear {
-                                    videoPlayer?.pause()
-                                    NotificationCenter.default.removeObserver(self)
-                                    videoPlayer = nil
-                                }
-                        }
-                        
-                        HStack(spacing: 15) {
-                            // 身体动作图片
-                            if let imageURL = currentBodyImageURL {
-                                AsyncImage(url: imageURL) { image in
-                                    image
-                                        .resizable()
-                                        .scaledToFit()
-                                } placeholder: {
-                                    ProgressView()
-                                }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 150)
-                                .cornerRadius(10)
-                            }
-                            
-                            // 手指动作视频
-                            if let videoURL = currentFingerVideoURL {
-                                VideoPlayer(player: fingerVideoPlayer)
+                        VStack(spacing: 5) {
+                            if let videoURL = currentArmVideoURL {
+                                VideoPlayer(player: videoPlayer)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 150)
+                                    .frame(height: 200)
                                     .cornerRadius(10)
                                     .onChange(of: videoURL) { newURL in
                                         // 当URL改变时，重新创建播放器
-                                        fingerVideoPlayer?.pause()
-                                        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: fingerVideoPlayer?.currentItem)
-                                        fingerVideoPlayer = AVPlayer(url: newURL)
-                                        fingerVideoPlayer?.actionAtItemEnd = .none
-                                        fingerVideoPlayer?.play()
+                                        videoPlayer?.pause()
+                                        NotificationCenter.default.removeObserver(self)
+                                        videoPlayer = AVPlayer(url: newURL)
+                                        videoPlayer?.actionAtItemEnd = .none
+                                        videoPlayer?.play()
                                         
                                         // 重新添加循环播放观察者
                                         NotificationCenter.default.addObserver(
                                             forName: .AVPlayerItemDidPlayToEndTime,
-                                            object: fingerVideoPlayer?.currentItem,
+                                            object: videoPlayer?.currentItem,
                                             queue: .main
                                         ) { _ in
-                                            fingerVideoPlayer?.seek(to: .zero)
-                                            fingerVideoPlayer?.play()
+                                            videoPlayer?.seek(to: .zero)
+                                            videoPlayer?.play()
                                         }
                                     }
                                     .onAppear {
-                                        fingerVideoPlayer = AVPlayer(url: videoURL)
-                                        fingerVideoPlayer?.actionAtItemEnd = .none
-                                        fingerVideoPlayer?.play()
+                                        videoPlayer = AVPlayer(url: videoURL)
+                                        videoPlayer?.actionAtItemEnd = .none
+                                        videoPlayer?.play()
                                         
                                         // 添加循环播放观察者
                                         NotificationCenter.default.addObserver(
                                             forName: .AVPlayerItemDidPlayToEndTime,
-                                            object: fingerVideoPlayer?.currentItem,
+                                            object: videoPlayer?.currentItem,
                                             queue: .main
                                         ) { _ in
-                                            fingerVideoPlayer?.seek(to: .zero)
-                                            fingerVideoPlayer?.play()
+                                            videoPlayer?.seek(to: .zero)
+                                            videoPlayer?.play()
                                         }
                                     }
                                     .onDisappear {
-                                        fingerVideoPlayer?.pause()
-                                        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: fingerVideoPlayer?.currentItem)
-                                        fingerVideoPlayer = nil
+                                        videoPlayer?.pause()
+                                        NotificationCenter.default.removeObserver(self)
+                                        videoPlayer = nil
                                     }
+                            }
+                            Text("手臂动作：\(group.armGesture)")
+                                .font(.system(size: 15))
+                                .foregroundColor(.primary)
+                        }
+                        
+                        HStack(spacing: 15) {
+                            // 身体动作图片
+                            VStack(spacing: 5) {
+                                if let imageURL = currentBodyImageURL {
+                                    AsyncImage(url: imageURL) { image in
+                                        image
+                                            .resizable()
+                                            .scaledToFit()
+                                    } placeholder: {
+                                        ProgressView()
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 150)
+                                    .cornerRadius(10)
+                                }
+                                Text("身体动作：\(group.bodyGesture)")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.primary)
+                            }
+                            
+                            // 手指动作视频
+                            VStack(spacing: 5) {
+                                if let videoURL = currentFingerVideoURL {
+                                    VideoPlayer(player: fingerVideoPlayer)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 150)
+                                        .cornerRadius(10)
+                                        .onChange(of: videoURL) { newURL in
+                                            // 当URL改变时，重新创建播放器
+                                            fingerVideoPlayer?.pause()
+                                            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: fingerVideoPlayer?.currentItem)
+                                            fingerVideoPlayer = AVPlayer(url: newURL)
+                                            fingerVideoPlayer?.actionAtItemEnd = .none
+                                            fingerVideoPlayer?.play()
+                                            
+                                            // 重新添加循环播放观察者
+                                            NotificationCenter.default.addObserver(
+                                                forName: .AVPlayerItemDidPlayToEndTime,
+                                                object: fingerVideoPlayer?.currentItem,
+                                                queue: .main
+                                            ) { _ in
+                                                fingerVideoPlayer?.seek(to: .zero)
+                                                fingerVideoPlayer?.play()
+                                            }
+                                        }
+                                        .onAppear {
+                                            fingerVideoPlayer = AVPlayer(url: videoURL)
+                                            fingerVideoPlayer?.actionAtItemEnd = .none
+                                            fingerVideoPlayer?.play()
+                                            
+                                            // 添加循环播放观察者
+                                            NotificationCenter.default.addObserver(
+                                                forName: .AVPlayerItemDidPlayToEndTime,
+                                                object: fingerVideoPlayer?.currentItem,
+                                                queue: .main
+                                            ) { _ in
+                                                fingerVideoPlayer?.seek(to: .zero)
+                                                fingerVideoPlayer?.play()
+                                            }
+                                        }
+                                        .onDisappear {
+                                            fingerVideoPlayer?.pause()
+                                            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: fingerVideoPlayer?.currentItem)
+                                            fingerVideoPlayer = nil
+                                        }
+                                }
+                                Text("手指动作：\(group.fingerGesture)")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.primary)
                             }
                         }
                     }
