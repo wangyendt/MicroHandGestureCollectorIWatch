@@ -2,11 +2,17 @@ import SwiftUI
 import AVKit
 import ios_tools_lib
 
-struct DemoGroup: Identifiable {
+struct DemoGroup: Identifiable, Equatable {
     let id = UUID()
     let armGesture: String
     let bodyGesture: String
     let fingerGesture: String
+    
+    static func == (lhs: DemoGroup, rhs: DemoGroup) -> Bool {
+        return lhs.armGesture == rhs.armGesture &&
+               lhs.bodyGesture == rhs.bodyGesture &&
+               lhs.fingerGesture == rhs.fingerGesture
+    }
 }
 
 struct ActionDemoView: View {
@@ -23,6 +29,13 @@ struct ActionDemoView: View {
     @State private var currentGroupIndex = 0
     @State private var resourceFiles: [String: [String]] = [:]
     @State private var shuffleSeed: UInt16
+    
+    // 添加资源URL状态
+    @State private var currentArmVideoURL: URL?
+    @State private var currentBodyImageURL: URL?
+    @State private var currentFingerVideoURL: URL?
+    @State private var videoPlayer: AVPlayer?
+    @State private var fingerVideoPlayer: AVPlayer?
     
     private let cloudPrefix = "micro_hand_gesture/demo_videos/"
     private let categories = ["arm_gesture", "body_gesture", "finger_gesture"]
@@ -87,6 +100,119 @@ struct ActionDemoView: View {
                     }
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
+                    
+                    // 资源显示区域
+                    VStack(spacing: 15) {
+                        // 手臂动作视频
+                        if let videoURL = currentArmVideoURL {
+                            VideoPlayer(player: videoPlayer)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 200)
+                                .cornerRadius(10)
+                                .onChange(of: videoURL) { newURL in
+                                    // 当URL改变时，重新创建播放器
+                                    videoPlayer?.pause()
+                                    NotificationCenter.default.removeObserver(self)
+                                    videoPlayer = AVPlayer(url: newURL)
+                                    videoPlayer?.actionAtItemEnd = .none
+                                    videoPlayer?.play()
+                                    
+                                    // 重新添加循环播放观察者
+                                    NotificationCenter.default.addObserver(
+                                        forName: .AVPlayerItemDidPlayToEndTime,
+                                        object: videoPlayer?.currentItem,
+                                        queue: .main
+                                    ) { _ in
+                                        videoPlayer?.seek(to: .zero)
+                                        videoPlayer?.play()
+                                    }
+                                }
+                                .onAppear {
+                                    videoPlayer = AVPlayer(url: videoURL)
+                                    videoPlayer?.actionAtItemEnd = .none
+                                    videoPlayer?.play()
+                                    
+                                    // 添加循环播放观察者
+                                    NotificationCenter.default.addObserver(
+                                        forName: .AVPlayerItemDidPlayToEndTime,
+                                        object: videoPlayer?.currentItem,
+                                        queue: .main
+                                    ) { _ in
+                                        videoPlayer?.seek(to: .zero)
+                                        videoPlayer?.play()
+                                    }
+                                }
+                                .onDisappear {
+                                    videoPlayer?.pause()
+                                    NotificationCenter.default.removeObserver(self)
+                                    videoPlayer = nil
+                                }
+                        }
+                        
+                        HStack(spacing: 15) {
+                            // 身体动作图片
+                            if let imageURL = currentBodyImageURL {
+                                AsyncImage(url: imageURL) { image in
+                                    image
+                                        .resizable()
+                                        .scaledToFit()
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 150)
+                                .cornerRadius(10)
+                            }
+                            
+                            // 手指动作视频
+                            if let videoURL = currentFingerVideoURL {
+                                VideoPlayer(player: fingerVideoPlayer)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 150)
+                                    .cornerRadius(10)
+                                    .onChange(of: videoURL) { newURL in
+                                        // 当URL改变时，重新创建播放器
+                                        fingerVideoPlayer?.pause()
+                                        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: fingerVideoPlayer?.currentItem)
+                                        fingerVideoPlayer = AVPlayer(url: newURL)
+                                        fingerVideoPlayer?.actionAtItemEnd = .none
+                                        fingerVideoPlayer?.play()
+                                        
+                                        // 重新添加循环播放观察者
+                                        NotificationCenter.default.addObserver(
+                                            forName: .AVPlayerItemDidPlayToEndTime,
+                                            object: fingerVideoPlayer?.currentItem,
+                                            queue: .main
+                                        ) { _ in
+                                            fingerVideoPlayer?.seek(to: .zero)
+                                            fingerVideoPlayer?.play()
+                                        }
+                                    }
+                                    .onAppear {
+                                        fingerVideoPlayer = AVPlayer(url: videoURL)
+                                        fingerVideoPlayer?.actionAtItemEnd = .none
+                                        fingerVideoPlayer?.play()
+                                        
+                                        // 添加循环播放观察者
+                                        NotificationCenter.default.addObserver(
+                                            forName: .AVPlayerItemDidPlayToEndTime,
+                                            object: fingerVideoPlayer?.currentItem,
+                                            queue: .main
+                                        ) { _ in
+                                            fingerVideoPlayer?.seek(to: .zero)
+                                            fingerVideoPlayer?.play()
+                                        }
+                                    }
+                                    .onDisappear {
+                                        fingerVideoPlayer?.pause()
+                                        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: fingerVideoPlayer?.currentItem)
+                                        fingerVideoPlayer = nil
+                                    }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical)
                 } else {
                     Text(infoMessage)
                         .font(.system(size: 15))
@@ -142,16 +268,27 @@ struct ActionDemoView: View {
         .task {
             await checkAndDownloadResources()
         }
+        .onChange(of: currentGroup) { newGroup in
+            if let group = newGroup {
+                updateResourceURLs(for: group)
+            }
+        }
     }
     
     private func showNextGroup() {
         guard !allGroups.isEmpty else { return }
         currentGroupIndex = (currentGroupIndex + 1) % allGroups.count
+        if let group = currentGroup {
+            updateResourceURLs(for: group)
+        }
     }
     
     private func showPreviousGroup() {
         guard !allGroups.isEmpty else { return }
         currentGroupIndex = (currentGroupIndex - 1 + allGroups.count) % allGroups.count
+        if let group = currentGroup {
+            updateResourceURLs(for: group)
+        }
     }
     
     private func generateAllCombinations() {
@@ -273,6 +410,26 @@ struct ActionDemoView: View {
                         infoMessage = "下载\(category)资源失败"
                         return
                     }
+                    
+                    // 移动文件到正确的目录
+                    let tempPath = demoPath.appendingPathComponent(cloudPrefix + category)
+                    if FileManager.default.fileExists(atPath: tempPath.path) {
+                        let tempContents = try FileManager.default.contentsOfDirectory(
+                            at: tempPath,
+                            includingPropertiesForKeys: nil
+                        )
+                        for fileURL in tempContents {
+                            let fileName = fileURL.lastPathComponent
+                            let destinationURL = categoryPath.appendingPathComponent(fileName)
+                            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                                try FileManager.default.removeItem(at: destinationURL)
+                            }
+                            try FileManager.default.moveItem(at: fileURL, to: destinationURL)
+                        }
+                        // 清理临时目录
+                        try FileManager.default.removeItem(at: tempPath)
+                    }
+                    
                     needsUpdate = true
                 }
                 
@@ -305,22 +462,124 @@ struct ActionDemoView: View {
             print("错误：\(error)")
         }
     }
+    
+    private func updateResourceURLs(for group: DemoGroup) {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return
+        }
+        
+        let demoPath = documentsPath.appendingPathComponent("DemoVideos")
+        
+        // 更新手臂动作视频URL
+        let armPath = demoPath.appendingPathComponent("arm_gesture")
+        let armBaseName = group.armGesture
+        if let videoURL = findVideoFile(in: armPath, baseName: armBaseName) {
+            print("找到手臂动作视频: \(videoURL.path)")
+            currentArmVideoURL = videoURL
+        } else {
+            print("未找到手臂动作视频，路径: \(armPath.path), 基础名: \(armBaseName)")
+        }
+        
+        // 更新身体动作图片URL
+        let bodyPath = demoPath.appendingPathComponent("body_gesture")
+        let bodyImageURL = bodyPath.appendingPathComponent(group.bodyGesture + ".png")
+        print("设置身体动作图片: \(bodyImageURL.path)")
+        currentBodyImageURL = bodyImageURL
+        
+        // 更新手指动作视频 URL
+        let fingerPath = demoPath.appendingPathComponent("finger_gesture")
+        let fingerBaseName = group.fingerGesture
+        if let videoURL = findVideoFile(in: fingerPath, baseName: fingerBaseName) {
+            print("找到手指动作视频: \(videoURL.path)")
+            currentFingerVideoURL = videoURL
+        } else {
+            print("未找到手指动作视频，路径: \(fingerPath.path), 基础名: \(fingerBaseName)")
+        }
+    }
+    
+    private func findVideoFile(in directory: URL, baseName: String) -> URL? {
+        // 检查mp4
+        let mp4URL = directory.appendingPathComponent(baseName + ".mp4")
+        if FileManager.default.fileExists(atPath: mp4URL.path) {
+            print("找到MP4文件: \(mp4URL.path)")
+            return mp4URL
+        }
+        
+        // 检查mov
+        let movURL = directory.appendingPathComponent(baseName + ".mov")
+        if FileManager.default.fileExists(atPath: movURL.path) {
+            print("找到MOV文件: \(movURL.path)")
+            return movURL
+        }
+        
+        print("在目录 \(directory.path) 中未找到视频文件，基础名: \(baseName)")
+        return nil
+    }
 }
 
 // 修改随机数生成器
 struct SeededRandomNumberGenerator: RandomNumberGenerator {
-    private let seed: UInt16
-    private var current: UInt16
+    private let multiplier: UInt64 = 6364136223846793005
+    private let increment: UInt64 = 1442695040888963407
+    private var state: UInt64
     
     init(seed: UInt16) {
-        self.seed = seed
-        self.current = seed
+        self.state = UInt64(seed)
+        _ = next() // 丢弃第一个值以改善随机性
     }
     
     mutating func next() -> UInt64 {
-        // 使用简单的线性同余生成器
-        current = current &* 21_845 &+ 1
-        // 转换为UInt64返回
-        return UInt64(current)
+        state = state &* multiplier &+ increment
+        return state
+    }
+}
+
+// 修改 GIF 显示组件
+struct GIFImage: UIViewRepresentable {
+    let url: URL
+    @State private var imageView = UIImageView()
+    
+    func makeUIView(context: Context) -> UIImageView {
+        imageView.contentMode = .scaleAspectFit
+        loadGIF()
+        return imageView
+    }
+    
+    func updateUIView(_ uiView: UIImageView, context: Context) {
+        loadGIF()
+    }
+    
+    private func loadGIF() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            if let data = try? Data(contentsOf: url),
+               let source = CGImageSourceCreateWithData(data as CFData, nil) {
+                let frameCount = CGImageSourceGetCount(source)
+                var images: [UIImage] = []
+                var delays: [Double] = []
+                
+                for i in 0..<frameCount {
+                    if let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) {
+                        images.append(UIImage(cgImage: cgImage))
+                        
+                        if let properties = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [String: Any],
+                           let gifProperties = properties[kCGImagePropertyGIFDictionary as String] as? [String: Any] {
+                            var delay = gifProperties[kCGImagePropertyGIFDelayTime as String] as? Double ?? 0.1
+                            if delay < 0.011 { delay = 0.1 }
+                            delays.append(delay)
+                        }
+                    }
+                }
+                
+                let totalDuration = delays.reduce(0, +)
+                
+                DispatchQueue.main.async {
+                    imageView.stopAnimating()
+                    imageView.animationImages = images
+                    imageView.animationDuration = totalDuration
+                    imageView.animationRepeatCount = 0
+                    imageView.startAnimating()
+                }
+            }
+        }
     }
 } 
