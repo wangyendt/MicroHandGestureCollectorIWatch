@@ -30,6 +30,7 @@ struct ActionDemoView: View {
     @State private var currentGroupIndex = 0
     @State private var resourceFiles: [String: [String]] = [:]
     @State private var shuffleSeed: UInt16
+    @State private var showingGestureSettings = false
     
     // 添加资源URL状态
     @State private var currentArmVideoURL: URL?
@@ -64,11 +65,19 @@ struct ActionDemoView: View {
     
     var body: some View {
         VStack(spacing: 15) {
-            // 动作演示标题和刷新按钮
+            // 动作演示标题和按钮
             HStack {
                 Text("当前组合")
                     .font(.headline)
                 Spacer()
+                Button(action: {
+                    showingGestureSettings = true
+                }) {
+                    Image(systemName: "gearshape")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                }
+                .disabled(isLoading)
                 Button(action: {
                     Task {
                         await checkAndDownloadResources()
@@ -287,6 +296,16 @@ struct ActionDemoView: View {
                 updateResourceURLs(for: group)
             }
         }
+        .sheet(isPresented: $showingGestureSettings) {
+            GestureSettingsView(resourceFiles: resourceFiles, onSave: {
+                // 重新生成组合
+                generateAllCombinations()
+                // 更新当前组的资源URL
+                if let group = currentGroup {
+                    updateResourceURLs(for: group)
+                }
+            })
+        }
     }
     
     private func showNextGroup() {
@@ -318,15 +337,24 @@ struct ActionDemoView: View {
         print("身体动作：\(bodyGestures)")
         print("手指动作：\(fingerGestures)")
         
+        // 获取动作映射关系
+        let gestureMapping = settings.gestureMapping
+        
         // 生成所有可能的组合
-        for arm in armGestures {
-            for body in bodyGestures {
-                for finger in fingerGestures {
-                    combinations.append(DemoGroup(
-                        armGesture: arm,
-                        bodyGesture: body,
-                        fingerGesture: finger
-                    ))
+        for body in bodyGestures {
+            // 获取该身体动作对应的手臂动作列表
+            let validArmGestures = gestureMapping[body] ?? Set(armGestures)
+            
+            // 如果没有配置映射关系，或者该身体动作被选中
+            if gestureMapping.isEmpty || gestureMapping.keys.contains(body) {
+                for arm in validArmGestures {
+                    for finger in fingerGestures {
+                        combinations.append(DemoGroup(
+                            armGesture: arm,
+                            bodyGesture: body,
+                            fingerGesture: finger
+                        ))
+                    }
                 }
             }
         }

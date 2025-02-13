@@ -35,5 +35,20 @@ class AppSettings: ObservableObject {
     @UserDefaultsBacked(key: "larkGroupName", defaultValue: "手势测试")
     var larkGroupName: String
     
-    private init() {}
+    @Published var gestureMapping: [String: Set<String>] {
+        didSet {
+            if let data = try? JSONEncoder().encode(gestureMapping) {
+                UserDefaults.standard.set(data, forKey: "gestureMapping")
+            }
+        }
+    }
+    
+    private init() {
+        if let data = UserDefaults.standard.data(forKey: "gestureMapping"),
+           let mapping = try? JSONDecoder().decode([String: Set<String>].self, from: data) {
+            self.gestureMapping = mapping
+        } else {
+            self.gestureMapping = [:]
+        }
+    }
 } 
