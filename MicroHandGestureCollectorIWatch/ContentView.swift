@@ -40,6 +40,7 @@ struct ContentView: View {
     @State private var showingWatchSettings = false
     @State private var showingCloudDataManagement = false
     @State private var showingChatView = false
+    @State private var showingStopCollectionAlert = false
     
     // 添加视觉反馈状态
     @State private var showingVisualFeedback = false
@@ -294,8 +295,10 @@ struct ContentView: View {
                                 
                                 // 开始/停止采集按钮
                                 Button(action: {
-                                    isCollecting.toggle()
                                     if isCollecting {
+                                        // 显示确认弹窗
+                                        showingStopCollectionAlert = true
+                                    } else {
                                         // 发送开始采集消息到 Watch
                                         if WCSession.default.isReachable {
                                             WCSession.default.sendMessage([
@@ -305,17 +308,7 @@ struct ContentView: View {
                                                 print("发送开始采集消息失败: \(error.localizedDescription)")
                                             }
                                         }
-                                    } else {
-                                        // 发送停止采集消息到 Watch
-                                        if WCSession.default.isReachable {
-                                            WCSession.default.sendMessage([
-                                                "type": "stop_collection",
-                                                "trigger_collection": true
-                                            ], replyHandler: nil) { error in
-                                                print("发送停止采集消息失败: \(error.localizedDescription)")
-                                            }
-                                        }
-                                        sensorManager.resetState()
+                                        isCollecting = true
                                     }
                                 }) {
                                     HStack {
@@ -567,6 +560,24 @@ struct ContentView: View {
             if let message = notification.userInfo as? [String: Any] {
                 handleMessage(message)
             }
+        }
+        .alert("确认停止采集", isPresented: $showingStopCollectionAlert) {
+            Button("取消", role: .cancel) { }
+            Button("停止", role: .destructive) {
+                // 发送停止采集消息到 Watch
+                if WCSession.default.isReachable {
+                    WCSession.default.sendMessage([
+                        "type": "stop_collection",
+                        "trigger_collection": true
+                    ], replyHandler: nil) { error in
+                        print("发送停止采集消息失败: \(error.localizedDescription)")
+                    }
+                }
+                isCollecting = false
+                sensorManager.resetState()
+            }
+        } message: {
+            Text("确定要停止当前的数据采集吗？")
         }
     }
     
