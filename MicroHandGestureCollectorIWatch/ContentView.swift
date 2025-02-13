@@ -406,8 +406,8 @@ struct ContentView: View {
                                     Text("峰值")
                                         .frame(width: 50, alignment: .leading)
                                         .font(.system(size: 17))
-                                    Text("真实手势")
-                                        .frame(width: 70, alignment: .leading)
+                                    Text("真实")
+                                        .frame(width: 50, alignment: .leading)
                                         .font(.system(size: 17))
                                     Spacer(minLength: 0)
                                 }
@@ -481,6 +481,8 @@ struct ContentView: View {
                                                                 .frame(width: 50, height: 32, alignment: .leading)
                                                         }
                                                         .frame(width: 50, height: 32)
+                                                        
+                                                        Spacer(minLength: 0)
                                                         
                                                         // 删除按钮
                                                         Button(action: {

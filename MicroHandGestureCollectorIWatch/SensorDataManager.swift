@@ -24,6 +24,11 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var lastUpdateTime = Date()
     @Published var gestureResults: [GestureResult] = []
     
+    // 添加当前动作状态
+    @Published var currentBodyGesture: String = "无"
+    @Published var currentArmGesture: String = "无"
+    @Published var currentFingerGesture: String = "无"
+    
     private var dataQueue = DispatchQueue(label: "com.wayne.dataQueue", qos: .userInteractive)
     private var lastSentTime: TimeInterval = 0
     private let minSendInterval: TimeInterval = 0.005  // 最小发送间隔，100Hz
@@ -115,6 +120,25 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
     
+    // 添加更新当前动作的方法
+    func updateCurrentGestures(body: String? = nil, arm: String? = nil, finger: String? = nil) {
+        DispatchQueue.main.async {
+            if let bodyGesture = body {
+                self.currentBodyGesture = bodyGesture
+                print("更新身体动作为: \(bodyGesture)")
+            }
+            if let armGesture = arm {
+                self.currentArmGesture = armGesture
+                print("更新手臂动作为: \(armGesture)")
+            }
+            if let fingerGesture = finger {
+                self.currentFingerGesture = fingerGesture
+                print("更新手指动作为: \(fingerGesture)")
+            }
+            print("当前动作状态 - 身体: \(self.currentBodyGesture), 手臂: \(self.currentArmGesture), 手指: \(self.currentFingerGesture)")
+        }
+    }
+    
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         if let error = error {
             lastMessage = "Watch连接失败: \(error.localizedDescription)"
@@ -193,15 +217,42 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
                    let peakValue = message["peakValue"] as? Double,
                    let id = message["id"] as? String {
                     
+                    print("收到手势识别结果 - ID: \(id)")
+                    print("当前动作状态 - 身体: \(self.currentBodyGesture), 手臂: \(self.currentArmGesture), 手指: \(self.currentFingerGesture)")
+                    
+                    // 确保使用当前选择的动作，而不是默认值
+                    let bodyGesture = self.currentBodyGesture != "无" ? self.currentBodyGesture : "无"
+                    let armGesture = self.currentArmGesture != "无" ? self.currentArmGesture : "无"
+                    let fingerGesture = self.currentFingerGesture != "无" ? self.currentFingerGesture : "无"
+                    
                     let result = GestureResult(
                         id: id,
                         timestamp: timestamp,
                         gesture: gesture,
                         confidence: confidence,
                         peakValue: peakValue,
-                        trueGesture: gesture
+                        trueGesture: gesture,
+                        bodyGesture: bodyGesture,
+                        armGesture: armGesture,
+                        fingerGesture: fingerGesture
                     )
                     self.gestureResults.append(result)
+                    print("创建手势结果 - 身体: \(result.bodyGesture), 手臂: \(result.armGesture), 手指: \(result.fingerGesture)")
+                    
+                    // 发送更新的手势结果到手表
+                    if WCSession.default.isReachable {
+                        let updatedMessage: [String: Any] = [
+                            "type": "update_gesture_result",
+                            "id": id,
+                            "body_gesture": bodyGesture,
+                            "arm_gesture": armGesture,
+                            "finger_gesture": fingerGesture
+                        ]
+                        print("发送动作更新到手表 - ID: \(id), 身体: \(bodyGesture), 手臂: \(armGesture), 手指: \(fingerGesture)")
+                        WCSession.default.sendMessage(updatedMessage, replyHandler: nil) { error in
+                            print("发送动作更新失败: \(error.localizedDescription)")
+                        }
+                    }
                 } else if messageType == "stop_collection" {
                     self.resetState()
                 }

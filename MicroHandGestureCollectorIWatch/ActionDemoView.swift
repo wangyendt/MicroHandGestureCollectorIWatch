@@ -17,6 +17,7 @@ struct DemoGroup: Identifiable, Equatable {
 
 struct ActionDemoView: View {
     @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var sensorManager = SensorDataManager.shared
     @State private var infoMessage = "正在检查资源文件..."
     @State private var isLoading = false
     @State private var resourceStats: [String: Int] = [:]
@@ -508,6 +509,13 @@ struct ActionDemoView: View {
         } else {
             print("未找到手指动作视频，路径: \(fingerPath.path), 基础名: \(fingerBaseName)")
         }
+        
+        // 更新 SensorDataManager 中的当前动作状态
+        sensorManager.updateCurrentGestures(
+            body: group.bodyGesture,
+            arm: group.armGesture,
+            finger: group.fingerGesture
+        )
     }
     
     private func findVideoFile(in directory: URL, baseName: String) -> URL? {

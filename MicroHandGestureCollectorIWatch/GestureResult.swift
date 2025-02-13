@@ -5,6 +5,9 @@ struct GestureResult: Identifiable {
     let confidence: Double
     let peakValue: Double
     var trueGesture: String
+    var bodyGesture: String
+    var armGesture: String
+    var fingerGesture: String
 }
 
 enum GestureNames {

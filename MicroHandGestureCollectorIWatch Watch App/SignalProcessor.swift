@@ -273,7 +273,10 @@ public class SignalProcessor {
                                 "gesture": gesture as String,
                                 "confidence": confidence as Double,
                                 "peakValue": peak_val as Double,
-                                "id": resultId as String
+                                "id": resultId as String,
+                                "bodyGesture": "无" as String,
+                                "armGesture": "无" as String,
+                                "fingerGesture": "无" as String
                             ]
                             
                             // 保存结果到文件

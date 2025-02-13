@@ -23,6 +23,9 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     
     // 添加一个字典来存储更新的真实手势
     private var updatedTrueGestures: [String: String] = [:]
+    private var updatedBodyGestures: [String: String] = [:]
+    private var updatedArmGestures: [String: String] = [:]
+    private var updatedFingerGestures: [String: String] = [:]
     
     // 添加 MotionManager 引用
     private var motionManager: MotionManager?
@@ -338,10 +341,10 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     }
     #endif
     
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
-        print("Watch收到消息:", message)
-        
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         if let type = message["type"] as? String {
+            print("手表收到消息类型: \(type)")
+            
             switch type {
             case "update_settings":
                 print("收到设置更新") // 添加调试输出
@@ -406,10 +409,43 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                     print("收到真实手势更新，ID: \(id), 真实手势: \(trueGesture)")
                     updatedTrueGestures[id] = trueGesture
                 }
+            case "update_body_gesture":
+                print("收到身体动作更新")
+                if let id = message["id"] as? String,
+                   let bodyGesture = message["body_gesture"] as? String {
+                    print("收到身体动作更新，ID: \(id), 身体动作: \(bodyGesture)")
+                    updatedBodyGestures[id] = bodyGesture
+                }
+            case "update_arm_gesture":
+                print("收到手臂动作更新")
+                if let id = message["id"] as? String,
+                   let armGesture = message["arm_gesture"] as? String {
+                    print("收到手臂动作更新，ID: \(id), 手臂动作: \(armGesture)")
+                    updatedArmGestures[id] = armGesture
+                }
+            case "update_finger_gesture":
+                print("收到手指动作更新")
+                if let id = message["id"] as? String,
+                   let fingerGesture = message["finger_gesture"] as? String {
+                    print("收到手指动作更新，ID: \(id), 手指动作: \(fingerGesture)")
+                    updatedFingerGestures[id] = fingerGesture
+                }
             case "delete_result":
                 print("收到删除请求")
                 if let id = message["id"] as? String {
                     deleteResultFromFile(id: id)
+                }
+            case "update_gesture_result":
+                if let id = message["id"] as? String,
+                   let bodyGesture = message["body_gesture"] as? String,
+                   let armGesture = message["arm_gesture"] as? String,
+                   let fingerGesture = message["finger_gesture"] as? String {
+                    print("收到动作更新 - ID: \(id)")
+                    print("动作信息 - 身体: \(bodyGesture), 手臂: \(armGesture), 手指: \(fingerGesture)")
+                    updatedBodyGestures[id] = bodyGesture
+                    updatedArmGestures[id] = armGesture
+                    updatedFingerGestures[id] = fingerGesture
+                    print("已更新动作字典")
                 }
             default:
                 break
@@ -480,7 +516,7 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             }
             
             // 创建 manual_result.txt
-            var manualResultContent = "timestamp_ns,relative_timestamp_s,gesture,confidence,peak_value,id,true_gesture,is_deleted\n"
+            var manualResultContent = "timestamp_ns,relative_timestamp_s,gesture,confidence,peak_value,id,true_gesture,is_deleted,body_gesture,arm_gesture,finger_gesture\n"
             
             // 统计变量
             var gestureCounts: [String: Int] = [:]
@@ -495,13 +531,16 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                 if line.isEmpty { continue }
                 
                 let components = line.components(separatedBy: ",")
-                if components.count >= 6 {
+                if components.count >= 6 {  // 修改这里，因为result.txt现在只有6列
                     let id = components[5]
                     let isDeleted = deletedIds.contains(id)
                     let predictedGesture = components[2]
                     let trueGesture = updatedTrueGestures[id] ?? predictedGesture
+                    let bodyGesture = updatedBodyGestures[id] ?? "无"  // 使用updatedBodyGestures中的值或默认值
+                    let armGesture = updatedArmGestures[id] ?? "无"    // 使用updatedArmGestures中的值或默认值
+                    let fingerGesture = updatedFingerGestures[id] ?? "无"  // 使用updatedFingerGestures中的值或默认值
                     
-                    manualResultContent += "\(line),\(trueGesture),\(isDeleted ? "1" : "0")\n"
+                    manualResultContent += "\(components[0]),\(components[1]),\(components[2]),\(components[3]),\(components[4]),\(id),\(trueGesture),\(isDeleted ? "1" : "0"),\(bodyGesture),\(armGesture),\(fingerGesture)\n"
                     
                     // 只统计未删除的结果
                     if !isDeleted {
