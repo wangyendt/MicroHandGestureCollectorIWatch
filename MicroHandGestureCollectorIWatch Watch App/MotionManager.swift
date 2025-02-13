@@ -259,8 +259,11 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         force: String,
         gender: String,
         tightness: String,
-        note: String
+        note: String,
+        wristSize: String,
+        bandType: String
     ) {
+        // 重置计数器
         signalProcessor.resetCount()  // 重置计数
         signalProcessor.resetStartTime()  // 重置开始时间
         peakCount = 0
@@ -298,7 +301,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 force: force,
                 gender: gender,
                 tightness: tightness,
-                note: note
+                note: note,
+                wristSize: wristSize,
+                bandType: bandType
             )
             
             // 创建必需的文件
@@ -681,11 +686,12 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         force: String,
         gender: String,
         tightness: String,
-        note: String
+        note: String,
+        wristSize: String,
+        bandType: String
     ) {
         var info = collectDeviceInfo()
         
-        // 添加采集信息
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         info["collection_time"] = dateFormatter.string(from: Date())
@@ -696,6 +702,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         info["gender"] = gender
         info["tightness"] = tightness
         info["note"] = note
+        info["wrist_size"] = wristSize
+        info["band_type"] = bandType
         
         let infoFileURL = folderURL.appendingPathComponent("info.yaml")
         
@@ -779,11 +787,13 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         yamlString += "  force: \(info["force"] ?? "")\n"
         yamlString += "  gender: \(info["gender"] ?? "")\n"
         yamlString += "  tightness: \(info["tightness"] ?? "")\n"
+        yamlString += "  wrist_size: \(info["wrist_size"] ?? "")\n"
+        yamlString += "  band_type: \(info["band_type"] ?? "")\n"
         yamlString += "  note: \(info["note"] ?? "")\n\n"
         
         yamlString += "# 设备信息\n"
         yamlString += "device:\n"
-        for key in info.keys.sorted() where !["collection_time", "participant_name", "hand", "gesture", "force", "gender", "tightness", "note"].contains(key) {
+        for key in info.keys.sorted() where !["collection_time", "participant_name", "hand", "gesture", "force", "gender", "tightness", "note", "wrist_size", "band_type"].contains(key) {
             if let value = info[key] {
                 yamlString += "  \(key): \(value)\n"
             }

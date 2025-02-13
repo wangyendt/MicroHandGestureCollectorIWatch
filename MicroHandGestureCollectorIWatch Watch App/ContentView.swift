@@ -125,6 +125,7 @@ struct ContentView: View {
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     
     @AppStorage("userName") private var userName = "王也"
+    @AppStorage("wristSize") private var wristSize = "16"
     @State private var showingNameInput = false
     
     // 添加设置相关的状态
@@ -137,6 +138,10 @@ struct ContentView: View {
     @State private var showGenderPicker = false
     @State private var showTightnessPicker = false
     
+    // 添加表带相关状态
+    @AppStorage("selectedBandType") private var selectedBandType = "运动"
+    @State private var showBandTypePicker = false
+    
     let handOptions = ["左手", "右手"]
     let gestureOptions = ["混合", "单击[正]", "双击[正]", "握拳[正]",
                           "摊掌[正]", "转腕[正]", "摇手[正]",
@@ -146,6 +151,7 @@ struct ContentView: View {
     let calculator = CalculatorBridge()
     let genderOptions = ["男", "女"]
     let tightnessOptions = ["松", "紧"]
+    let bandTypeOptions = ["金属", "真皮", "编织", "运动", "橡胶"]
     
     var body: some View {
         ScrollView {
@@ -208,6 +214,39 @@ struct ContentView: View {
                                     Text(option)
                                     Spacer()
                                     if selectedGender == option {
+                                        Text("✓")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Button(action: { showBandTypePicker = true }) {
+                    HStack {
+                        Text("表带").font(.headline)
+                        Spacer()
+                        Text(selectedBandType)
+                            .foregroundColor(.gray)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
+                }
+                .sheet(isPresented: $showBandTypePicker) {
+                    List {
+                        ForEach(bandTypeOptions, id: \.self) { option in
+                            Button(action: {
+                                selectedBandType = option
+                                showBandTypePicker = false
+                            }) {
+                                HStack {
+                                    Text(option)
+                                    Spacer()
+                                    if selectedBandType == option {
                                         Text("✓")
                                             .foregroundColor(.blue)
                                     }
@@ -317,6 +356,18 @@ struct ContentView: View {
                         }
                     }
                 }
+
+                // 新增备注输入框
+                HStack {
+                    Text("备注").font(.headline)
+                    TextField("请输入备注", text: $noteText)
+                        .frame(height: 32)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(6)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(8)
                 
                 // 姓名输入框
                 HStack {
@@ -330,10 +381,10 @@ struct ContentView: View {
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
                 
-                // 新增备注输入框
+                // 新增腕围输入框
                 HStack {
-                    Text("备注").font(.headline)
-                    TextField("请输入备注", text: $noteText)
+                    Text("腕围").font(.headline)
+                    TextField("请输入腕围(cm)", text: $wristSize)
                         .frame(height: 32)
                         .background(Color.gray.opacity(0.1))
                         .cornerRadius(6)
@@ -341,6 +392,7 @@ struct ContentView: View {
                 .padding()
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
+                
                 
                 // 添加设置按钮
                 Button(action: {
@@ -389,7 +441,9 @@ struct ContentView: View {
                             force: selectedForce,
                             gender: selectedGender,
                             tightness: selectedTightness,
-                            note: noteText
+                            note: noteText,
+                            wristSize: wristSize,
+                            bandType: selectedBandType
                         )
                         // 向iPhone发送开始采集的消息
                         if WCSession.default.isReachable {
@@ -616,7 +670,9 @@ struct ContentView: View {
                                 force: selectedForce,
                                 gender: selectedGender,
                                 tightness: selectedTightness,
-                                note: noteText
+                                note: noteText,
+                                wristSize: wristSize,
+                                bandType: selectedBandType
                             )
                         }
                     }

@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		B096274E2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B0B817B82D3819CC000C8A95 /* ios_tools_lib in Frameworks */ = {isa = PBXBuildFile; productRef = B0B817B72D3819CC000C8A95 /* ios_tools_lib */; };
+		B0D911972D5D9DD200B6DC8E /* ios_tools_lib in Frameworks */ = {isa = PBXBuildFile; productRef = B0D911962D5D9DD200B6DC8E /* ios_tools_lib */; };
 		B0FCE81A2D2277D500DEDC4A /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0FCE8192D2277D500DEDC4A /* Accelerate.framework */; };
 /* End PBXBuildFile section */
 
@@ -125,7 +125,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B0B817B82D3819CC000C8A95 /* ios_tools_lib in Frameworks */,
+				B0D911972D5D9DD200B6DC8E /* ios_tools_lib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,7 +225,7 @@
 			);
 			name = MicroHandGestureCollectorIWatch;
 			packageProductDependencies = (
-				B0B817B72D3819CC000C8A95 /* ios_tools_lib */,
+				B0D911962D5D9DD200B6DC8E /* ios_tools_lib */,
 			);
 			productName = MicroHandGestureCollectorIWatch;
 			productReference = B09627272D02CFA50015F052 /* MicroHandGestureCollectorIWatch.app */;
@@ -389,7 +389,7 @@
 			mainGroup = B096271E2D02CFA50015F052;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				B0B817B62D3819CC000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */,
+				B0D911952D5D9DD200B6DC8E /* XCRemoteSwiftPackageReference "ios_tools" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B09627282D02CFA50015F052 /* Products */;
@@ -1016,7 +1016,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		B0B817B62D3819CC000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */ = {
+		B0D911952D5D9DD200B6DC8E /* XCRemoteSwiftPackageReference "ios_tools" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/wangyendt/ios_tools";
 			requirement = {
@@ -1027,9 +1027,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		B0B817B72D3819CC000C8A95 /* ios_tools_lib */ = {
+		B0D911962D5D9DD200B6DC8E /* ios_tools_lib */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = B0B817B62D3819CC000C8A95 /* XCRemoteSwiftPackageReference "ios_tools" */;
+			package = B0D911952D5D9DD200B6DC8E /* XCRemoteSwiftPackageReference "ios_tools" */;
 			productName = ios_tools_lib;
 		};
 /* End XCSwiftPackageProductDependency section */
