@@ -328,6 +328,11 @@ struct ContentView: View {
                             .padding(.vertical, 8)
                         }
                         
+                        // 动作演示模块
+                        GroupBox(label: Text("动作演示").font(.headline)) {
+                            ActionDemoView()
+                        }
+                        
                         // 手势识别结果区域
                         GroupBox(label: Text("手势识别结果").font(.headline)) {
                             VStack(spacing: 0) {
