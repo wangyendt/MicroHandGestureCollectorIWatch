@@ -246,31 +246,47 @@ struct DataDetailView: View {
         // 读取 info.yaml 中的 collection 部分
         let infoURL = dataFile.url.appendingPathComponent("info.yaml")
         if let content = try? String(contentsOf: infoURL, encoding: .utf8) {
+            // 打印完整的文件内容
+            print("info.yaml 完整内容:\n\(content)")
+            
             let lines = content.components(separatedBy: .newlines)
+            print("文件总行数: \(lines.count)")
+            
             var isInCollectionSection = false
             var collectionFields: [String: String] = [:]
             
             for line in lines {
                 let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+                let indentLevel = line.prefix(while: { $0 == " " }).count
+                print("处理行: '\(line)', 缩进级别: \(indentLevel)")  // 打印每行的处理信息
                 
                 if trimmedLine == "collection:" {
                     isInCollectionSection = true
+                    print("进入 collection 部分")
                     continue
                 }
                 
-                if isInCollectionSection && trimmedLine.contains(":") {
-                    let parts = trimmedLine.components(separatedBy: ":")
-                    if parts.count == 2 {
-                        let key = parts[0].trimmingCharacters(in: .whitespaces)
-                        let value = parts[1].trimmingCharacters(in: .whitespaces)
-                        collectionFields[key] = value
+                if isInCollectionSection {
+                    if indentLevel == 2 && trimmedLine.contains(":") {  // collection 下的字段有2个空格缩进
+                        // 只分割第一个冒号
+                        if let colonIndex = trimmedLine.firstIndex(of: ":") {
+                            let key = trimmedLine[..<colonIndex].trimmingCharacters(in: .whitespaces)
+                            let value = trimmedLine[trimmedLine.index(after: colonIndex)...].trimmingCharacters(in: .whitespaces)
+                            collectionFields[key] = value
+                            print("添加字段: \(key) = \(value)")
+                        }
+                    } else if indentLevel == 0 && !trimmedLine.isEmpty {
+                        // 遇到无缩进的非空行,说明离开了 collection 部分
+                        isInCollectionSection = false
+                        print("离开 collection 部分")
                     }
-                } else if isInCollectionSection && !trimmedLine.hasPrefix(" ") && !trimmedLine.isEmpty {
-                    isInCollectionSection = false
                 }
             }
             
+            print("读取到的 collection 字段: \(collectionFields)")
             collectionInfo = CollectionInfo(fields: collectionFields)
+        } else {
+            print("无法读取 info.yaml 文件: \(infoURL.path)")
         }
     }
 }

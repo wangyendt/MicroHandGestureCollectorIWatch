@@ -25,6 +25,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     private var isCollecting = false
     private var logger: OSLog
     
+    // 添加采集开始时间属性
+    private var collectionStartTime: Date?
+    
     @Published var isReady = true
     
     // 添加文件写入队列
@@ -263,6 +266,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         wristSize: String,
         bandType: String
     ) {
+        // 记录开始时间
+        collectionStartTime = Date()
+        
         // 重置计数器
         signalProcessor.resetCount()  // 重置计数
         signalProcessor.resetStartTime()  // 重置开始时间
@@ -556,6 +562,55 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         signalProcessor.resetStartTime()  // 重置开始时间
         
+        // 更新 info.yaml 文件中的采集时长
+        if let startTime = collectionStartTime {
+            // 获取当前文件夹路径
+            if let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                // 查找最新的数据文件夹
+                do {
+                    let fileURLs = try FileManager.default.contentsOfDirectory(at: documentsPath, includingPropertiesForKeys: [.creationDateKey])
+                    let sortedURLs = fileURLs.sorted { url1, url2 in
+                        let date1 = (try? url1.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? Date.distantPast
+                        let date2 = (try? url2.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? Date.distantPast
+                        return date1 > date2
+                    }
+                    
+                    if let latestFolder = sortedURLs.first(where: { url in
+                        url.hasDirectoryPath && (url.lastPathComponent.contains("_右手_") || url.lastPathComponent.contains("_左手_"))
+                    }) {
+                        let infoURL = latestFolder.appendingPathComponent("info.yaml")
+                        if let content = try? String(contentsOf: infoURL, encoding: .utf8) {
+                            // 计算采集时长
+                            let duration = Date().timeIntervalSince(startTime)
+                            let hours = Int(duration) / 3600
+                            let minutes = Int(duration) / 60 % 60
+                            let seconds = Int(duration) % 60
+                            let durationString = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+                            
+                            // 更新文件内容
+                            var lines = content.components(separatedBy: .newlines)
+                            for (index, line) in lines.enumerated() {
+                                if line.trimmingCharacters(in: .whitespaces).hasPrefix("duration:") {
+                                    lines[index] = "  duration: \(durationString)"
+                                    break
+                                }
+                            }
+                            
+                            // 写回文件
+                            let updatedContent = lines.joined(separator: "\n")
+                            try updatedContent.write(to: infoURL, atomically: true, encoding: .utf8)
+                            print("已更新采集时长: \(durationString)")
+                        }
+                    }
+                } catch {
+                    print("更新采集时长时出错: \(error)")
+                }
+            }
+        }
+        
+        // 重置采集开始时间
+        collectionStartTime = nil
+        
         // 停止提醒定时器
         stopReminderTimer()
     }
@@ -695,6 +750,16 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         info["collection_time"] = dateFormatter.string(from: Date())
+        
+        // 计算采集时长
+        if let startTime = collectionStartTime {
+            let duration = Date().timeIntervalSince(startTime)
+            let hours = Int(duration) / 3600
+            let minutes = Int(duration) / 60 % 60
+            let seconds = Int(duration) % 60
+            info["collection_duration"] = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+        
         info["participant_name"] = name
         info["hand"] = hand
         info["gesture"] = gesture
@@ -781,6 +846,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         var yamlString = "# 采集信息\n"
         yamlString += "collection:\n"
         yamlString += "  time: \(info["collection_time"] ?? "")\n"
+        yamlString += "  duration: \(info["collection_duration"] ?? "")\n"
         yamlString += "  participant_name: \(info["participant_name"] ?? "")\n"
         yamlString += "  hand: \(info["hand"] ?? "")\n"
         yamlString += "  gesture: \(info["gesture"] ?? "")\n"
@@ -793,7 +859,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         yamlString += "# 设备信息\n"
         yamlString += "device:\n"
-        for key in info.keys.sorted() where !["collection_time", "participant_name", "hand", "gesture", "force", "gender", "tightness", "note", "wrist_size", "band_type"].contains(key) {
+        for key in info.keys.sorted() where !["collection_time", "collection_duration", "participant_name", "hand", "gesture", "force", "gender", "tightness", "note", "wrist_size", "band_type"].contains(key) {
             if let value = info[key] {
                 yamlString += "  \(key): \(value)\n"
             }
