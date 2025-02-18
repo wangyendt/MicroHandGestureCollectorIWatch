@@ -437,7 +437,7 @@ struct ContentView: View {
                                     ScrollViewReader { proxy in
                                         ScrollView {
                                             LazyVStack(spacing: 0) {
-                                                ForEach(sensorManager.gestureResults) { result in
+                                                ForEach(sensorManager.gestureResults.reversed()) { result in
                                                     HStack(spacing: 0) {
                                                         // 时间列
                                                         Text(String(format: "%.2fs", result.timestamp))
