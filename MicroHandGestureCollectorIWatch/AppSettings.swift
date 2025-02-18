@@ -43,12 +43,27 @@ class AppSettings: ObservableObject {
         }
     }
     
+    @Published var armFingerMapping: [String: Set<String>] {
+        didSet {
+            if let data = try? JSONEncoder().encode(armFingerMapping) {
+                UserDefaults.standard.set(data, forKey: "armFingerMapping")
+            }
+        }
+    }
+    
     private init() {
         if let data = UserDefaults.standard.data(forKey: "gestureMapping"),
            let mapping = try? JSONDecoder().decode([String: Set<String>].self, from: data) {
             self.gestureMapping = mapping
         } else {
             self.gestureMapping = [:]
+        }
+        
+        if let data = UserDefaults.standard.data(forKey: "armFingerMapping"),
+           let mapping = try? JSONDecoder().decode([String: Set<String>].self, from: data) {
+            self.armFingerMapping = mapping
+        } else {
+            self.armFingerMapping = [:]
         }
     }
 } 

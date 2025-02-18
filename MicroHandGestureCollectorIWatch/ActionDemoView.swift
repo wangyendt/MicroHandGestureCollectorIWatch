@@ -338,22 +338,29 @@ struct ActionDemoView: View {
         print("手指动作：\(fingerGestures)")
         
         // 获取动作映射关系
-        let gestureMapping = settings.gestureMapping
+        let bodyArmMapping = settings.gestureMapping
+        let armFingerMapping = settings.armFingerMapping
         
         // 生成所有可能的组合
         for body in bodyGestures {
             // 获取该身体动作对应的手臂动作列表
-            let validArmGestures = gestureMapping[body] ?? Set(armGestures)
+            let validArmGestures = bodyArmMapping[body] ?? Set(armGestures)
             
             // 如果没有配置映射关系，或者该身体动作被选中
-            if gestureMapping.isEmpty || gestureMapping.keys.contains(body) {
+            if bodyArmMapping.isEmpty || bodyArmMapping.keys.contains(body) {
                 for arm in validArmGestures {
-                    for finger in fingerGestures {
-                        combinations.append(DemoGroup(
-                            armGesture: arm,
-                            bodyGesture: body,
-                            fingerGesture: finger
-                        ))
+                    // 获取该手臂动作对应的手指动作列表
+                    let validFingerGestures = armFingerMapping[arm] ?? Set(fingerGestures)
+                    
+                    // 如果没有配置手臂-手指映射关系，或者该手臂动作被选中
+                    if armFingerMapping.isEmpty || armFingerMapping.keys.contains(arm) {
+                        for finger in validFingerGestures {
+                            combinations.append(DemoGroup(
+                                armGesture: arm,
+                                bodyGesture: body,
+                                fingerGesture: finger
+                            ))
+                        }
                     }
                 }
             }
@@ -518,16 +525,42 @@ struct ActionDemoView: View {
             print("资源统计：\(stats)")
             print("文件列表：\(files)")
             
-            // 如果资源发生变化，重新生成组合并更新设置
+            // 如果资源发生变化，检查并更新设置
             if resourcesChanged {
-                // 清空现有的动作组合设置
-                settings.gestureMapping.removeAll()
+                if let armGestures = files["arm_gesture"],
+                   let fingerGestures = files["finger_gesture"] {
+                    
+                    // 检查是否有新增的手臂动作
+                    for armGesture in armGestures {
+                        if settings.armFingerMapping[armGesture] == nil {
+                            // 只为新增的手臂动作设置默认的手指动作映射
+                            settings.armFingerMapping[armGesture] = Set(fingerGestures)
+                        }
+                    }
+                    
+                    // 移除不存在的手臂动作的映射
+                    settings.armFingerMapping = settings.armFingerMapping.filter { armGestures.contains($0.key) }
+                }
                 
-                // 为每个身体动作设置默认的手臂动作映射
                 if let bodyGestures = files["body_gesture"],
                    let armGestures = files["arm_gesture"] {
+                    
+                    // 检查是否有新增的身体动作
                     for bodyGesture in bodyGestures {
-                        settings.gestureMapping[bodyGesture] = Set(armGestures)
+                        if settings.gestureMapping[bodyGesture] == nil {
+                            // 只为新增的身体动作设置默认的手臂动作映射
+                            settings.gestureMapping[bodyGesture] = Set(armGestures)
+                        }
+                    }
+                    
+                    // 移除不存在的身体动作的映射
+                    settings.gestureMapping = settings.gestureMapping.filter { bodyGestures.contains($0.key) }
+                    
+                    // 确保每个身体动作的手臂动作列表中不包含已经不存在的手臂动作
+                    for bodyGesture in bodyGestures {
+                        if let armMappings = settings.gestureMapping[bodyGesture] {
+                            settings.gestureMapping[bodyGesture] = armMappings.filter { armGestures.contains($0) }
+                        }
                     }
                 }
             }
