@@ -53,11 +53,23 @@ struct ContentView: View {
     @State private var lastDeleteTime: Date = Date(timeIntervalSince1970: 0)
     private let deleteDebounceInterval: TimeInterval = 0.3  // 1秒内不重复删除
     
+    // 添加版本号
+    private let version: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+    
     var body: some View {
         NavigationView {
             ZStack {  // 添加ZStack来显示视觉反馈
                 ScrollView {
                     VStack(spacing: 30) {
+                        // 添加版本号显示
+                        HStack {
+                            Text("版本: \(version)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        
                         // 连接设置区域
                         GroupBox(label: Text("连接设置").font(.headline)) {
                             VStack(spacing: 15) {
@@ -123,35 +135,35 @@ struct ContentView: View {
                             .padding(.vertical, 8)
                         }
                         
-                        // 传感器数据区域
-                        GroupBox(label: Text("传感器数据").font(.headline)) {
-                            VStack(spacing: 20) {
-                                // 加速度计图表
-                                ChartView(
-                                    title: "加速度计 (m/s²)",
-                                    dataX: accDataX,
-                                    dataY: accDataY,
-                                    dataZ: accDataZ,
-                                    xData: sensorManager.lastReceivedData["acc_x"] ?? 0,
-                                    yData: sensorManager.lastReceivedData["acc_y"] ?? 0,
-                                    zData: sensorManager.lastReceivedData["acc_z"] ?? 0
-                                )
-                                .frame(height: 350)
-                                
-                                // 陀螺仪图表
-                                ChartView(
-                                    title: "陀螺仪 (rad/s)",
-                                    dataX: gyroDataX,
-                                    dataY: gyroDataY,
-                                    dataZ: gyroDataZ,
-                                    xData: sensorManager.lastReceivedData["gyro_x"] ?? 0,
-                                    yData: sensorManager.lastReceivedData["gyro_y"] ?? 0,
-                                    zData: sensorManager.lastReceivedData["gyro_z"] ?? 0
-                                )
-                                .frame(height: 350)
-                            }
-                            .padding(.vertical, 8)
-                        }
+//                        // 传感器数据区域
+//                        GroupBox(label: Text("传感器数据").font(.headline)) {
+//                            VStack(spacing: 20) {
+//                                // 加速度计图表
+//                                ChartView(
+//                                    title: "加速度计 (m/s²)",
+//                                    dataX: accDataX,
+//                                    dataY: accDataY,
+//                                    dataZ: accDataZ,
+//                                    xData: sensorManager.lastReceivedData["acc_x"] ?? 0,
+//                                    yData: sensorManager.lastReceivedData["acc_y"] ?? 0,
+//                                    zData: sensorManager.lastReceivedData["acc_z"] ?? 0
+//                                )
+//                                .frame(height: 350)
+//                                
+//                                // 陀螺仪图表
+//                                ChartView(
+//                                    title: "陀螺仪 (rad/s)",
+//                                    dataX: gyroDataX,
+//                                    dataY: gyroDataY,
+//                                    dataZ: gyroDataZ,
+//                                    xData: sensorManager.lastReceivedData["gyro_x"] ?? 0,
+//                                    yData: sensorManager.lastReceivedData["gyro_y"] ?? 0,
+//                                    zData: sensorManager.lastReceivedData["gyro_z"] ?? 0
+//                                )
+//                                .frame(height: 350)
+//                            }
+//                            .padding(.vertical, 8)
+//                        }
                         
                         // 控制区域
                         GroupBox(label: Text("数据采集").font(.headline)) {

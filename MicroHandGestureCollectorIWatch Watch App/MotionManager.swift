@@ -190,6 +190,10 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         "Watch1,2": ("Apple Watch", "42mm", "GPS", "S1", "A1554")
     ]
     
+    private let version: String = {
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+    }()
+    
     public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
         motionManager = CMMotionManager()
@@ -855,7 +859,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         yamlString += "  tightness: \(info["tightness"] ?? "")\n"
         yamlString += "  wrist_size: \(info["wrist_size"] ?? "")\n"
         yamlString += "  band_type: \(info["band_type"] ?? "")\n"
-        yamlString += "  note: \(info["note"] ?? "")\n\n"
+        yamlString += "  note: \(info["note"] ?? "")\n"
+        yamlString += "  version: \(version)\n\n"
         
         yamlString += "# 设备信息\n"
         yamlString += "device:\n"

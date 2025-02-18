@@ -142,6 +142,9 @@ struct ContentView: View {
     @AppStorage("selectedBandType") private var selectedBandType = "运动"
     @State private var showBandTypePicker = false
     
+    // 添加版本号
+    private let version: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+    
     let handOptions = ["左手", "右手"]
     let gestureOptions = ["混合", "单击[正]", "双击[正]", "握拳[正]",
                           "摊掌[正]", "转腕[正]", "摇手[正]",
@@ -156,6 +159,15 @@ struct ContentView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 15) {
+                // 添加版本号显示
+                HStack {
+                    Text("版本: \(version)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                
                 // 手性选择
                 Button(action: { showHandPicker = true }) {
                     HStack {
@@ -561,8 +573,8 @@ struct ContentView: View {
                     RealTimeDataView(accData: accData, rotationData: motionManager.rotationData)
                 }
                 
-                Text("1024 + 1000 = \(calculator.sum(1000, with: 1024))")
-                    .padding()
+//                Text("1024 + 1000 = \(calculator.sum(1000, with: 1024))")
+//                    .padding()
                 
                 // 添加时间戳和采样率显示
                 VStack(alignment: .leading, spacing: 5) {
