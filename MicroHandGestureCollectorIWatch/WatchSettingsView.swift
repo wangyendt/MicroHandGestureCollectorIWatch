@@ -12,10 +12,10 @@ struct WatchSettingsView: View {
     @AppStorage("saveQuaternions") private var saveQuaternions = false
     @AppStorage("saveGestureData") private var saveGestureData = false
     @AppStorage("saveResultFile") private var saveResultFile = true
-    @AppStorage("enableVisualFeedback") private var enableVisualFeedback = true
-    @AppStorage("enableHapticFeedback") private var enableHapticFeedback = true
-    @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback = true
-    @AppStorage("feedbackType") private var feedbackType = "peak"
+    @AppStorage("enableVisualFeedback") private var enableVisualFeedback = false
+    @AppStorage("enableHapticFeedback") private var enableHapticFeedback = false
+    @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback = false
+    @AppStorage("feedbackType") private var feedbackType = "gesture"
     @AppStorage("enableRealtimeData") private var enableRealtimeData = false
     
     let onComplete: ([String: Any]) -> Void

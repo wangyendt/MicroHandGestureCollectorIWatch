@@ -15,12 +15,12 @@ struct WatchAppSettingsView: View {
     @AppStorage("enableRealtimeData") private var enableRealtimeData = false
     
     // 添加反馈设置
-    @AppStorage("enableVisualFeedback") private var enableVisualFeedback = true
-    @AppStorage("enableHapticFeedback") private var enableHapticFeedback = true
-    @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback = true
+    @AppStorage("enableVisualFeedback") private var enableVisualFeedback = false
+    @AppStorage("enableHapticFeedback") private var enableHapticFeedback = false
+    @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback = false
     
     // 添加反馈类型设置
-    @AppStorage("feedbackType") private var feedbackType = "peak" // "peak" 或 "gesture"
+    @AppStorage("feedbackType") private var feedbackType = "gesture" // "peak" 或 "gesture"
     
     @ObservedObject var motionManager: MotionManager
     

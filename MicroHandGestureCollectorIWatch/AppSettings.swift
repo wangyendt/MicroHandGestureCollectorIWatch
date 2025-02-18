@@ -14,10 +14,10 @@ struct UserDefaultsBacked<Value> {
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
     
-    @UserDefaultsBacked(key: "ossEndpoint", defaultValue: "oss-cn-shenzhen.aliyuncs.com")
+    @UserDefaultsBacked(key: "ossEndpoint", defaultValue: "oss-cn-beijing.aliyuncs.com")
     var ossEndpoint: String
     
-    @UserDefaultsBacked(key: "ossBucketName", defaultValue: "wayne-oss-bucket")
+    @UserDefaultsBacked(key: "ossBucketName", defaultValue: "xr-micro-gestures-online")
     var ossBucketName: String
     
     @UserDefaultsBacked(key: "ossApiKey", defaultValue: "")
