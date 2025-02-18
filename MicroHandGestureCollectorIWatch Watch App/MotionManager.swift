@@ -204,8 +204,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         // peak阈值
         signalProcessor = SignalProcessor(
-            peakThreshold: threshold > 0 ? threshold : 0.5,
-            peakWindow: window > 0 ? window : 0.5
+            peakThreshold: threshold > 0 ? threshold : 0.5,  // peak阈值
+            peakWindow: window > 0 ? window : 0.6
         )
         
         // 设置代理

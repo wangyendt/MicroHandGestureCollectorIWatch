@@ -130,7 +130,7 @@ struct ContentView: View {
     
     // 添加设置相关的状态
     @AppStorage("peakThreshold") private var peakThreshold: Double = 0.5  // peak阈值
-    @AppStorage("peakWindow") private var peakWindow: Double = 0.5
+    @AppStorage("peakWindow") private var peakWindow: Double = 0.6
     @State private var showingSettings = false
     
     @AppStorage("selectedGender") private var selectedGender = "男"
