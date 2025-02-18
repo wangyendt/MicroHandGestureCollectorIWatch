@@ -396,6 +396,7 @@ struct ActionDemoView: View {
             var stats: [String: Int] = [:]
             var files: [String: [String]] = [:]
             var needsUpdate = false
+            var resourcesChanged = false
             
             for category in categories {
                 let categoryPath = demoPath.appendingPathComponent(category)
@@ -436,8 +437,14 @@ struct ActionDemoView: View {
                 
                 // 删除多余的本地文件
                 for fileName in filesToDelete {
-                    let fileURL = categoryPath.appendingPathComponent(fileName)
-                    try? FileManager.default.removeItem(at: fileURL)
+                    // 删除所有可能的文件扩展名
+                    for ext in ["mp4", "mov", "png"] {
+                        let fileURL = categoryPath.appendingPathComponent("\(fileName).\(ext)")
+                        if FileManager.default.fileExists(atPath: fileURL.path) {
+                            try FileManager.default.removeItem(at: fileURL)
+                            resourcesChanged = true
+                        }
+                    }
                     needsUpdate = true
                 }
                 
@@ -467,6 +474,7 @@ struct ActionDemoView: View {
                                 try FileManager.default.removeItem(at: destinationURL)
                             }
                             try FileManager.default.moveItem(at: fileURL, to: destinationURL)
+                            resourcesChanged = true
                         }
                         // 清理临时目录
                         try FileManager.default.removeItem(at: tempPath)
@@ -475,9 +483,30 @@ struct ActionDemoView: View {
                     needsUpdate = true
                 }
                 
+                // 检查本地文件的完整性
+                let currentLocalFiles = try FileManager.default.contentsOfDirectory(
+                    at: categoryPath,
+                    includingPropertiesForKeys: [.fileSizeKey]
+                )
+                
+                for fileURL in currentLocalFiles {
+                    let resources = try fileURL.resourceValues(forKeys: [.fileSizeKey])
+                    if let fileSize = resources.fileSize, fileSize == 0 {
+                        // 删除大小为0的文件
+                        try FileManager.default.removeItem(at: fileURL)
+                        resourcesChanged = true
+                        needsUpdate = true
+                    }
+                }
+                
                 // 更新统计信息
-                files[category] = Array(cloudFileNames).sorted()
-                stats[category] = cloudFileNames.count
+                let finalLocalFiles = try FileManager.default.contentsOfDirectory(
+                    at: categoryPath,
+                    includingPropertiesForKeys: nil
+                )
+                let finalFileNames = Set(finalLocalFiles.map { $0.deletingPathExtension().lastPathComponent })
+                files[category] = Array(finalFileNames).sorted()
+                stats[category] = finalFileNames.count
                 
                 print("\(category) 最终文件列表：\(files[category] ?? [])")
             }
@@ -488,6 +517,20 @@ struct ActionDemoView: View {
             
             print("资源统计：\(stats)")
             print("文件列表：\(files)")
+            
+            // 如果资源发生变化，重新生成组合并更新设置
+            if resourcesChanged {
+                // 清空现有的动作组合设置
+                settings.gestureMapping.removeAll()
+                
+                // 为每个身体动作设置默认的手臂动作映射
+                if let bodyGestures = files["body_gesture"],
+                   let armGestures = files["arm_gesture"] {
+                    for bodyGesture in bodyGestures {
+                        settings.gestureMapping[bodyGesture] = Set(armGestures)
+                    }
+                }
+            }
             
             // 总是重新生成组合（因为即使文件没变，也可能是第一次加载）
             generateAllCombinations()
