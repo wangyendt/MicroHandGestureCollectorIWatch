@@ -202,9 +202,10 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         let threshold = UserDefaults.standard.double(forKey: "peakThreshold")
         let window = UserDefaults.standard.double(forKey: "peakWindow")
         
+        // peak阈值
         signalProcessor = SignalProcessor(
-            peakThreshold: threshold > 0 ? threshold : 0.3,
-            peakWindow: window > 0 ? window : 0.6
+            peakThreshold: threshold > 0 ? threshold : 0.5,
+            peakWindow: window > 0 ? window : 0.5
         )
         
         // 设置代理

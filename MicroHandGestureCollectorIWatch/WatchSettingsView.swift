@@ -4,8 +4,8 @@ import WatchConnectivity
 struct WatchSettingsView: View {
     @Environment(\.dismiss) var dismiss
     
-    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.3
-    @AppStorage("peakWindow") private var peakWindow: Double = 0.6
+    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.5  // peak阈值
+    @AppStorage("peakWindow") private var peakWindow: Double = 0.5
     @AppStorage("savePeaks") private var savePeaks = false
     @AppStorage("saveValleys") private var saveValleys = false
     @AppStorage("saveSelectedPeaks") private var saveSelectedPeaks = false

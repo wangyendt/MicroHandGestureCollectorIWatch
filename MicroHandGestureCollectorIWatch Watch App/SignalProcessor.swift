@@ -58,7 +58,7 @@ public class SignalProcessor {
     
     private var shouldSaveResult = true  // 添加这个属性
     
-    init(peakThreshold: Double = 0.3, peakWindow: Double = 0.6) {
+    init(peakThreshold: Double = 0.5, peakWindow: Double = 0.5) {  // peak阈值
         self.peakThreshold = peakThreshold
         self.peakWindow = peakWindow
         
