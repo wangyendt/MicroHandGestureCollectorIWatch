@@ -327,7 +327,7 @@ struct ActionDemoView: View {
     private func generateAllCombinations() {
         var combinations: [DemoGroup] = []
         
-        // 获取每个类别的文件列表
+        // 1. 获取每个类别的动作列表
         let armGestures = resourceFiles["arm_gesture"] ?? []
         let bodyGestures = resourceFiles["body_gesture"] ?? []
         let fingerGestures = resourceFiles["finger_gesture"] ?? []
@@ -337,17 +337,24 @@ struct ActionDemoView: View {
         print("身体动作：\(bodyGestures)")
         print("手指动作：\(fingerGestures)")
         
-        // 获取动作映射关系
+        // 2. 获取动作映射关系
         let bodyArmMapping = settings.gestureMapping
         let armFingerMapping = settings.armFingerMapping
         
-        // 生成所有可能的组合
-        for body in bodyGestures {
+        // 3. 先将身体动作随机排序
+        var generator = SeededRandomNumberGenerator(seed: shuffleSeed)
+        let shuffledBodyGestures = bodyGestures.shuffled(using: &generator)
+        
+        // 4. 对每个身体动作，生成并随机排序其对应的手臂x手指组合
+        for body in shuffledBodyGestures {
+            var bodyGroupCombinations: [DemoGroup] = []
+            
             // 获取该身体动作对应的手臂动作列表
             let validArmGestures = bodyArmMapping[body] ?? Set(armGestures)
             
             // 如果没有配置映射关系，或者该身体动作被选中
             if bodyArmMapping.isEmpty || bodyArmMapping.keys.contains(body) {
+                // 生成该身体动作下的所有有效手臂x手指组合
                 for arm in validArmGestures {
                     // 获取该手臂动作对应的手指动作列表
                     let validFingerGestures = armFingerMapping[arm] ?? Set(fingerGestures)
@@ -355,7 +362,7 @@ struct ActionDemoView: View {
                     // 如果没有配置手臂-手指映射关系，或者该手臂动作被选中
                     if armFingerMapping.isEmpty || armFingerMapping.keys.contains(arm) {
                         for finger in validFingerGestures {
-                            combinations.append(DemoGroup(
+                            bodyGroupCombinations.append(DemoGroup(
                                 armGesture: arm,
                                 bodyGesture: body,
                                 fingerGesture: finger
@@ -363,14 +370,17 @@ struct ActionDemoView: View {
                         }
                     }
                 }
+                
+                // 随机打乱该身体动作下的所有组合
+                bodyGroupCombinations.shuffle(using: &generator)
+                
+                // 将该身体动作的所有组合添加到最终结果中
+                combinations.append(contentsOf: bodyGroupCombinations)
             }
         }
         
         print("生成的组合数量：\(combinations.count)")
-        
-        // 使用固定种子进行随机排序
-        var generator = SeededRandomNumberGenerator(seed: shuffleSeed)
-        allGroups = combinations.shuffled(using: &generator)
+        allGroups = combinations
         currentGroupIndex = 0
         
         print("排序后的组合数量：\(allGroups.count)")

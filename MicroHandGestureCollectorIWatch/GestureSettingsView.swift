@@ -20,16 +20,13 @@ struct GestureSettingsView: View {
         // 初始化手臂动作和手指动作的映射关系
         var initialFingerGestures = settings.armFingerMapping
         
-        // 确保所有手臂动作都有完整的手指动作映射
+        // 只为没有映射关系的手臂动作设置默认值
         if let armGestures = resourceFiles["arm_gesture"],
            let fingerGestures = resourceFiles["finger_gesture"] {
             for armGesture in armGestures {
                 if initialFingerGestures[armGesture] == nil {
-                    // 如果没有映射关系，设置为全开
+                    // 只为新增的手臂动作设置默认的全开状态
                     initialFingerGestures[armGesture] = Set(fingerGestures)
-                } else {
-                    // 如果有映射关系，确保包含所有手指动作
-                    initialFingerGestures[armGesture]?.formUnion(fingerGestures)
                 }
             }
         }
