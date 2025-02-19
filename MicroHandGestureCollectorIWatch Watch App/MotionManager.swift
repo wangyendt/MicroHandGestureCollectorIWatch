@@ -77,9 +77,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         "Watch7,11_CN": ("Apple Watch Series 10", "46mm", "GPS+Cellular", "S10", "A3006"), // 中国大陆
 
         // Apple Watch Ultra 2
-        "Watch7,5_NA": ("Apple Watch Ultra 2", "49mm", "GPS+Cellular", "S9", "A2986"), // 北美洲
-        "Watch7,5_EU": ("Apple Watch Ultra 2", "49mm", "GPS+Cellular", "S9", "A2986"), // 欧洲、亚太地区
-        "Watch7,5_CN": ("Apple Watch Ultra 2", "49mm", "GPS+Cellular", "S9", "A2987"), // 中国大陆
+        "Watch7,5_NA": ("Apple Watch Ultra 2", "49mm", "GPS+Cellular", "Ultra2", "A2986"), // 北美洲
+        "Watch7,5_EU": ("Apple Watch Ultra 2", "49mm", "GPS+Cellular", "Ultra2", "A2986"), // 欧洲、亚太地区
+        "Watch7,5_CN": ("Apple Watch Ultra 2", "49mm", "GPS+Cellular", "Ultra2", "A2987"), // 中国大陆
 
         // Apple Watch Series 9
         "Watch7,1": ("Apple Watch Series 9", "41mm", "GPS", "S9", "A2978"),
@@ -106,16 +106,16 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         "Watch6,17_CN": ("Apple Watch Series 8", "45mm", "GPS+Cellular", "S8", "A2858"), // 中国大陆
 
         // Apple Watch SE (2nd generation)
-        "Watch6,10": ("Apple Watch SE 2", "40mm", "GPS", "S8", "A2722"),
-        "Watch6,11": ("Apple Watch SE 2", "44mm", "GPS", "S8", "A2723"),
+        "Watch6,10": ("Apple Watch SE 2", "40mm", "GPS", "SE2", "A2722"),
+        "Watch6,11": ("Apple Watch SE 2", "44mm", "GPS", "SE2", "A2723"),
         
-        "Watch6,12_NA": ("Apple Watch SE 2", "40mm", "GPS+Cellular", "S8", "A2726"), // 北美洲
-        "Watch6,12_EU": ("Apple Watch SE 2", "40mm", "GPS+Cellular", "S8", "A2725"), // 欧洲、亚太地区
-        "Watch6,12_CN": ("Apple Watch SE 2", "40mm", "GPS+Cellular", "S8", "A2855"), // 中国大陆
+        "Watch6,12_NA": ("Apple Watch SE 2", "40mm", "GPS+Cellular", "SE2", "A2726"), // 北美洲
+        "Watch6,12_EU": ("Apple Watch SE 2", "40mm", "GPS+Cellular", "SE2", "A2725"), // 欧洲、亚太地区
+        "Watch6,12_CN": ("Apple Watch SE 2", "40mm", "GPS+Cellular", "SE2", "A2855"), // 中国大陆
         
-        "Watch6,13_NA": ("Apple Watch SE 2", "44mm", "GPS+Cellular", "S8", "A2727"), // 北美洲
-        "Watch6,13_EU": ("Apple Watch SE 2", "44mm", "GPS+Cellular", "S8", "A2724"), // 欧洲、亚太地区
-        "Watch6,13_CN": ("Apple Watch SE 2", "44mm", "GPS+Cellular", "S8", "A2856"), // 中国大陆
+        "Watch6,13_NA": ("Apple Watch SE 2", "44mm", "GPS+Cellular", "SE2", "A2727"), // 北美洲
+        "Watch6,13_EU": ("Apple Watch SE 2", "44mm", "GPS+Cellular", "SE2", "A2724"), // 欧洲、亚太地区
+        "Watch6,13_CN": ("Apple Watch SE 2", "44mm", "GPS+Cellular", "SE2", "A2856"), // 中国大陆
 
         // Apple Watch Series 7
         "Watch6,6": ("Apple Watch Series 7", "41mm", "GPS", "S7", "A2473"),
