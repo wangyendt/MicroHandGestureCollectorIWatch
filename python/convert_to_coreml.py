@@ -168,7 +168,7 @@ class GestureModel(nn.Module):
 
 
 model = GestureModel(num_classes=9)
-model.load_state_dict(torch.load('train_epoch=11_accuracy=0.998.pt', map_location='cpu'))
+model.load_state_dict(torch.load('valid_epoch=24_accuracy=0.973.pt', map_location='cpu'))
 
 # 导出CoreML模型
 model.eval()
