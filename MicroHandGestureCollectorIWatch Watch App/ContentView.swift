@@ -19,10 +19,33 @@ import WatchKit
 struct FeedbackManager {
     private static let synthesizer = AVSpeechSynthesizer()
     
-    // 添加反馈开关
-    static var enableVisualFeedback = UserDefaults.standard.bool(forKey: "enableVisualFeedback") || !UserDefaults.standard.contains(forKey: "enableVisualFeedback")
-    static var enableHapticFeedback = UserDefaults.standard.bool(forKey: "enableHapticFeedback") || !UserDefaults.standard.contains(forKey: "enableHapticFeedback")
-    static var enableVoiceFeedback = UserDefaults.standard.bool(forKey: "enableVoiceFeedback") || !UserDefaults.standard.contains(forKey: "enableVoiceFeedback")
+    // 添加反馈开关，明确指定默认值
+    static var enableVisualFeedback = UserDefaults.standard.bool(forKey: "enableVisualFeedback")
+    static var enableHapticFeedback = UserDefaults.standard.bool(forKey: "enableHapticFeedback")
+    static var enableVoiceFeedback = UserDefaults.standard.bool(forKey: "enableVoiceFeedback")
+    
+    // 在初始化时设置默认值
+    static func initialize() {
+        // 如果是首次运行，设置默认值
+        if !UserDefaults.standard.contains(forKey: "feedbackType") {
+            UserDefaults.standard.set("gesture", forKey: "feedbackType")
+        }
+        if !UserDefaults.standard.contains(forKey: "enableVisualFeedback") {
+            UserDefaults.standard.set(false, forKey: "enableVisualFeedback")
+        }
+        if !UserDefaults.standard.contains(forKey: "enableHapticFeedback") {
+            UserDefaults.standard.set(false, forKey: "enableHapticFeedback")
+        }
+        if !UserDefaults.standard.contains(forKey: "enableVoiceFeedback") {
+            UserDefaults.standard.set(false, forKey: "enableVoiceFeedback")
+        }
+        UserDefaults.standard.synchronize()
+        
+        // 更新静态属性
+        enableVisualFeedback = UserDefaults.standard.bool(forKey: "enableVisualFeedback")
+        enableHapticFeedback = UserDefaults.standard.bool(forKey: "enableHapticFeedback")
+        enableVoiceFeedback = UserDefaults.standard.bool(forKey: "enableVoiceFeedback")
+    }
     
     static func playFeedback(
         style: WKHapticType? = nil,  // 改为可选类型
@@ -109,10 +132,10 @@ struct ContentView: View {
     @StateObject private var motionManager = MotionManager()
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @State private var isCollecting = false
-    @AppStorage("selectedHand") private var selectedHand = "左手"
-    @AppStorage("selectedGesture") private var selectedGesture = "混合"
-    @AppStorage("selectedForce") private var selectedForce = "轻"
-    @AppStorage("noteText") private var noteText = "静坐"
+    @AppStorage("selectedHand") private var selectedHand: String = "左手"
+    @AppStorage("selectedGesture") private var selectedGesture: String = "混合"
+    @AppStorage("selectedForce") private var selectedForce: String = "轻"
+    @AppStorage("noteText") private var noteText: String = "静坐"
     
     @State private var showHandPicker = false
     @State private var showGesturePicker = false
@@ -124,22 +147,22 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     
-    @AppStorage("userName") private var userName = "王也"
-    @AppStorage("wristSize") private var wristSize = "16"
+    @AppStorage("userName") private var userName: String = "王也"
+    @AppStorage("wristSize") private var wristSize: String = "16"
     @State private var showingNameInput = false
     
     // 添加设置相关的状态
     @AppStorage("peakThreshold") private var peakThreshold: Double = 0.5  // peak阈值
-    @AppStorage("peakWindow") private var peakWindow: Double = 0.6
+    @AppStorage("peakWindow") private var peakWindow: Double = 0.6  // peak窗口
     @State private var showingSettings = false
     
-    @AppStorage("selectedGender") private var selectedGender = "男"
-    @AppStorage("selectedTightness") private var selectedTightness = "松"
+    @AppStorage("selectedGender") private var selectedGender: String = "男"
+    @AppStorage("selectedTightness") private var selectedTightness: String = "松"
     @State private var showGenderPicker = false
     @State private var showTightnessPicker = false
     
     // 添加表带相关状态
-    @AppStorage("selectedBandType") private var selectedBandType = "运动"
+    @AppStorage("selectedBandType") private var selectedBandType: String = "运动"
     @State private var showBandTypePicker = false
     
     // 添加版本号
@@ -612,6 +635,9 @@ struct ContentView: View {
             
             // 设置 MotionManager
             WatchConnectivityManager.shared.setMotionManager(motionManager)
+            
+            // 初始化 FeedbackManager
+            FeedbackManager.initialize()
             
             // 添加欢迎语音
             FeedbackManager.playFeedback(speak: " ")

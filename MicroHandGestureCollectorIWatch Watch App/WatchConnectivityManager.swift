@@ -351,7 +351,10 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                 DispatchQueue.main.async {
                     // 更新本地设置
                     if let feedbackType = message["feedbackType"] as? String {
+                        print("更新反馈类型为: \(feedbackType)")
                         UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
+                        // 确保设置已保存
+                        UserDefaults.standard.synchronize()
                     }
                     if let peakThreshold = message["peakThreshold"] as? Double {
                         UserDefaults.standard.set(peakThreshold, forKey: "peakThreshold")

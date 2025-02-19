@@ -6,21 +6,23 @@ struct WatchAppSettingsView: View {
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @Binding var peakThreshold: Double
     @Binding var peakWindow: Double
-    @AppStorage("savePeaks") private var savePeaks = false
-    @AppStorage("saveValleys") private var saveValleys = false
-    @AppStorage("saveSelectedPeaks") private var saveSelectedPeaks = false
-    @AppStorage("saveQuaternions") private var saveQuaternions = false
-    @AppStorage("saveGestureData") private var saveGestureData = false
-    @AppStorage("saveResultFile") private var saveResultFile = true
-    @AppStorage("enableRealtimeData") private var enableRealtimeData = false
     
-    // 添加反馈设置
-    @AppStorage("enableVisualFeedback") private var enableVisualFeedback = false
-    @AppStorage("enableHapticFeedback") private var enableHapticFeedback = false
-    @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback = false
+    // 数据保存设置，明确指定默认值
+    @AppStorage("savePeaks") private var savePeaks: Bool = false
+    @AppStorage("saveValleys") private var saveValleys: Bool = false
+    @AppStorage("saveSelectedPeaks") private var saveSelectedPeaks: Bool = false
+    @AppStorage("saveQuaternions") private var saveQuaternions: Bool = false
+    @AppStorage("saveGestureData") private var saveGestureData: Bool = false
+    @AppStorage("saveResultFile") private var saveResultFile: Bool = true  // 只有这个默认为 true
+    @AppStorage("enableRealtimeData") private var enableRealtimeData: Bool = false
     
-    // 添加反馈类型设置
-    @AppStorage("feedbackType") private var feedbackType = "gesture" // "peak" 或 "gesture"
+    // 反馈设置，明确指定默认值
+    @AppStorage("enableVisualFeedback") private var enableVisualFeedback: Bool = false
+    @AppStorage("enableHapticFeedback") private var enableHapticFeedback: Bool = false
+    @AppStorage("enableVoiceFeedback") private var enableVoiceFeedback: Bool = false
+    
+    // 反馈类型设置，默认为 "gesture"
+    @AppStorage("feedbackType") private var feedbackType: String = "gesture"
     
     @ObservedObject var motionManager: MotionManager
     
@@ -105,9 +107,15 @@ struct WatchAppSettingsView: View {
                         FeedbackManager.enableHapticFeedback = enableHapticFeedback
                         FeedbackManager.enableVoiceFeedback = enableVoiceFeedback
                         
-                        // 保存到 UserDefaults
+                        // 保存到 UserDefaults 并立即同步
                         UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
                         UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
+                        UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
+                        UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
+                        UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
+                        UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
+                        UserDefaults.standard.set(enableRealtimeData, forKey: "enableRealtimeData")
+                        UserDefaults.standard.synchronize()
                         
                         // 同步设置到手机
                         if WCSession.default.isReachable {

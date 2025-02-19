@@ -248,7 +248,7 @@ public class SignalProcessor {
                         delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
                         
                         // 根据设置决定是否触发峰值反馈
-                        let feedbackType = UserDefaults.standard.string(forKey: "feedbackType") ?? "peak"
+                        let feedbackType = UserDefaults.standard.string(forKey: "feedbackType") ?? "gesture"
                         if feedbackType == "peak" {
                             print("强Peak触发反馈: \(String(format: "%.2f", peak_val)), peakWindow=\(String(format: "%.2f", peakWindow))")
                             delegate?.signalProcessor(self, didDetectStrongPeak: peak_val)
