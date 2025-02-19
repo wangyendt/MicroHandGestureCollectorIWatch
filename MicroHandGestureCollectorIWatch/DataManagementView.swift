@@ -425,8 +425,37 @@ struct DataManagementView: View {
         return nil
     }
     
+    private func checkRequiredFiles() -> [String] {
+        let requiredFiles = ["acc.txt", "gyro.txt", "info.yaml", "manual_result.txt", "statistics.yaml", "result.txt"]
+        var missingFilesInFolders: [String] = []
+        
+        for fileId in selectedFiles {
+            if let file = dataFiles.first(where: { $0.id == fileId }) {
+                let missingFiles = requiredFiles.filter { fileName in
+                    !FileManager.default.fileExists(atPath: file.url.appendingPathComponent(fileName).path)
+                }
+                
+                if !missingFiles.isEmpty {
+                    missingFilesInFolders.append("\(file.name): 缺少 \(missingFiles.joined(separator: ", "))")
+                }
+            }
+        }
+        
+        return missingFilesInFolders
+    }
+    
     private func uploadToCloud() async {
         guard !selectedFiles.isEmpty else { return }
+        
+        // 首先检查文件完整性
+        let missingFilesInFolders = checkRequiredFiles()
+        if !missingFilesInFolders.isEmpty {
+            DispatchQueue.main.async {
+                self.uploadMessage = "以下文件夹缺少必需文件：\n\n" + missingFilesInFolders.joined(separator: "\n")
+                self.showingUploadAlert = true
+            }
+            return
+        }
         
         isUploading = true
         var uploadedFolders: [String] = []
