@@ -435,6 +435,7 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func session(_ session: WCSession, didReceive file: WCSessionFile) {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let watchDataPath = documentsPath.appendingPathComponent("WatchData", isDirectory: true)
+        let logsPath = documentsPath.appendingPathComponent("Logs", isDirectory: true)
         
         do {
             // 创建 WatchData 文件夹（如果不存在）
@@ -465,6 +466,23 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
             
             // 移动文件到目标位置
             try FileManager.default.moveItem(at: file.fileURL, to: destinationURL)
+            
+            // 检查并复制对应的日志文件
+            let logFileName = "\(folderName).log"
+            let logSourceURL = logsPath.appendingPathComponent(logFileName)
+            let logDestURL = folderPath.appendingPathComponent("actions.log")
+            
+            if FileManager.default.fileExists(atPath: logSourceURL.path) {
+                print("找到对应的日志文件：\(logFileName)")
+                if !FileManager.default.fileExists(atPath: logDestURL.path) {
+                    try FileManager.default.copyItem(at: logSourceURL, to: logDestURL)
+                    print("成功复制日志文件到数据文件夹")
+                } else {
+                    print("目标日志文件已存在")
+                }
+            } else {
+                print("未找到对应的日志文件：\(logFileName)")
+            }
             
             DispatchQueue.main.async {
                 self.lastMessage = "接收文件成功: \(fileName)"
