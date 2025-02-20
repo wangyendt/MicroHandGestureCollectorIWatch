@@ -535,6 +535,8 @@ struct ContentView: View {
                                                 }
                                             }
                                         }
+                                        // 添加手势优先级设置
+                                        .simultaneousGesture(DragGesture().onChanged { _ in })
                                     }
                                 }
                             }
