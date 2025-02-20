@@ -469,6 +469,8 @@ struct ContentView: View {
                                                                 Button(action: {
                                                                     if let index = sensorManager.gestureResults.firstIndex(where: { $0.id == result.id }) {
                                                                         sensorManager.gestureResults[index].trueGesture = gesture
+                                                                        // 记录真实手势更新
+                                                                        sensorManager.updateTrueGesture(id: result.id, gesture: gesture, timestamp: result.timestamp)
                                                                         // 发送更新的真实手势到手表
                                                                         if WCSession.default.isReachable {
                                                                             let message: [String: Any] = [

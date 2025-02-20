@@ -10,6 +10,7 @@ import CoreMotion
 import Combine
 import os.log
 import WatchKit
+import WatchConnectivity  // 添加 WatchConnectivity 框架
 
 #if os(watchOS)
 public class MotionManager: ObservableObject, SignalProcessorDelegate {
@@ -378,6 +379,19 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             valleyFileHandle?.seekToEndOfFile()
             selectedPeakFileHandle?.seekToEndOfFile()
             quaternionFileHandle?.seekToEndOfFile()
+            
+            // 发送文件夹名到手机
+            if WCSession.default.isReachable {
+                let message: [String: Any] = [
+                    "type": "start_collection",
+                    "trigger_collection": true,
+                    "folder_name": folderName
+                ]
+                WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                    print("发送文件夹名到手机失败: \(error.localizedDescription)")
+                }
+            }
+            
         } catch {
             print("Error creating directory or files: \(error)")
             return
