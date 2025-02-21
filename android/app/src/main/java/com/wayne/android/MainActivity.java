@@ -9,6 +9,9 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,6 +21,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.wayne.android.tetris.TetrisGame;
+import com.wayne.android.tetris.TetrisView;
+
 public class MainActivity extends AppCompatActivity {
 
     private BluetoothAdapter bluetoothAdapter;
@@ -25,6 +31,13 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 1;
     private Handler handler = new Handler();
     private int currentValue = 0;
+    
+    // 添加游戏相关变量
+    private TetrisGame tetrisGame;
+    private TetrisView tetrisView;
+    private Handler gameHandler = new Handler();
+    private static final long GAME_TICK = 1000; // 1秒一次下落
+    private boolean isGameRunning = false;
 
     private final ActivityResultLauncher<Intent> enableBtLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -42,21 +55,23 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        // 初始化游戏
+        initGame();
+
         blePeripheralService = new BlePeripheralService(this);
         blePeripheralService.setCallback(new BlePeripheralService.BleCallback() {
             @Override
             public void onDeviceConnected(String deviceAddress) {
                 updateStatusText("已连接到设备: " + deviceAddress);
+                // 连接成功后启动游戏
+                startGame();
             }
 
             @Override
             public void onDeviceDisconnected(String deviceAddress) {
                 updateStatusText("设备已断开连接");
-                // 重置计数器显示
-                runOnUiThread(() -> {
-                    TextView counterText = findViewById(R.id.counterText);
-                    counterText.setText("当前计数: 0");
-                });
+                // 断开连接时暂停游戏
+                pauseGame();
             }
 
             @Override
@@ -69,10 +84,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onMessageReceived(String message) {
-                runOnUiThread(() -> {
-                    TextView gestureText = findViewById(R.id.gestureText);
-                    gestureText.setText("收到手势: " + message);
-                });
+                handleGesture(message);
             }
         });
 
@@ -81,6 +93,85 @@ public class MainActivity extends AppCompatActivity {
             blePeripheralService.startAdvertising();
             updateStatusText("正在等待设备连接...");
         }
+    }
+
+    private void initGame() {
+        tetrisGame = new TetrisGame();
+        tetrisView = new TetrisView(this);
+        tetrisView.setGame(tetrisGame);
+        
+        FrameLayout gameContainer = findViewById(R.id.gameContainer);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        );
+        gameContainer.addView(tetrisView, params);
+    }
+
+    private void startGame() {
+        if (!isGameRunning) {
+            isGameRunning = true;
+            tetrisGame = new TetrisGame();
+            tetrisView.setGame(tetrisGame);
+            gameHandler.post(gameLoop);
+        }
+    }
+
+    private void pauseGame() {
+        isGameRunning = false;
+        gameHandler.removeCallbacks(gameLoop);
+    }
+
+    private final Runnable gameLoop = new Runnable() {
+        @Override
+        public void run() {
+            if (isGameRunning && !tetrisGame.isGameOver()) {
+                tetrisGame.moveDown();
+                tetrisView.invalidate();
+                gameHandler.postDelayed(this, GAME_TICK);
+            }
+        }
+    };
+
+    private void handleGesture(String gesture) {
+        if (!isGameRunning || tetrisGame == null || tetrisGame.isGameOver()) {
+            Log.d("Tetris", "游戏未运行或已结束，忽略手势: " + gesture);
+            return;
+        }
+
+        runOnUiThread(() -> {
+            TextView gestureText = findViewById(R.id.gestureText);
+            gestureText.setText("收到手势: " + gesture);
+            
+            boolean needRefresh = false;
+            Log.d("Tetris", "处理手势: " + gesture);
+            
+            // 处理不同的手势名称变体
+            if (gesture.contains("左摆") || gesture.contains("左滑")) {
+                Log.d("Tetris", "执行左移");
+                needRefresh = tetrisGame.moveLeft();
+            } else if (gesture.contains("右摆") || gesture.contains("右滑")) {
+                Log.d("Tetris", "执行右移");
+                needRefresh = tetrisGame.moveRight();
+            } else if (gesture.contains("转腕")) {
+                Log.d("Tetris", "执行旋转");
+                tetrisGame.rotate();
+                needRefresh = true;
+            } else if (gesture.contains("单击")) {
+                Log.d("Tetris", "执行快速下落");
+                // 快速下落
+                while (tetrisGame.moveDown()) {
+                    needRefresh = true;
+                }
+            }
+            
+            if (needRefresh) {
+                Log.d("Tetris", "刷新视图");
+                tetrisView.invalidate();
+            } else {
+                Log.d("Tetris", "操作未产生变化，不刷新");
+            }
+        });
     }
 
     private void checkPermissionsAndStart() {
@@ -145,37 +236,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startBlePeripheral() {
-        blePeripheralService = new BlePeripheralService(this);
-        blePeripheralService.setCallback(new BlePeripheralService.BleCallback() {
-            @Override
-            public void onDeviceConnected(String deviceAddress) {
-                updateStatusText("已连接到设备: " + deviceAddress);
-                Toast.makeText(MainActivity.this, "设备已连接", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onDeviceDisconnected(String deviceAddress) {
-                updateStatusText("设备已断开连接");
-                Toast.makeText(MainActivity.this, "设备已断开连接", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onCounterUpdated(int value) {
-                runOnUiThread(() -> {
-                    TextView counterText = findViewById(R.id.counterText);
-                    counterText.setText("当前计数: " + value);
-                });
-            }
-
-            @Override
-            public void onMessageReceived(String message) {
-                runOnUiThread(() -> {
-                    TextView gestureText = findViewById(R.id.gestureText);
-                    gestureText.setText("收到手势: " + message);
-                    Toast.makeText(MainActivity.this, "收到手势: " + message, Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
         blePeripheralService.startAdvertising();
         updateStatusText("BLE外围设备已启动");
 
@@ -193,6 +253,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        pauseGame();
+        gameHandler.removeCallbacksAndMessages(null);
         handler.removeCallbacksAndMessages(null);
         if (blePeripheralService != null) {
             blePeripheralService.stop();
