@@ -19,6 +19,9 @@ class BleCentralService: NSObject, ObservableObject {
     @Published var currentValue: Int = 0
     @Published var lastError: String?
     
+    // 添加自动重连标志
+    private var shouldAutoReconnect = true
+    
     private let logger = Logger(subsystem: "com.wayne.MicroHandGestureCollectorIWatch", category: "BleCentral")
     
     override init() {
@@ -32,6 +35,7 @@ class BleCentralService: NSObject, ObservableObject {
             return
         }
         
+        shouldAutoReconnect = true
         isScanning = true
         centralManager.scanForPeripherals(withServices: [serviceUUID], options: nil)
         logger.info("开始扫描设备")
@@ -44,6 +48,7 @@ class BleCentralService: NSObject, ObservableObject {
     }
     
     func disconnect() {
+        shouldAutoReconnect = false  // 用户主动断开时，禁用自动重连
         if let peripheral = peripheral {
             centralManager.cancelPeripheralConnection(peripheral)
         }
@@ -113,8 +118,10 @@ extension BleCentralService: CBCentralManagerDelegate {
         self.peripheral = nil
         self.writeCharacteristic = nil
         
-        // 自动重新扫描
-        startScanning()
+        // 只有在shouldAutoReconnect为true时才自动重新扫描
+        if shouldAutoReconnect {
+            startScanning()
+        }
     }
 }
 
