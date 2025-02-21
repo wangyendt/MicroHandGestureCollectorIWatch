@@ -129,6 +129,7 @@ extension UserDefaults {
 }
 
 struct ContentView: View {
+    @StateObject private var bleService = BleCentralService.shared  // 添加蓝牙服务
     @StateObject private var motionManager = MotionManager()
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @State private var isCollecting = false
@@ -225,6 +226,7 @@ struct ContentView: View {
                     }
                 }
                 
+                // 性别选择
                 Button(action: { showGenderPicker = true }) {
                     HStack {
                         Text("性别").font(.headline)
@@ -258,6 +260,7 @@ struct ContentView: View {
                     }
                 }
                 
+                // 表带类型选择
                 Button(action: { showBandTypePicker = true }) {
                     HStack {
                         Text("表带").font(.headline)
@@ -291,6 +294,7 @@ struct ContentView: View {
                     }
                 }
                 
+                // 松紧度选择
                 Button(action: { showTightnessPicker = true }) {
                     HStack {
                         Text("松紧").font(.headline)
@@ -391,8 +395,8 @@ struct ContentView: View {
                         }
                     }
                 }
-
-                // 新增备注输入框
+                
+                // 备注输入框
                 HStack {
                     Text("备注").font(.headline)
                     TextField("请输入备注", text: $noteText)
@@ -416,7 +420,7 @@ struct ContentView: View {
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
                 
-                // 新增腕围输入框
+                // 腕围输入框
                 HStack {
                     Text("腕围").font(.headline)
                     TextField("请输入腕围(cm)", text: $wristSize)
@@ -428,8 +432,7 @@ struct ContentView: View {
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
                 
-                
-                // 添加设置按钮
+                // 设置按钮
                 Button(action: {
                     showingSettings = true
                 }) {
@@ -450,6 +453,33 @@ struct ContentView: View {
                             )
                         }
                     )
+                }
+
+                // 添加蓝牙状态显示
+                HStack {
+                    Image(systemName: bleService.isConnected ? "bluetooth.circle.fill" : "bluetooth.circle")
+                        .foregroundColor(bleService.isConnected ? .blue : .gray)
+                    Text(bleService.isConnected ? "已连接" : "未连接")
+                        .foregroundColor(bleService.isConnected ? .blue : .gray)
+                    Spacer()
+                    Button(action: {
+                        if bleService.isScanning {
+                            bleService.stopScanning()
+                        } else {
+                            bleService.startScanning()
+                        }
+                    }) {
+                        Image(systemName: bleService.isScanning ? "stop.circle.fill" : "arrow.clockwise.circle.fill")
+                            .foregroundColor(bleService.isScanning ? .red : .blue)
+                    }
+                }
+                .padding(.horizontal, 8)
+                
+                // 添加计数器显示
+                if bleService.isConnected {
+                    Text("计数器: \(bleService.currentValue)")
+                        .font(.caption)
+                        .foregroundColor(.blue)
                 }
                 
                 // 添加计数显示

@@ -263,6 +263,9 @@ public class SignalProcessor {
                                 delegate?.signalProcessor(self, didRecognizeGesture: gesture, confidence: confidence)
                             }
                             
+                            // 发送手势数据到Android设备
+                            BleCentralService.shared.sendGestureData(gesture)
+                            
                             // 先生成一个 UUID，然后在发送和保存时都使用这个相同的 ID
                             let resultId = UUID().uuidString
                             
