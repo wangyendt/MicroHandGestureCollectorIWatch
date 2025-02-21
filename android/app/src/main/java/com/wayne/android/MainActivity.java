@@ -18,14 +18,11 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-public class MainActivity extends AppCompatActivity implements BlePeripheralService.BleCallback {
+public class MainActivity extends AppCompatActivity {
 
     private BluetoothAdapter bluetoothAdapter;
     private BlePeripheralService blePeripheralService;
     private static final int PERMISSION_REQUEST_CODE = 1;
-    private TextView statusText;
-    private TextView counterText;
-    private TextView gestureText;
     private Handler handler = new Handler();
     private int currentValue = 0;
 
@@ -45,21 +42,45 @@ public class MainActivity extends AppCompatActivity implements BlePeripheralServ
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // 初始化视图
-        statusText = findViewById(R.id.statusText);
-        counterText = findViewById(R.id.counterText);
-        gestureText = findViewById(R.id.gestureText);
+        blePeripheralService = new BlePeripheralService(this);
+        blePeripheralService.setCallback(new BlePeripheralService.BleCallback() {
+            @Override
+            public void onDeviceConnected(String deviceAddress) {
+                updateStatusText("已连接到设备: " + deviceAddress);
+            }
 
-        BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        bluetoothAdapter = bluetoothManager.getAdapter();
+            @Override
+            public void onDeviceDisconnected(String deviceAddress) {
+                updateStatusText("设备已断开连接");
+                // 重置计数器显示
+                runOnUiThread(() -> {
+                    TextView counterText = findViewById(R.id.counterText);
+                    counterText.setText("当前计数: 0");
+                });
+            }
 
-        if (bluetoothAdapter == null) {
-            Toast.makeText(this, "此设备不支持蓝牙", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
+            @Override
+            public void onCounterUpdated(int value) {
+                runOnUiThread(() -> {
+                    TextView counterText = findViewById(R.id.counterText);
+                    counterText.setText("当前计数: " + value);
+                });
+            }
+
+            @Override
+            public void onMessageReceived(String message) {
+                runOnUiThread(() -> {
+                    TextView gestureText = findViewById(R.id.gestureText);
+                    gestureText.setText("收到手势: " + message);
+                });
+            }
+        });
+
+        // 启动蓝牙服务
+        if (checkPermissions()) {
+            blePeripheralService.startAdvertising();
+            updateStatusText("正在等待设备连接...");
         }
-
-        checkPermissionsAndStart();
     }
 
     private void checkPermissionsAndStart() {
@@ -125,16 +146,44 @@ public class MainActivity extends AppCompatActivity implements BlePeripheralServ
 
     private void startBlePeripheral() {
         blePeripheralService = new BlePeripheralService(this);
-        blePeripheralService.setCallback(this);
+        blePeripheralService.setCallback(new BlePeripheralService.BleCallback() {
+            @Override
+            public void onDeviceConnected(String deviceAddress) {
+                updateStatusText("已连接到设备: " + deviceAddress);
+                Toast.makeText(MainActivity.this, "设备已连接", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onDeviceDisconnected(String deviceAddress) {
+                updateStatusText("设备已断开连接");
+                Toast.makeText(MainActivity.this, "设备已断开连接", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onCounterUpdated(int value) {
+                runOnUiThread(() -> {
+                    TextView counterText = findViewById(R.id.counterText);
+                    counterText.setText("当前计数: " + value);
+                });
+            }
+
+            @Override
+            public void onMessageReceived(String message) {
+                runOnUiThread(() -> {
+                    TextView gestureText = findViewById(R.id.gestureText);
+                    gestureText.setText("收到手势: " + message);
+                    Toast.makeText(MainActivity.this, "收到手势: " + message, Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
         blePeripheralService.startAdvertising();
-        statusText.setText("BLE外围设备已启动");
+        updateStatusText("BLE外围设备已启动");
 
         // 启动定时器，每秒更新一次计数
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 currentValue = (currentValue + 1) % 1000;
-                counterText.setText("当前计数: " + currentValue);
                 blePeripheralService.updateCounter(currentValue);
                 handler.postDelayed(this, 1000); // 1秒后再次执行
             }
@@ -150,32 +199,23 @@ public class MainActivity extends AppCompatActivity implements BlePeripheralServ
         }
     }
 
-    @Override
-    public void onDeviceConnected(String deviceAddress) {
+    private void updateStatusText(String status) {
         runOnUiThread(() -> {
-            statusText.setText("设备已连接: " + deviceAddress);
-            Toast.makeText(this, "设备已连接", Toast.LENGTH_SHORT).show();
+            TextView statusText = findViewById(R.id.statusText);
+            statusText.setText(status);
         });
     }
 
-    @Override
-    public void onDeviceDisconnected(String deviceAddress) {
-        runOnUiThread(() -> {
-            statusText.setText("设备已断开连接");
-            Toast.makeText(this, "设备已断开连接", Toast.LENGTH_SHORT).show();
-        });
-    }
+    private boolean checkPermissions() {
+        BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        bluetoothAdapter = bluetoothManager.getAdapter();
 
-    @Override
-    public void onCounterUpdated(int value) {
-        runOnUiThread(() -> counterText.setText("当前计数: " + value));
-    }
+        if (bluetoothAdapter == null) {
+            Toast.makeText(this, "此设备不支持蓝牙", Toast.LENGTH_SHORT).show();
+            return false;
+        }
 
-    @Override
-    public void onMessageReceived(String message) {
-        runOnUiThread(() -> {
-            gestureText.setText("收到手势: " + message);
-            Toast.makeText(this, "收到手势: " + message, Toast.LENGTH_SHORT).show();
-        });
+        checkPermissionsAndStart();
+        return true;
     }
 }

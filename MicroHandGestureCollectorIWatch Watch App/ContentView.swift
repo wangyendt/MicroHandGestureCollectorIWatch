@@ -462,15 +462,24 @@ struct ContentView: View {
                     Text(bleService.isConnected ? "已连接" : "未连接")
                         .foregroundColor(bleService.isConnected ? .blue : .gray)
                     Spacer()
-                    Button(action: {
-                        if bleService.isScanning {
-                            bleService.stopScanning()
-                        } else {
-                            bleService.startScanning()
+                    if bleService.isConnected {
+                        Button(action: {
+                            bleService.disconnect()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red)
                         }
-                    }) {
-                        Image(systemName: bleService.isScanning ? "stop.circle.fill" : "arrow.clockwise.circle.fill")
-                            .foregroundColor(bleService.isScanning ? .red : .blue)
+                    } else {
+                        Button(action: {
+                            if bleService.isScanning {
+                                bleService.stopScanning()
+                            } else {
+                                bleService.startScanning()
+                            }
+                        }) {
+                            Image(systemName: bleService.isScanning ? "stop.circle.fill" : "arrow.clockwise.circle.fill")
+                                .foregroundColor(bleService.isScanning ? .red : .blue)
+                        }
                     }
                 }
                 .padding(.horizontal, 8)
