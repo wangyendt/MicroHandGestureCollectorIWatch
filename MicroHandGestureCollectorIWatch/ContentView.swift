@@ -473,7 +473,7 @@ struct ContentView: View {
                                                                         sensorManager.updateTrueGesture(id: result.id, gesture: gesture, timestamp: result.timestamp)
                                                                         // 发送更新的真实手势到手表
                                                                         if WCSession.default.isReachable {
-                                                                            let message: [String: Any] = [
+                                                                            let message = [
                                                                                 "type": "update_true_gesture",
                                                                                 "id": result.id,
                                                                                 "true_gesture": gesture
@@ -484,15 +484,14 @@ struct ContentView: View {
                                                                         }
                                                                     }
                                                                 }) {
-                                                                    Text(gesture)
-                                                                        .font(.system(size: 17))
+                                                                    Text(GestureEmoji.getDisplayText(gesture))
                                                                 }
                                                             }
                                                         } label: {
                                                             Text(result.trueGesture)
-                                                                .font(.system(size: 17))
-                                                                .foregroundColor(.blue)
                                                                 .frame(width: 50, height: 32, alignment: .leading)
+                                                                .font(.system(size: 17))
+                                                                .foregroundColor(result.trueGesture == result.gesture ? .green : .red)
                                                         }
                                                         .frame(width: 50, height: 32)
                                                         
