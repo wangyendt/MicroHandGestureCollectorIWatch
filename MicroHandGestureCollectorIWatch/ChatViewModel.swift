@@ -10,6 +10,11 @@ class ChatViewModel: ObservableObject {
     
     @AppStorage("aiApiKey") private var apiKey = ""
     @AppStorage("aiBaseURL") private var baseURL = "https://api.deepseek.com/v1"
+    @AppStorage("aiModel") private var aiModel = "deepseek-chat"
+    @AppStorage("aiMaxTokens") private var aiMaxTokens = 8192
+    
+    private var lastRequestTime: Date?
+    private let minimumRequestInterval: TimeInterval = 2.0  // 设置最小请求间隔为2秒
     
     private var openAI: OpenAI {
         OpenAI(
@@ -31,6 +36,15 @@ class ChatViewModel: ObservableObject {
             return
         }
         
+        // 检查是否需要等待
+        if let lastRequest = lastRequestTime {
+            let timeSinceLastRequest = Date().timeIntervalSince(lastRequest)
+            if timeSinceLastRequest < minimumRequestInterval {
+                // 等待所需的时间
+                try? await Task.sleep(nanoseconds: UInt64((minimumRequestInterval - timeSinceLastRequest) * 1_000_000_000))
+            }
+        }
+        
         print("发送消息: \(text)")
         let userMessage = ChatMessage(role: "user", content: text)
         messages.append(userMessage)
@@ -42,12 +56,15 @@ class ChatViewModel: ObservableObject {
         messages.append(assistantMessage)
         
         do {
+            // 更新最后请求时间
+            lastRequestTime = Date()
+            
             var assistantResponse = ""
             try await openAI.chatStream(
                 messages: messages.dropLast(),
-                model: "deepseek-chat",
-                temperature: 0.3,
-                maxTokens: 2000
+                model: aiModel,
+                temperature: AppSettings.shared.aiTemperature,
+                maxTokens: aiMaxTokens
             ) { [weak self] content in
                 guard let self = self else { return }
                 print("收到回复片段: \(content)")

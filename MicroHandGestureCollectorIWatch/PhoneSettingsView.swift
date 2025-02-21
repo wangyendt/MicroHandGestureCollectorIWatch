@@ -8,6 +8,8 @@ struct PhoneSettingsView: View {
     // AI API设置
     @AppStorage("aiApiKey") private var aiApiKey = ""
     @AppStorage("aiBaseURL") private var aiBaseURL = "https://api.deepseek.com/v1"
+    @AppStorage("aiModel") private var aiModel = "deepseek-chat"
+    @AppStorage("aiMaxTokens") private var aiMaxTokens = 8192
     
     var body: some View {
         NavigationView {
@@ -60,6 +62,22 @@ struct PhoneSettingsView: View {
                     TextField("Base URL", text: $aiBaseURL)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                    
+                    TextField("模型名称", text: $aiModel)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                    
+                    Stepper("最大Token数: \(aiMaxTokens)", value: $aiMaxTokens, in: 1024...16384, step: 1024)
+                    
+                    HStack {
+                        Text("温度")
+                        Slider(value: Binding(
+                            get: { self.settings.aiTemperature },
+                            set: { self.settings.aiTemperature = $0 }
+                        ), in: 0...1, step: 0.1)
+                        Text(String(format: "%.1f", settings.aiTemperature))
+                            .frame(width: 40)
+                    }
                 }
                 
                 Section(header: Text("飞书机器人设置")) {

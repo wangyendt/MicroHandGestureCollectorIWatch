@@ -35,6 +35,9 @@ class AppSettings: ObservableObject {
     @UserDefaultsBacked(key: "larkGroupName", defaultValue: "手势测试")
     var larkGroupName: String
     
+    @UserDefaultsBacked(key: "aiTemperature", defaultValue: 0.3)
+    var aiTemperature: Double
+    
     @Published var gestureMapping: [String: Set<String>] {
         didSet {
             if let data = try? JSONEncoder().encode(gestureMapping) {
