@@ -56,6 +56,8 @@ struct ContentView: View {
     // 添加版本号
     private let version: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
     
+    @State private var showingTetrisGame = false
+    
     var body: some View {
         NavigationView {
             ZStack {  // 添加ZStack来显示视觉反馈
@@ -340,6 +342,24 @@ struct ContentView: View {
                             .padding(.vertical, 8)
                         }
                         
+                        // 添加俄罗斯方块游戏按钮
+                        Button(action: {
+                            showingTetrisGame = true
+                        }) {
+                            HStack {
+                                Image(systemName: "gamecontroller.fill")
+                                    .font(.title2)
+                                Text("俄罗斯方块")
+                                    .font(.headline)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                        }
+                        .padding(.horizontal)
+                        
                         // 动作演示模块
                         GroupBox(label: Text("动作演示").font(.headline)) {
                             ActionDemoView()
@@ -600,6 +620,9 @@ struct ContentView: View {
             }
         } message: {
             Text("确定要停止当前的数据采集吗？")
+        }
+        .sheet(isPresented: $showingTetrisGame) {
+            TetrisGameView()
         }
     }
     
