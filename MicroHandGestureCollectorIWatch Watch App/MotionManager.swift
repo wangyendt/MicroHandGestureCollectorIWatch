@@ -270,7 +270,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         tightness: String,
         note: String,
         wristSize: String,
-        bandType: String
+        bandType: String,
+        supervisorName: String  // 添加监督者姓名参数
     ) {
         // 记录开始时间
         collectionStartTime = Date()
@@ -315,7 +316,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 tightness: tightness,
                 note: note,
                 wristSize: wristSize,
-                bandType: bandType
+                bandType: bandType,
+                supervisorName: supervisorName  // 添加监督者姓名
             )
             
             // 创建必需的文件
@@ -762,7 +764,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         tightness: String,
         note: String,
         wristSize: String,
-        bandType: String
+        bandType: String,
+        supervisorName: String  // 添加监督者姓名参数
     ) {
         var info = collectDeviceInfo()
         
@@ -788,6 +791,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         info["note"] = note
         info["wrist_size"] = wristSize
         info["band_type"] = bandType
+        info["supervisor_name"] = supervisorName  // 添加监督者姓名
         
         let infoFileURL = folderURL.appendingPathComponent("info.yaml")
         
@@ -875,6 +879,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         yamlString += "  wrist_size: \(info["wrist_size"] ?? "")\n"
         yamlString += "  band_type: \(info["band_type"] ?? "")\n"
         yamlString += "  note: \(info["note"] ?? "")\n"
+        yamlString += "  supervisor_name: \(info["supervisor_name"] ?? "")\n"  // 添加监督者姓名
         yamlString += "  version: \(version)\n\n"
         
         yamlString += "# 设备信息\n"

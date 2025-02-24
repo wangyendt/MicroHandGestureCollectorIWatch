@@ -150,6 +150,7 @@ struct ContentView: View {
     
     @AppStorage("userName") private var userName: String = "王也"
     @AppStorage("wristSize") private var wristSize: String = "16"
+    @AppStorage("supervisorName") private var supervisorName: String = ""  // 添加监督者姓名
     @State private var showingNameInput = false
     
     // 添加设置相关的状态
@@ -408,19 +409,7 @@ struct ContentView: View {
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
                 
-                // 姓名输入框
-                HStack {
-                    Text("姓名").font(.headline)
-                    TextField("请输入姓名", text: $userName)
-                        .frame(height: 32)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(6)
-                }
-                .padding()
-                .background(Color.gray.opacity(0.2))
-                .cornerRadius(8)
-                
-                // 腕围输入框
+                // 新增腕围输入框
                 HStack {
                     Text("腕围").font(.headline)
                     TextField("请输入腕围(cm)", text: $wristSize)
@@ -432,7 +421,31 @@ struct ContentView: View {
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
                 
-                // 设置按钮
+                // 参与测试者的姓名输入框
+                HStack {
+                    Text("测试者").font(.headline)
+                    TextField("请输入姓名", text: $userName)
+                        .frame(height: 32)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(6)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(8)
+                
+                // 添加监督者姓名输入框
+                HStack {
+                    Text("监督者").font(.headline)
+                    TextField("请输入监督者姓名", text: $supervisorName)
+                        .frame(height: 32)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(6)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(8)
+                
+                // 添加设置按钮
                 Button(action: {
                     showingSettings = true
                 }) {
@@ -517,7 +530,8 @@ struct ContentView: View {
                             tightness: selectedTightness,
                             note: noteText,
                             wristSize: wristSize,
-                            bandType: selectedBandType
+                            bandType: selectedBandType,
+                            supervisorName: supervisorName  // 添加监督者姓名参数
                         )
                         // 向iPhone发送开始采集的消息
                         if WCSession.default.isReachable {
@@ -749,7 +763,8 @@ struct ContentView: View {
                                 tightness: selectedTightness,
                                 note: noteText,
                                 wristSize: wristSize,
-                                bandType: selectedBandType
+                                bandType: selectedBandType,
+                                supervisorName: supervisorName  // 添加监督者姓名参数
                             )
                         }
                     }
