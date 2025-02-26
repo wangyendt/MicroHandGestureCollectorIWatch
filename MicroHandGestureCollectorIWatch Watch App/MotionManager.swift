@@ -884,7 +884,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         yamlString += "# 设备信息\n"
         yamlString += "device:\n"
-        for key in info.keys.sorted() where !["collection_time", "collection_duration", "participant_name", "hand", "gesture", "force", "gender", "tightness", "note", "wrist_size", "band_type"].contains(key) {
+        for key in info.keys.sorted() where !["collection_time", "collection_duration", "participant_name", "hand", "gesture", "force", "gender", "tightness", "note", "wrist_size", "band_type", "supervisor_name"].contains(key) {
             if let value = info[key] {
                 yamlString += "  \(key): \(value)\n"
             }
