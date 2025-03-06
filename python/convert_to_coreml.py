@@ -168,7 +168,8 @@ class GestureModel(nn.Module):
 
 
 model = GestureModel(num_classes=9)
-model.load_state_dict(torch.load('valid_epoch=24_accuracy=0.973.pt', map_location='cpu'))
+model_path = 'valid_epoch=14_accuracy=0.960.pt'
+model.load_state_dict(torch.load(model_path, map_location='cpu'))
 
 # 导出CoreML模型
 model.eval()
@@ -182,6 +183,10 @@ mlmodel = ct.convert(
     minimum_deployment_target=ct.target.watchOS8
 )
 # exported_program = torch.export.export(model, example_inputs)
+mlmodel.author = "wy"
+mlmodel.license = "rayneo"
+mlmodel.short_description = "补充了权博的数据"
+mlmodel.version = "0.0.9"  # 设置模型版本号
 
 # import coremltools as ct
 # mlmodel = ct.convert(exported_program)

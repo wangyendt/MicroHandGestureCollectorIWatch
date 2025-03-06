@@ -866,28 +866,56 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     private func generateYAMLString(from info: [String: String]) -> String {
+        // 将原始信息分为收集信息和设备信息两部分
+        var collectionInfo: [String: String] = [:]
+        var deviceInfo: [String: String] = [:]
+        
+        // 明确定义属于收集信息的键
+        let collectionKeys = [
+            "collection_time", "collection_duration", "participant_name", 
+            "hand", "gesture", "force", "gender", "tightness", 
+            "note", "wrist_size", "band_type", "supervisor_name"
+        ]
+        
+        // 分类信息
+        for (key, value) in info {
+            if collectionKeys.contains(key) {
+                collectionInfo[key] = value
+            } else {
+                deviceInfo[key] = value
+            }
+        }
+        
+        // 生成YAML字符串
         var yamlString = "# 采集信息\n"
         yamlString += "collection:\n"
-        yamlString += "  time: \(info["collection_time"] ?? "")\n"
-        yamlString += "  duration: \(info["collection_duration"] ?? "")\n"
-        yamlString += "  participant_name: \(info["participant_name"] ?? "")\n"
-        yamlString += "  hand: \(info["hand"] ?? "")\n"
-        yamlString += "  gesture: \(info["gesture"] ?? "")\n"
-        yamlString += "  force: \(info["force"] ?? "")\n"
-        yamlString += "  gender: \(info["gender"] ?? "")\n"
-        yamlString += "  tightness: \(info["tightness"] ?? "")\n"
-        yamlString += "  wrist_size: \(info["wrist_size"] ?? "")\n"
-        yamlString += "  band_type: \(info["band_type"] ?? "")\n"
-        yamlString += "  note: \(info["note"] ?? "")\n"
-        yamlString += "  supervisor_name: \(info["supervisor_name"] ?? "")\n"  // 添加监督者姓名
-        yamlString += "  version: \(version)\n\n"
+        yamlString += "  time: \(collectionInfo["collection_time"] ?? "")\n"
+        yamlString += "  duration: \(collectionInfo["collection_duration"] ?? "")\n"
+        yamlString += "  participant_name: \(collectionInfo["participant_name"] ?? "")\n"
+        yamlString += "  hand: \(collectionInfo["hand"] ?? "")\n"
+        yamlString += "  gesture: \(collectionInfo["gesture"] ?? "")\n"
+        yamlString += "  force: \(collectionInfo["force"] ?? "")\n"
+        yamlString += "  gender: \(collectionInfo["gender"] ?? "")\n"
+        yamlString += "  tightness: \(collectionInfo["tightness"] ?? "")\n"
+        yamlString += "  wrist_size: \(collectionInfo["wrist_size"] ?? "")\n"
+        yamlString += "  band_type: \(collectionInfo["band_type"] ?? "")\n"
+        yamlString += "  note: \(collectionInfo["note"] ?? "")\n"
+        yamlString += "  supervisor_name: \(collectionInfo["supervisor_name"] ?? "")\n"  // 添加监督者姓名
+        yamlString += "  version: \(version)\n"
+        
+        // 获取模型元数据并添加到YAML
+        let modelMetadata = signalProcessor.gestureRecognizer.getModelMetadata()
+        yamlString += "  model_name: \(modelMetadata["model_name"] ?? "未知")\n"
+        yamlString += "  model_author: \(modelMetadata["model_author"] ?? "未知")\n"
+        yamlString += "  model_version: \(modelMetadata["model_version"] ?? "未知")\n"
+        yamlString += "  model_license: \(modelMetadata["model_license"] ?? "未知")\n"
+        yamlString += "  model_description: \(modelMetadata["model_description"] ?? "未知")\n\n"
         
         yamlString += "# 设备信息\n"
         yamlString += "device:\n"
-        for key in info.keys.sorted() where !["collection_time", "collection_duration", "participant_name", "hand", "gesture", "force", "gender", "tightness", "note", "wrist_size", "band_type", "supervisor_name"].contains(key) {
-            if let value = info[key] {
-                yamlString += "  \(key): \(value)\n"
-            }
+        // 直接使用已分类的设备信息
+        for key in deviceInfo.keys.sorted() {
+            yamlString += "  \(key): \(deviceInfo[key]!)\n"
         }
         
         return yamlString

@@ -445,6 +445,119 @@ public class GestureRecognizer {
         self.saveGestureData = saveGestureData
     }
     
+    // 添加获取模型元数据的方法
+    public func getModelMetadata() -> [String: String] {
+        var metadata: [String: String] = [:]
+        
+        if whoseModel == "wayne", let model = gestureClassifier as? GestureClassifier {
+            metadata["model_name"] = "GestureClassifier"
+            // 尝试直接从模型中读取元数据
+            let modelDescription = model.model.modelDescription
+            
+            // 使用正确的MLModelMetadataKey常量而不是字符串
+            if let author = modelDescription.metadata[.author] as? String {
+                metadata["model_author"] = author
+            } else {
+                metadata["model_author"] = "N/A" // 如果没有找到元数据，使用N/A
+            }
+            
+            if let version = modelDescription.metadata[.versionString] as? String {
+                metadata["model_version"] = version
+            } else {
+                metadata["model_version"] = "N/A" // 如果没有找到元数据，使用N/A
+            }
+            
+            if let license = modelDescription.metadata[.license] as? String {
+                metadata["model_license"] = license
+            } else {
+                metadata["model_license"] = "N/A" // 如果没有找到元数据，使用N/A
+            }
+            
+            if let description = modelDescription.metadata[.description] as? String {
+                metadata["model_description"] = description
+            } else {
+                metadata["model_description"] = "N/A" // 如果没有找到元数据，使用N/A
+            }
+            
+            // 尝试读取用户自定义元数据 (creatorDefinedKey)
+            if let userDefined = modelDescription.metadata[.creatorDefinedKey] as? [String: Any] {
+                if let userAuthor = userDefined["author"] as? String {
+                    metadata["model_author"] = userAuthor
+                }
+                if let userVersion = userDefined["version"] as? String {
+                    metadata["model_version"] = userVersion
+                }
+                if let userLicense = userDefined["license"] as? String {
+                    metadata["model_license"] = userLicense
+                }
+                if let userDescription = userDefined["description"] as? String {
+                    metadata["model_description"] = userDescription
+                }
+            }
+            
+            // 打印完整元数据用于调试
+            print("完整模型元数据：\(modelDescription.metadata)")
+            
+        } else if whoseModel == "haili", let model = gestureClassifier as? GestureModel_1 {
+            metadata["model_name"] = "GestureModel_1"
+            // 尝试直接从模型中读取元数据
+            let modelDescription = model.model.modelDescription
+            
+            // 使用正确的MLModelMetadataKey常量而不是字符串
+            if let author = modelDescription.metadata[.author] as? String {
+                metadata["model_author"] = author
+            } else {
+                metadata["model_author"] = "N/A" // 如果没有找到元数据，使用N/A
+            }
+            
+            if let version = modelDescription.metadata[.versionString] as? String {
+                metadata["model_version"] = version
+            } else {
+                metadata["model_version"] = "N/A" // 如果没有找到元数据，使用N/A
+            }
+            
+            if let license = modelDescription.metadata[.license] as? String {
+                metadata["model_license"] = license
+            } else {
+                metadata["model_license"] = "N/A" // 如果没有找到元数据，使用N/A
+            }
+            
+            if let description = modelDescription.metadata[.description] as? String {
+                metadata["model_description"] = description
+            } else {
+                metadata["model_description"] = "N/A" // 如果没有找到元数据，使用N/A
+            }
+            
+            // 尝试读取用户自定义元数据 (creatorDefinedKey)
+            if let userDefined = modelDescription.metadata[.creatorDefinedKey] as? [String: Any] {
+                if let userAuthor = userDefined["author"] as? String {
+                    metadata["model_author"] = userAuthor
+                }
+                if let userVersion = userDefined["version"] as? String {
+                    metadata["model_version"] = userVersion
+                }
+                if let userLicense = userDefined["license"] as? String {
+                    metadata["model_license"] = userLicense
+                }
+                if let userDescription = userDefined["description"] as? String {
+                    metadata["model_description"] = userDescription
+                }
+            }
+            
+            // 打印完整元数据用于调试
+            print("完整模型元数据：\(modelDescription.metadata)")
+            
+        } else {
+            metadata["model_name"] = whoseModel
+            metadata["model_author"] = "N/A"
+            metadata["model_version"] = "N/A"
+            metadata["model_license"] = "N/A"
+            metadata["model_description"] = "N/A"
+        }
+        
+        return metadata
+    }
+    
     public func setCurrentFolder(_ url: URL) {
         print("GestureRecognizer: Setting current folder to: \(url.path)")  // 添加日志
         currentFolderURL = url
