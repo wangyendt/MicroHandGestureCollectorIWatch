@@ -29,19 +29,14 @@ public class GestureRecognizer {
         ),
         "haili": ModelParams(
             modelType: GestureModel_1.self,
-            gestureNames: ["单击", "双击", "左摆", "右摆", "握拳", "摊掌", "转腕", "摇手", "其它"],
+            gestureNames: ["单击", "双击", "左摆", "右摆", "握拳", "摊掌", "正转", "反转", "其它"],
             halfWindowSize: 50,
-            inputShape: [1, 6, 1, 100],
+            inputShape: [1, 6, 4, 100],
             outputKey: "linear_3",
             reshapeData: { processedData, inputArray in
                 // haili模型的数据排列方式
-                let channelSize = processedData.count / 6
-                for c in 0..<6 {
-                    for t in 0..<channelSize {
-                        let sourceIdx = t * 6 + c
-                        let targetIdx = c * channelSize + t
-                        inputArray[targetIdx] = NSNumber(value: Float(processedData[sourceIdx]))
-                    }
+                for i in 0..<processedData.count {
+                    inputArray[i] = NSNumber(value: Float(processedData[i]))
                 }
             }
         )
@@ -149,18 +144,68 @@ public class GestureRecognizer {
         }
         
         // 对加速度数据进行带通滤波
-        let accFiltered = butterBandpassFilter(
+        let accFiltered_low = butterBandpassFilter(
             data: accData,
-            fs: 100.0,
-            lowCut: 0.1,
-            highCut: 40.0
+            coefficientType: .low
+        ).map { $0.map { $0 / 9.81 } }  // 转换为g
+
+        let accFiltered_mid = butterBandpassFilter(
+            data: accData,
+            coefficientType: .mid
+        ).map { $0.map { $0 / 9.81 } }  // 转换为g
+
+        let accFiltered_high = butterBandpassFilter(
+            data: accData,
+            coefficientType: .high
         ).map { $0.map { $0 / 9.81 } }  // 转换为g
         
+        
+        // 对陀螺仪数据进行带通滤波
+        let gyroFiltered_low = butterBandpassFilter(
+            data: gyroData,
+            coefficientType: .low  // 使用中频带通滤波器处理陀螺仪数据
+        )
+
+        let gyroFiltered_mid = butterBandpassFilter(
+            data: gyroData,
+            coefficientType: .mid
+        )
+
+        let gyroFiltered_high = butterBandpassFilter(
+            data: gyroData,
+            coefficientType: .high
+        )
+
+
         // 组合处理后的数据用于模型输入
         var modelInputData = [Double]()
-        for i in 0..<modelInputLength {
-            modelInputData.append(contentsOf: accFiltered[i])
-            modelInputData.append(contentsOf: gyroData[i])
+        for c in 0..<3 {
+            for i in 0..<modelInputLength {
+                modelInputData.append(accData[i][c])
+            }
+            for i in 0..<modelInputLength {
+                modelInputData.append(accFiltered_low[i][c])
+            }
+            for i in 0..<modelInputLength {
+                modelInputData.append(accFiltered_mid[i][c])
+            }
+            for i in 0..<modelInputLength {
+                modelInputData.append(accFiltered_high[i][c])
+            }
+        }
+        for c in 0..<3 {
+            for i in 0..<modelInputLength {
+                modelInputData.append(gyroData[i][c])
+            }
+            for i in 0..<modelInputLength {
+                modelInputData.append(gyroFiltered_low[i][c])
+            }
+            for i in 0..<modelInputLength {
+                modelInputData.append(gyroFiltered_mid[i][c])
+            }
+            for i in 0..<modelInputLength {
+                modelInputData.append(gyroFiltered_high[i][c])
+            }
         }
         
         // 进行预测
@@ -169,7 +214,7 @@ public class GestureRecognizer {
         // 保存数据（原始数据和处理后的数据）
         if prediction != nil {
             let rawData = data.map { ($0.acc, $0.gyro) }
-            let processedData = zip(accFiltered, gyroData).map { (acc: $0, gyro: $1) }
+            let processedData = zip(accData, gyroData).map { (acc: $0, gyro: $1) }
             saveGestureData(rawData: rawData, processedData: processedData, prediction: prediction)
         }
         
@@ -251,10 +296,36 @@ public class GestureRecognizer {
         case bandstop
     }
     
-    private func butterBandpassFilter(data: [[Double]], fs: Double, lowCut: Double, highCut: Double) -> [[Double]] {
-        // 使用预定义的滤波器系数
-        let b = [0.63602426, 0.0, -1.27204851, 0.0, 0.63602426]
-        let a = [1.0, -0.84856511, -0.87090805, 0.31034215, 0.40923166]
+    private enum FilterCoefficients {
+        case standard  // 标准带通滤波器
+        case low       // 低通滤波器
+        case mid       // 中频带通滤波器
+        case high      // 高通滤波器
+        
+        var coefficients: (b: [Double], a: [Double]) {
+            switch self {
+            case .standard:
+                return ([0.63602426, 0.0, -1.27204851, 0.0, 0.63602426],
+                        [1.0, -0.84856511, -0.87090805, 0.31034215, 0.40923166])
+            case .low:
+                return ([0.04366836, 0.0, -0.08733672, 0.0, 0.04366836],
+                        [1.0, -3.31469991, 4.1362177, -2.32424114, 0.50276922])
+            case .mid:
+                return ([0.27472685, 0.0, -0.5494537, 0.0, 0.27472685],
+                        [1.0, -0.87902961, 0.29755739, -0.17748527, 0.17253125])
+            case .high:
+                return ([0.17508764, -0.35017529, 0.17508764],
+                        [1.0, 0.51930341, 0.21965398])
+            }
+        }
+    }
+    
+    private func butterBandpassFilter(
+        data: [[Double]], 
+        coefficientType: FilterCoefficients = .standard
+    ) -> [[Double]] {
+        // 获取选定的滤波器系数
+        let (b, a) = coefficientType.coefficients
         
         // 创建ButterworthFilter实例
         guard let filter = ButterworthFilterBridge(b: b as NSArray as! [NSNumber], a: a as NSArray as! [NSNumber]) else {
