@@ -29,7 +29,7 @@ public class GestureRecognizer {
         ),
         "haili": ModelParams(
             modelType: GestureModel_1.self,
-            gestureNames: ["单击", "双击", "左摆", "右摆", "握拳", "摊掌", "正转", "反转", "其它"],
+            gestureNames: ["单击", "双击", "左摆", "右摆", "握拳", "摊掌", "转腕", "旋腕", "其它"],
             halfWindowSize: 50,
             inputShape: [1, 6, 4, 100],
             outputKey: "linear_3",
