@@ -426,26 +426,30 @@ struct ContentView: View {
                                 
                                 // 表头
                                 HStack(spacing: 0) {
+                                    // 添加前置空间，使整个内容向右移动
+                                    Spacer()
+                                        .frame(width: 10)
+                                    
                                     Text("时间")
-                                        .frame(width: 80, alignment: .leading)
-                                        .font(.system(size: 17))
+                                        .frame(width: 70, alignment: .center)
+                                        .font(.system(size: 15))
                                     Text("手势")
-                                        .frame(width: 50, alignment: .leading)
-                                        .font(.system(size: 17))
+                                        .frame(width: 45, alignment: .center)
+                                        .font(.system(size: 15))
                                     Text("置信度")
-                                        .frame(width: 60, alignment: .leading)
-                                        .font(.system(size: 17))
+                                        .frame(width: 55, alignment: .center)
+                                        .font(.system(size: 15))
                                     Text("峰值")
-                                        .frame(width: 50, alignment: .leading)
-                                        .font(.system(size: 17))
+                                        .frame(width: 45, alignment: .center)
+                                        .font(.system(size: 15))
                                     Text("真实")
-                                        .frame(width: 50, alignment: .leading)
-                                        .font(.system(size: 17))
+                                        .frame(width: 45, alignment: .center)
+                                        .font(.system(size: 15))
                                     Spacer(minLength: 0)
                                 }
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 2)
-                                .padding(.vertical, 6)
+                                .padding(.vertical, 4)
                                 .background(Color(.systemGray6))
                                 
                                 // 结果列表
@@ -459,27 +463,31 @@ struct ContentView: View {
                                             LazyVStack(spacing: 0) {
                                                 ForEach(sensorManager.gestureResults.reversed()) { result in
                                                     HStack(spacing: 0) {
+                                                        // 添加前置空间，使整个内容向右移动
+                                                        Spacer()
+                                                            .frame(width: 10)
+                                                        
                                                         // 时间列
                                                         Text(String(format: "%.2fs", result.timestamp))
-                                                            .frame(width: 80, height: 32, alignment: .leading)
-                                                            .font(.system(size: 17, design: .monospaced))
+                                                            .frame(width: 70, height: 28, alignment: .center)
+                                                            .font(.system(size: 15, design: .monospaced))
                                                         
                                                         // 手势列
                                                         Text(result.gesture)
-                                                            .frame(width: 50, height: 32, alignment: .leading)
-                                                            .font(.system(size: 17))
+                                                            .frame(width: 45, height: 28, alignment: .center)
+                                                            .font(.system(size: 15))
                                                             .bold()
                                                         
                                                         // 置信度列
                                                         Text(String(format: "%.2f", result.confidence))
-                                                            .frame(width: 60, height: 32, alignment: .leading)
-                                                            .font(.system(size: 17))
+                                                            .frame(width: 55, height: 28, alignment: .center)
+                                                            .font(.system(size: 15))
                                                             .foregroundColor(result.confidence > 0.8 ? .green : .orange)
                                                         
                                                         // 峰值列
                                                         Text(String(format: "%.2f", result.peakValue))
-                                                            .frame(width: 50, height: 32, alignment: .leading)
-                                                            .font(.system(size: 17))
+                                                            .frame(width: 45, height: 28, alignment: .center)
+                                                            .font(.system(size: 15))
                                                             .foregroundColor(getPeakValueColor(result.peakValue))
                                                         
                                                         // 真实手势下拉菜单
@@ -509,13 +517,14 @@ struct ContentView: View {
                                                             }
                                                         } label: {
                                                             Text(result.trueGesture)
-                                                                .frame(width: 50, height: 32, alignment: .leading)
-                                                                .font(.system(size: 17))
+                                                                .frame(width: 45, height: 28, alignment: .center)
+                                                                .font(.system(size: 15))
                                                                 .foregroundColor(result.trueGesture == result.gesture ? .green : .red)
                                                         }
-                                                        .frame(width: 50, height: 32)
+                                                        .frame(width: 45, height: 28)
                                                         
-                                                        Spacer(minLength: 0)
+                                                        Spacer()
+                                                            .frame(width: 1)
                                                         
                                                         // 删除按钮
                                                         Button(action: {
@@ -531,21 +540,20 @@ struct ContentView: View {
                                                             Image(systemName: "trash")
                                                                 .foregroundColor(.red)
                                                                 .imageScale(.small)
-                                                                .font(.system(size: 17))
+                                                                .font(.system(size: 15))
                                                         }
-                                                        .frame(width: 30, height: 32)
-                                                        .padding(.leading, 8)
+                                                        .frame(width: 26, height: 28)
                                                     }
-                                                    .frame(height: 32)
+                                                    .frame(height: 28)
                                                     .id(result.id)
                                                     .padding(.horizontal, 2)
-                                                    .padding(.vertical, 2)
+                                                    .padding(.vertical, 1)
                                                     .background(Color(.systemBackground))
                                                 }
                                             }
                                         }
                                         .background(Color(.systemGray6))
-                                        .frame(height: 350)
+                                        .frame(height: 300)
                                         .onChange(of: sensorManager.gestureResults.count) { _ in
                                             // 当有新结果时，自动滚动到最后一个结果
                                             if let lastId = sensorManager.gestureResults.last?.id {

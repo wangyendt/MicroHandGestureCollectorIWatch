@@ -656,7 +656,7 @@ def run_mlpackage_model(best_model_path):
 if __name__ == '__main__':
 	device = 'cpu'
 	# y_idx2lbl = ['单击', '双击', '握拳', '左滑', '右滑', '鼓掌', '抖腕', '拍打', '日常']
-	y_idx2lbl = ['单击', '双击', '左摆', '右摆', '握拳', "摊掌", "转腕", "摇手", "其它"]
+	y_idx2lbl = ['单击', '双击', '左摆', '右摆', '握拳', "摊掌", "转腕", "旋腕", "其它"]
 	y_lbl2idx = {l: i for i, l in enumerate(y_idx2lbl)}
 	y_lbl2onehot = {l: np.eye(len(y_idx2lbl))[i] for i, l in enumerate(y_idx2lbl)}
 	wayne_print(y_lbl2idx, 'green')
