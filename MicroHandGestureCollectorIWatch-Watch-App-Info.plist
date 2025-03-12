@@ -2,15 +2,25 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSExtensionPointIdentifier</key>
+	<string>com.apple.watchkit</string>
 	<key>OS_ACTIVITY_MODE</key>
 	<string>debug</string>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>remote-notification</string>
 		<string>processing</string>
+		<string>remote-notification</string>
 	</array>
 	<key>WKAlwaysRunsInBackground</key>
 	<true/>
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>workout-processing</string>
+		<string>mindfulness</string>
+		<string>self-care</string>
+		<string>physical-therapy</string>
+		<string>alarm</string>
+	</array>
 	<key>WKExtendedRuntimeSessionEnabled</key>
 	<true/>
 	<key>WKExtendedRuntimeSessionWatchOSVersion</key>
