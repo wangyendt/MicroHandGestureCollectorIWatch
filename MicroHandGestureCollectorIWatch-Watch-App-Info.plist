@@ -18,5 +18,26 @@
 	<true/>
 	<key>WKSupportsAlwaysOnDisplay</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>bluetooth-central</string>
+		<string>processing</string>
+	</array>
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>mindfulness</string>
+	</array>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>应用需要使用蓝牙来连接设备并收集数据</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>应用需要使用蓝牙来连接设备并收集数据</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSMotionUsageDescription</key>
+	<string>此应用需要访问运动传感器数据来识别手势</string>
 </dict>
 </plist>

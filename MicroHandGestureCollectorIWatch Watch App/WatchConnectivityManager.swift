@@ -603,4 +603,23 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             print("❌ Error generating result files: \(error)")
         }
     }
+    
+    // 添加连接刷新功能
+    func refreshConnection() {
+        if WCSession.default.activationState != .activated {
+            print("Watch连接未激活，尝试重新激活")
+            WCSession.default.activate()
+        } else if !WCSession.default.isReachable {
+            print("iPhone暂时不可达，尝试刷新连接")
+            // 发送一个空消息触发连接刷新
+            let pingMessage: [String: Any] = ["type": "ping", "timestamp": Date().timeIntervalSince1970]
+            WCSession.default.sendMessage(pingMessage, replyHandler: { _ in
+                print("连接刷新成功，iPhone可达")
+            }, errorHandler: { error in
+                print("发送ping消息失败: \(error.localizedDescription)")
+            })
+        } else {
+            print("WatchConnectivity连接状态良好")
+        }
+    }
 } 
