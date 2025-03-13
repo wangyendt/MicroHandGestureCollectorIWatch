@@ -6,21 +6,8 @@
 	<string>com.apple.watchkit</string>
 	<key>OS_ACTIVITY_MODE</key>
 	<string>debug</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>processing</string>
-		<string>remote-notification</string>
-	</array>
 	<key>WKAlwaysRunsInBackground</key>
 	<true/>
-	<key>WKBackgroundModes</key>
-	<array>
-		<string>workout-processing</string>
-		<string>mindfulness</string>
-		<string>self-care</string>
-		<string>physical-therapy</string>
-		<string>alarm</string>
-	</array>
 	<key>WKExtendedRuntimeSessionEnabled</key>
 	<true/>
 	<key>WKExtendedRuntimeSessionWatchOSVersion</key>
@@ -31,7 +18,5 @@
 	<true/>
 	<key>WKSupportsAlwaysOnDisplay</key>
 	<true/>
-	<key>NSMotionUsageDescription</key>
-	<string>我们需要访问运动和健身数据来识别手势</string>
 </dict>
 </plist>
