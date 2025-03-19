@@ -624,6 +624,22 @@ struct ContentView: View {
                 handleMessage(message)
             }
         }
+        // 添加对BLE手势结果通知的处理
+        .onReceive(NotificationCenter.default.publisher(for: .didReceiveJsonData)) { notification in
+            if let jsonData = notification.userInfo as? [String: Any],
+               let type = jsonData["type"] as? String,
+               type == "gesture_result" {
+                // 处理手势结果数据
+                handleMessage(jsonData)
+            }
+        }
+        // 添加对普通BLE手势通知的处理
+        .onReceive(NotificationCenter.default.publisher(for: .didReceiveGesture)) { notification in
+            if let gesture = notification.userInfo?["gesture"] as? String {
+                // 这里可以处理简单手势，例如游戏控制
+                // 现有的游戏控制已经通过didReceiveGesture通知处理
+            }
+        }
         .alert("确认停止采集", isPresented: $showingStopCollectionAlert) {
             Button("取消", role: .cancel) { }
             Button("停止", role: .destructive) {
@@ -737,7 +753,11 @@ struct ContentView: View {
             case "gesture_result":
                 print("收到手势识别结果") // 添加调试输出
                 if let gesture = message["gesture"] as? String,
-                   let confidence = message["confidence"] as? Double {
+                   let confidence = message["confidence"] as? Double,
+                   let timestamp = message["timestamp"] as? Double,
+                   let peakValue = message["peakValue"] as? Double,
+                   let id = message["id"] as? String {
+                    
                     print("识别到手势: \(gesture), 置信度: \(confidence)") // 添加调试输出
                     DispatchQueue.main.async {
                         // 播放反馈
@@ -755,6 +775,20 @@ struct ContentView: View {
                                 }
                             }
                         }
+                        
+                        // 添加到手势识别结果列表
+                        let result = GestureResult(
+                            id: id,
+                            timestamp: timestamp,
+                            gesture: gesture,
+                            confidence: confidence,
+                            peakValue: peakValue,
+                            trueGesture: gesture, // 初始时将真实手势设为识别结果
+                            bodyGesture: message["bodyGesture"] as? String ?? "无",
+                            armGesture: message["armGesture"] as? String ?? "无",
+                            fingerGesture: message["fingerGesture"] as? String ?? "无"
+                        )
+                        sensorManager.gestureResults.append(result)
                     }
                 }
             default:

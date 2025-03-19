@@ -141,15 +141,28 @@ extension BlePeripheralService: CBPeripheralManagerDelegate {
     func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveWrite requests: [CBATTRequest]) {
         for request in requests {
             if request.characteristic.uuid == writeCharacteristicUUID,
-               let value = request.value,
-               let gesture = String(data: value, encoding: .utf8) {
-                logger.info("收到手势数据: \(gesture)")
-                // 发送通知以处理手势
-                NotificationCenter.default.post(
-                    name: .didReceiveGesture,
-                    object: nil,
-                    userInfo: ["gesture": gesture]
-                )
+               let value = request.value {
+                
+                // 尝试解析为JSON格式数据
+                if let jsonObject = try? JSONSerialization.jsonObject(with: value, options: []) as? [String: Any] {
+                    // 直接发送原始JSON数据通知，不在BLE服务中解析业务数据
+                    logger.info("收到JSON格式数据")
+                    NotificationCenter.default.post(
+                        name: .didReceiveJsonData,
+                        object: nil,
+                        userInfo: jsonObject
+                    )
+                }
+                // 如果不是JSON格式，尝试解析为简单的手势字符串
+                else if let gesture = String(data: value, encoding: .utf8) {
+                    logger.info("收到手势数据: \(gesture)")
+                    // 发送通知以处理手势
+                    NotificationCenter.default.post(
+                        name: .didReceiveGesture,
+                        object: nil,
+                        userInfo: ["gesture": gesture]
+                    )
+                }
             }
             
             if request.characteristic.uuid == writeCharacteristicUUID {
@@ -161,4 +174,5 @@ extension BlePeripheralService: CBPeripheralManagerDelegate {
 
 extension Notification.Name {
     static let didReceiveGesture = Notification.Name("didReceiveGesture")
+    static let didReceiveJsonData = Notification.Name("didReceiveJsonData")
 } 

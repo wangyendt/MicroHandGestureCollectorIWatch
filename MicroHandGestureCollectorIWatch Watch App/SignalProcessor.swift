@@ -269,18 +269,21 @@ public class SignalProcessor {
                             // 先生成一个 UUID，然后在发送和保存时都使用这个相同的 ID
                             let resultId = UUID().uuidString
                             
-                            // 发送到 iPhone，使用相对时间
+                            // 构建完整的手势结果数据
                             let result: [String: Any] = [
-                                "type": "gesture_result" as String,
-                                "timestamp": relativeTimeS as Double,
-                                "gesture": gesture as String,
-                                "confidence": confidence as Double,
-                                "peakValue": peak_val as Double,
-                                "id": resultId as String,
-                                "bodyGesture": "无" as String,
-                                "armGesture": "无" as String,
-                                "fingerGesture": "无" as String
+                                "type": "gesture_result",
+                                "gesture": gesture,
+                                "confidence": confidence,
+                                "peakValue": peak_val,
+                                "timestamp": relativeTimeS,
+                                "id": resultId,
+                                "bodyGesture": "无",
+                                "armGesture": "无",
+                                "fingerGesture": "无"
                             ]
+                            
+                            // 通过BLE发送详细的手势结果到iPhone
+                            BleCentralService.shared.sendGestureResult(resultDict: result)
                             
                             // 保存结果到文件
                             saveResult(timestamp: UInt64(peak_time * 1_000_000_000), 
@@ -289,12 +292,6 @@ public class SignalProcessor {
                                       confidence: confidence, 
                                       peakValue: peak_val,
                                       id: resultId)
-                            
-                            if WCSession.default.isReachable {
-                                WCSession.default.sendMessage(result, replyHandler: nil) { error in
-                                    print("发送手势结果失败: \(error.localizedDescription)")
-                                }
-                            }
                         }
                     }
                 }

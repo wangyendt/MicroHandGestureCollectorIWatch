@@ -65,6 +65,29 @@ class BleCentralService: NSObject, ObservableObject {
         peripheral.writeValue(data, for: characteristic, type: .withResponse)
         logger.info("发送手势数据: \(gesture)")
     }
+    
+    func sendGestureResult(resultDict: [String: Any]) {
+        guard let peripheral = peripheral,
+              let characteristic = writeCharacteristic else {
+            lastError = "无法发送手势结果"
+            return
+        }
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: resultDict, options: [])
+            peripheral.writeValue(jsonData, for: characteristic, type: .withResponse)
+            
+            // 记录简单日志，不解析业务数据
+            if let type = resultDict["type"] as? String {
+                logger.info("通过BLE发送\(type)数据")
+            } else {
+                logger.info("通过BLE发送JSON数据")
+            }
+        } catch {
+            lastError = "数据序列化失败: \(error.localizedDescription)"
+            logger.error("数据序列化失败: \(error.localizedDescription)")
+        }
+    }
 }
 
 extension BleCentralService: CBCentralManagerDelegate {
