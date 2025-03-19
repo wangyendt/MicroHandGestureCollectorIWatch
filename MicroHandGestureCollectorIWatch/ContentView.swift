@@ -505,7 +505,8 @@ struct ContentView: View {
                                                         
                                                         // 真实手势下拉菜单
                                                         Menu {
-                                                            let gestureNames = whoseModel == "haili" ? GestureNames.haili : GestureNames.wayne
+                                                            // let gestureNames = whoseModel == "haili" ? GestureNames.haili : GestureNames.wayne
+                                                            let gestureNames = GestureNames.temp
                                                             ForEach(gestureNames, id: \.self) { gesture in
                                                                 Button(action: {
                                                                     if let index = sensorManager.gestureResults.firstIndex(where: { $0.id == result.id }) {
