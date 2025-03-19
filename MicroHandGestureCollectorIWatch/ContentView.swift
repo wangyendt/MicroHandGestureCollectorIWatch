@@ -21,6 +21,7 @@ extension Array {
 struct ContentView: View {
     @StateObject private var sensorManager = SensorDataManager.shared
     @StateObject private var feedbackManager = FeedbackManager.shared
+    @StateObject private var bleService = BlePeripheralService.shared  // 添加蓝牙服务状态观察
     @State private var accDataX: [(Double, Double)] = [] // (seconds, value)
     @State private var accDataY: [(Double, Double)] = []
     @State private var accDataZ: [(Double, Double)] = []
@@ -95,6 +96,18 @@ struct ContentView: View {
                                             tempIP = sensorManager.serverHost
                                             isEditingIP = true
                                         }
+                                    }
+                                }
+                                
+                                // 蓝牙状态
+                                HStack {
+                                    Image(systemName: bleService.isAdvertising ? "bluetooth" : "bluetooth.slash")
+                                        .foregroundColor(bleService.isAdvertising ? .blue : .red)
+                                    Text(bleService.isAdvertising ? "蓝牙已启动" : "蓝牙未启动")
+                                    Spacer()
+                                    if bleService.isConnected {
+                                        Text("已连接")
+                                            .foregroundColor(.green)
                                     }
                                 }
                                 
@@ -342,14 +355,14 @@ struct ContentView: View {
                             .padding(.vertical, 8)
                         }
                         
-                        // 添加俄罗斯方块游戏按钮
+                        // 添加手势游戏按钮
                         Button(action: {
                             showingTetrisGame = true
                         }) {
                             HStack {
                                 Image(systemName: "gamecontroller.fill")
                                     .font(.title2)
-                                Text("俄罗斯方块")
+                                Text("手势游戏")
                                     .font(.headline)
                             }
                             .frame(maxWidth: .infinity)

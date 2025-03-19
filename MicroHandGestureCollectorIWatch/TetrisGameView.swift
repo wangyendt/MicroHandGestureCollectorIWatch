@@ -13,17 +13,11 @@ struct TetrisGameView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button("关闭") {
-                            bleService.stopAdvertising()
+                            // 不再在这里停止蓝牙广播，只关闭游戏界面
                             dismiss()
                         }
                     }
                 }
-        }
-        .onAppear {
-            bleService.startAdvertising()
-        }
-        .onDisappear {
-            bleService.stopAdvertising()
         }
     }
 } 

@@ -72,6 +72,8 @@ extension BleCentralService: CBCentralManagerDelegate {
         switch central.state {
         case .poweredOn:
             logger.info("蓝牙已开启")
+            // 自动开始扫描
+            startScanning()
         case .poweredOff:
             lastError = "蓝牙已关闭"
             isConnected = false

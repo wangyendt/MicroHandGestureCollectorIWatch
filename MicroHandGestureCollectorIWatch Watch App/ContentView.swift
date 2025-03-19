@@ -472,8 +472,8 @@ struct ContentView: View {
                 HStack {
                     Image(systemName: bleService.isConnected ? "bluetooth.circle.fill" : "bluetooth.circle")
                         .foregroundColor(bleService.isConnected ? .blue : .gray)
-                    Text(bleService.isConnected ? "已连接" : "未连接")
-                        .foregroundColor(bleService.isConnected ? .blue : .gray)
+                    Text(bleService.isConnected ? "已连接" : (bleService.isScanning ? "扫描中..." : "未连接"))
+                        .foregroundColor(bleService.isConnected ? .blue : (bleService.isScanning ? .orange : .gray))
                     Spacer()
                     if bleService.isConnected {
                         Button(action: {
