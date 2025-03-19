@@ -719,15 +719,73 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ReceivedWatchMessage"))) { notification in
             if let message = notification.userInfo as? [String: Any] {
-                handleMessage(message)
+                // 已由WatchConnectivityManager处理，这里不再需要进行处理
+                print("收到消息通知")
             }
         }
         // 添加对BLE JSON数据的处理
-        .onReceive(NotificationCenter.default.publisher(for: .didReceiveBleJsonData)) { notification in
-            if let message = notification.userInfo as? [String: Any] {
-                print("通过BLE收到JSON数据：\(message)")
-                // 使用相同的处理方法处理BLE消息
-                handleMessage(message)
+        .onReceive(NotificationCenter.default.publisher(for: .didReceiveBleJsonData)) { _ in
+            // 已由WatchConnectivityManager处理，这里不再需要进行处理
+            print("收到BLE JSON数据通知")
+        }
+        // 添加特定操作的处理
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StartCollectionRequested"))) { notification in
+            guard !isCollecting && motionManager.isReady else { return }
+            if let message = notification.userInfo as? [String: Any], 
+               message["trigger_collection"] as? Bool == true {
+                print("响应开始采集请求")
+                DispatchQueue.main.async {
+                    isCollecting = true
+                    FeedbackManager.playFeedback(
+                        style: .success,
+                        speak: "开始采集"
+                    )
+                    motionManager.startDataCollection(
+                        name: userName,
+                        hand: selectedHand,
+                        gesture: selectedGesture,
+                        force: selectedForce,
+                        gender: selectedGender,
+                        tightness: selectedTightness,
+                        note: noteText,
+                        wristSize: wristSize,
+                        bandType: selectedBandType,
+                        supervisorName: supervisorName  // 添加监督者姓名参数
+                    )
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StopCollectionRequested"))) { notification in
+            guard isCollecting else { return }
+            if let message = notification.userInfo as? [String: Any], 
+               message["trigger_collection"] as? Bool == true {
+                print("响应停止采集请求")
+                DispatchQueue.main.async {
+                    isCollecting = false
+                    FeedbackManager.playFeedback(
+                        style: .stop,
+                        speak: "停止采集"
+                    )
+                    WatchConnectivityManager.shared.sendStopSignal()
+                    motionManager.stopDataCollection()
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ExportDataRequested"))) { notification in
+            if let message = notification.userInfo as? [String: Any], 
+               message["trigger_export"] as? Bool == true {
+                print("响应导出数据请求")
+                DispatchQueue.main.async {
+                    motionManager.exportData()
+                }
+            }
+        }
+        // 添加删除结果请求的处理
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("DeleteResultRequested"))) { notification in
+            if let message = notification.userInfo as? [String: Any],
+               let id = message["id"] as? String {
+                print("响应删除结果请求，ID: \(id)")
+                deleteResultFromFile(id: id)
             }
         }
     }
@@ -856,163 +914,6 @@ struct ContentView: View {
                 print("✅ 成功保存手动删除的记录")
             } catch {
                 print("❌ 保存手动删除的记录时出错: \(error)")
-            }
-        }
-    }
-
-    private func handleMessage(_ message: [String: Any]) {
-        print("处理消息:", message) // 添加调试输出
-        if let type = message["type"] as? String {
-            switch type {
-            case "start_collection":
-                print("收到开始采集消息") // 添加调试输出
-                if !isCollecting && motionManager.isReady {
-                    if message["trigger_collection"] as? Bool == true {
-                        print("准备开始采集") // 添加调试输出
-                        DispatchQueue.main.async {
-                            isCollecting = true
-                            FeedbackManager.playFeedback(
-                                style: .success,
-                                speak: "开始采集"
-                            )
-                            motionManager.startDataCollection(
-                                name: userName,
-                                hand: selectedHand,
-                                gesture: selectedGesture,
-                                force: selectedForce,
-                                gender: selectedGender,
-                                tightness: selectedTightness,
-                                note: noteText,
-                                wristSize: wristSize,
-                                bandType: selectedBandType,
-                                supervisorName: supervisorName  // 添加监督者姓名参数
-                            )
-                        }
-                    }
-                }
-            case "stop_collection":
-                print("收到停止采集消息") // 添加调试输出
-                if isCollecting {
-                    if message["trigger_collection"] as? Bool == true {
-                        print("准备停止采集") // 添加调试输出
-                        DispatchQueue.main.async {
-                            isCollecting = false
-                            FeedbackManager.playFeedback(
-                                style: .stop,
-                                speak: "停止采集"
-                            )
-                            WatchConnectivityManager.shared.sendStopSignal()
-                            motionManager.stopDataCollection()
-                        }
-                    }
-                }
-            case "request_export":
-                print("收到导出请求") // 添加调试输出
-                if message["trigger_export"] as? Bool == true {
-                    print("准备导出数据") // 添加调试输出
-                    DispatchQueue.main.async {
-                        motionManager.exportData()
-                    }
-                }
-            case "update_settings":
-                print("收到设置更新") // 添加调试输出
-                DispatchQueue.main.async {
-                    // 更新本地设置
-                    if let feedbackType = message["feedbackType"] as? String {
-                        UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
-                    }
-                    if let peakThreshold = message["peakThreshold"] as? Double {
-                        self.peakThreshold = peakThreshold
-                        motionManager.signalProcessor.updateSettings(peakThreshold: peakThreshold)
-                    }
-                    if let peakWindow = message["peakWindow"] as? Double {
-                        self.peakWindow = peakWindow
-                        motionManager.signalProcessor.updateSettings(peakWindow: peakWindow)
-                    }
-                    if let saveGestureData = message["saveGestureData"] as? Bool {
-                        UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
-                        motionManager.updateSaveSettings(gestureData: saveGestureData)
-                    }
-                    if let savePeaks = message["savePeaks"] as? Bool {
-                        UserDefaults.standard.set(savePeaks, forKey: "savePeaks")
-                        motionManager.updateSaveSettings(peaks: savePeaks)
-                    }
-                    if let saveValleys = message["saveValleys"] as? Bool {
-                        UserDefaults.standard.set(saveValleys, forKey: "saveValleys")
-                        motionManager.updateSaveSettings(valleys: saveValleys)
-                    }
-                    if let saveSelectedPeaks = message["saveSelectedPeaks"] as? Bool {
-                        UserDefaults.standard.set(saveSelectedPeaks, forKey: "saveSelectedPeaks")
-                        motionManager.updateSaveSettings(selectedPeaks: saveSelectedPeaks)
-                    }
-                    if let saveQuaternions = message["saveQuaternions"] as? Bool {
-                        UserDefaults.standard.set(saveQuaternions, forKey: "saveQuaternions")
-                        motionManager.updateSaveSettings(quaternions: saveQuaternions)
-                    }
-                    if let saveResultFile = message["saveResultFile"] as? Bool {
-                        UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
-                        motionManager.updateSaveSettings(resultFile: saveResultFile)
-                    }
-                    if let enableVisualFeedback = message["enableVisualFeedback"] as? Bool {
-                        UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
-                        FeedbackManager.enableVisualFeedback = enableVisualFeedback
-                    }
-                    if let enableHapticFeedback = message["enableHapticFeedback"] as? Bool {
-                        UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
-                        FeedbackManager.enableHapticFeedback = enableHapticFeedback
-                    }
-                    if let enableVoiceFeedback = message["enableVoiceFeedback"] as? Bool {
-                        UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
-                        FeedbackManager.enableVoiceFeedback = enableVoiceFeedback
-                    }
-                }
-            case "update_true_gesture":
-                print("收到真实手势更新")
-                if let id = message["id"] as? String,
-                   let trueGesture = message["true_gesture"] as? String {
-                    print("收到真实手势更新，ID: \(id), 真实手势: \(trueGesture)")
-                    connectivityManager.updatedTrueGestures[id] = trueGesture
-                }
-            case "update_body_gesture":
-                print("收到身体动作更新")
-                if let id = message["id"] as? String,
-                   let bodyGesture = message["body_gesture"] as? String {
-                    print("收到身体动作更新，ID: \(id), 身体动作: \(bodyGesture)")
-                    connectivityManager.updatedBodyGestures[id] = bodyGesture
-                }
-            case "update_arm_gesture":
-                print("收到手臂动作更新")
-                if let id = message["id"] as? String,
-                   let armGesture = message["arm_gesture"] as? String {
-                    print("收到手臂动作更新，ID: \(id), 手臂动作: \(armGesture)")
-                    connectivityManager.updatedArmGestures[id] = armGesture
-                }
-            case "update_finger_gesture":
-                print("收到手指动作更新")
-                if let id = message["id"] as? String,
-                   let fingerGesture = message["finger_gesture"] as? String {
-                    print("收到手指动作更新，ID: \(id), 手指动作: \(fingerGesture)")
-                    connectivityManager.updatedFingerGestures[id] = fingerGesture
-                }
-            case "delete_result":
-                print("收到删除请求")
-                if let id = message["id"] as? String {
-                    deleteResultFromFile(id: id)
-                }
-            case "update_gesture_result":
-                if let id = message["id"] as? String,
-                   let bodyGesture = message["body_gesture"] as? String,
-                   let armGesture = message["arm_gesture"] as? String,
-                   let fingerGesture = message["finger_gesture"] as? String {
-                    print("收到动作更新 - ID: \(id)")
-                    print("动作信息 - 身体: \(bodyGesture), 手臂: \(armGesture), 手指: \(fingerGesture)")
-                    connectivityManager.updatedBodyGestures[id] = bodyGesture
-                    connectivityManager.updatedArmGestures[id] = armGesture
-                    connectivityManager.updatedFingerGestures[id] = fingerGesture
-                    print("已更新动作字典")
-                }
-            default:
-                break
             }
         }
     }

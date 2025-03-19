@@ -201,6 +201,10 @@ extension BleCentralService: CBPeripheralDelegate {
                 
                 // 发送通知，以便应用其他部分可以处理这些消息
                 DispatchQueue.main.async {
+                    // 使用WatchConnectivityManager处理消息
+                    WatchConnectivityManager.shared.processMessage(jsonObject)
+                    
+                    // 同时仍然发送通知，保持向后兼容
                     NotificationCenter.default.post(
                         name: .didReceiveBleJsonData,
                         object: nil,

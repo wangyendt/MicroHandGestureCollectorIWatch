@@ -512,14 +512,8 @@ struct ContentView: View {
                                                                         sensorManager.gestureResults[index].trueGesture = gesture
                                                                         // 记录真实手势更新
                                                                         sensorManager.updateTrueGesture(id: result.id, gesture: gesture, timestamp: result.timestamp)
-                                                                        // 发送更新的真实手势到手表
-                                                                        let message = [
-                                                                            "type": "update_true_gesture",
-                                                                            "id": result.id,
-                                                                            "true_gesture": gesture
-                                                                        ]
-                                                                        print("通过BLE发送真实手势更新 - ID: \(result.id), 真实手势: \(gesture)")
-                                                                        bleService.sendJSONData(message)
+                                                                        // 使用消息处理服务发送真实手势更新
+                                                                        MessageHandlerService.shared.sendTrueGestureUpdate(id: result.id, trueGesture: gesture)
                                                                     }
                                                                 }) {
                                                                     Text(GestureEmoji.getDisplayText(gesture))
@@ -616,25 +610,79 @@ struct ContentView: View {
             idleTimer?.invalidate()
             idleTimer = nil
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ReceivedWatchMessage"))) { notification in
-            if let message = notification.userInfo as? [String: Any] {
-                handleMessage(message)
+        // 更新：使用新的通知名称监听事件
+        .onReceive(NotificationCenter.default.publisher(for: .startCollectionRequested)) { notification in
+            if let message = notification.userInfo as? [String: Any],
+               message["trigger_collection"] as? Bool == true {
+                print("开始采集")
+                DispatchQueue.main.async {
+                    isCollecting = true
+                }
             }
         }
-        // 添加对BLE手势结果通知的处理
-        .onReceive(NotificationCenter.default.publisher(for: .didReceiveJsonData)) { notification in
-            if let jsonData = notification.userInfo as? [String: Any],
-               let type = jsonData["type"] as? String,
-               type == "gesture_result" {
-                // 处理手势结果数据
-                handleMessage(jsonData)
+        .onReceive(NotificationCenter.default.publisher(for: .stopCollectionRequested)) { notification in
+            if let message = notification.userInfo as? [String: Any],
+               message["trigger_collection"] as? Bool == true {
+                print("停止采集")
+                DispatchQueue.main.async {
+                    isCollecting = false
+                    sensorManager.resetState()
+                    resetChartData() // 重置图表数据
+                }
             }
         }
-        // 添加对普通BLE手势通知的处理
-        .onReceive(NotificationCenter.default.publisher(for: .didReceiveGesture)) { notification in
-            if let gesture = notification.userInfo?["gesture"] as? String {
-                // 这里可以处理简单手势，例如游戏控制
-                // 现有的游戏控制已经通过didReceiveGesture通知处理
+        .onReceive(NotificationCenter.default.publisher(for: .gestureResultReceived)) { notification in
+            if let message = notification.userInfo as? [String: Any],
+               let gesture = message["gesture"] as? String,
+               let confidence = message["confidence"] as? Double,
+               let timestamp = message["timestamp"] as? Double,
+               let peakValue = message["peakValue"] as? Double,
+               let id = message["id"] as? String {
+                
+                print("识别到手势: \(gesture), 置信度: \(confidence)")
+                DispatchQueue.main.async {
+                    // 播放反馈
+                    feedbackManager.playFeedback(gesture: gesture, confidence: confidence)
+                    
+                    // 显示视觉反馈
+                    if feedbackManager.isVisualEnabled {
+                        withAnimation {
+                            showingVisualFeedback = true
+                            // 0.5秒后隐藏视觉反馈
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                withAnimation {
+                                    showingVisualFeedback = false
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 添加到手势识别结果列表
+                    let result = GestureResult(
+                        id: id,
+                        timestamp: timestamp,
+                        gesture: gesture,
+                        confidence: confidence,
+                        peakValue: peakValue,
+                        trueGesture: gesture, // 初始时将真实手势设为识别结果
+                        bodyGesture: sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无",
+                        armGesture: sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无",
+                        fingerGesture: sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
+                    )
+                    sensorManager.gestureResults.append(result)
+                    
+                    // 使用消息处理服务发送更新
+                    let bodyGesture = sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无"
+                    let armGesture = sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无"
+                    let fingerGesture = sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
+                    
+                    MessageHandlerService.shared.sendGestureResultUpdate(
+                        id: id,
+                        bodyGesture: bodyGesture,
+                        armGesture: armGesture,
+                        fingerGesture: fingerGesture
+                    )
+                }
             }
         }
         .alert("确认停止采集", isPresented: $showingStopCollectionAlert) {
@@ -718,94 +766,6 @@ struct ContentView: View {
                 return num >= 0 && num <= 255
             }
             return false
-        }
-    }
-    
-    private func handleMessage(_ message: [String: Any]) {
-        if let type = message["type"] as? String {
-            // 只打印非传感器数据的消息
-            if type != "batch_data" && type != "sensor_data" {
-                print("iPhone收到消息: \(type)")
-            }
-            
-            switch type {
-            case "start_collection":
-                print("收到开始采集消息") // 添加调试输出
-                if message["trigger_collection"] as? Bool == true {
-                    print("准备开始采集") // 添加调试输出
-                    DispatchQueue.main.async {
-                        isCollecting = true
-                    }
-                }
-            case "stop_collection":
-                print("收到停止采集消息") // 添加调试输出
-                if message["trigger_collection"] as? Bool == true {
-                    print("准备停止采集") // 添加调试输出
-                    DispatchQueue.main.async {
-                        isCollecting = false
-                        sensorManager.resetState()
-                        resetChartData() // 重置图表数据
-                    }
-                }
-            case "gesture_result":
-                print("收到手势识别结果") // 添加调试输出
-                if let gesture = message["gesture"] as? String,
-                   let confidence = message["confidence"] as? Double,
-                   let timestamp = message["timestamp"] as? Double,
-                   let peakValue = message["peakValue"] as? Double,
-                   let id = message["id"] as? String {
-                    
-                    print("识别到手势: \(gesture), 置信度: \(confidence)") // 添加调试输出
-                    DispatchQueue.main.async {
-                        // 播放反馈
-                        feedbackManager.playFeedback(gesture: gesture, confidence: confidence)
-                        
-                        // 显示视觉反馈
-                        if feedbackManager.isVisualEnabled {
-                            withAnimation {
-                                showingVisualFeedback = true
-                                // 0.5秒后隐藏视觉反馈
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    withAnimation {
-                                        showingVisualFeedback = false
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // 添加到手势识别结果列表
-                        let result = GestureResult(
-                            id: id,
-                            timestamp: timestamp,
-                            gesture: gesture,
-                            confidence: confidence,
-                            peakValue: peakValue,
-                            trueGesture: gesture, // 初始时将真实手势设为识别结果
-                            bodyGesture: sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无",
-                            armGesture: sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无",
-                            fingerGesture: sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
-                        )
-                        sensorManager.gestureResults.append(result)
-                        
-                        // 通过BLE发送更新的手势结果到手表
-                        let bodyGesture = sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无"
-                        let armGesture = sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无"
-                        let fingerGesture = sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
-                        
-                        let updatedMessage: [String: Any] = [
-                            "type": "update_gesture_result",
-                            "id": id,
-                            "body_gesture": bodyGesture,
-                            "arm_gesture": armGesture,
-                            "finger_gesture": fingerGesture
-                        ]
-                        print("通过BLE发送动作更新到手表 - ID: \(id), 身体: \(bodyGesture), 手臂: \(armGesture), 手指: \(fingerGesture)")
-                        bleService.sendJSONData(updatedMessage)
-                    }
-                }
-            default:
-                break
-            }
         }
     }
     
