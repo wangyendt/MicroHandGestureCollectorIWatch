@@ -513,16 +513,13 @@ struct ContentView: View {
                                                                         // 记录真实手势更新
                                                                         sensorManager.updateTrueGesture(id: result.id, gesture: gesture, timestamp: result.timestamp)
                                                                         // 发送更新的真实手势到手表
-                                                                        if WCSession.default.isReachable {
-                                                                            let message = [
-                                                                                "type": "update_true_gesture",
-                                                                                "id": result.id,
-                                                                                "true_gesture": gesture
-                                                                            ]
-                                                                            WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                                                                                print("发送真实手势更新失败: \(error.localizedDescription)")
-                                                                            }
-                                                                        }
+                                                                        let message = [
+                                                                            "type": "update_true_gesture",
+                                                                            "id": result.id,
+                                                                            "true_gesture": gesture
+                                                                        ]
+                                                                        print("通过BLE发送真实手势更新 - ID: \(result.id), 真实手势: \(gesture)")
+                                                                        bleService.sendJSONData(message)
                                                                     }
                                                                 }) {
                                                                     Text(GestureEmoji.getDisplayText(gesture))
@@ -784,11 +781,26 @@ struct ContentView: View {
                             confidence: confidence,
                             peakValue: peakValue,
                             trueGesture: gesture, // 初始时将真实手势设为识别结果
-                            bodyGesture: message["bodyGesture"] as? String ?? "无",
-                            armGesture: message["armGesture"] as? String ?? "无",
-                            fingerGesture: message["fingerGesture"] as? String ?? "无"
+                            bodyGesture: sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无",
+                            armGesture: sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无",
+                            fingerGesture: sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
                         )
                         sensorManager.gestureResults.append(result)
+                        
+                        // 通过BLE发送更新的手势结果到手表
+                        let bodyGesture = sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无"
+                        let armGesture = sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无"
+                        let fingerGesture = sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
+                        
+                        let updatedMessage: [String: Any] = [
+                            "type": "update_gesture_result",
+                            "id": id,
+                            "body_gesture": bodyGesture,
+                            "arm_gesture": armGesture,
+                            "finger_gesture": fingerGesture
+                        ]
+                        print("通过BLE发送动作更新到手表 - ID: \(id), 身体: \(bodyGesture), 手臂: \(armGesture), 手指: \(fingerGesture)")
+                        bleService.sendJSONData(updatedMessage)
                     }
                 }
             default:

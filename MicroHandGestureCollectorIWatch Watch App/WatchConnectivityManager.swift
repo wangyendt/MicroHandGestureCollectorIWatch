@@ -21,11 +21,11 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     
     private var currentFolderURL: URL?
     
-    // 添加一个字典来存储更新的真实手势
-    private var updatedTrueGestures: [String: String] = [:]
-    private var updatedBodyGestures: [String: String] = [:]
-    private var updatedArmGestures: [String: String] = [:]
-    private var updatedFingerGestures: [String: String] = [:]
+    // 将这些属性改为公开，以便ContentView可以访问
+    public var updatedTrueGestures: [String: String] = [:]
+    public var updatedBodyGestures: [String: String] = [:]
+    public var updatedArmGestures: [String: String] = [:]
+    public var updatedFingerGestures: [String: String] = [:]
     
     // 添加 MotionManager 引用
     private var motionManager: MotionManager?

@@ -102,6 +102,22 @@ class BlePeripheralService: NSObject, ObservableObject {
         print("发送计数器值：\(currentValue) 到 \(connectedCentrals.count) 个设备")
         peripheralManager.updateValue(value!, for: notifyCharacteristic, onSubscribedCentrals: Array(connectedCentrals))
     }
+    
+    // 新增：发送JSON数据到已连接的中心设备
+    func sendJSONData(_ data: [String: Any]) {
+        guard !connectedCentrals.isEmpty else {
+            print("没有已连接的设备，跳过发送JSON数据")
+            return
+        }
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: data)
+            print("通过BLE发送JSON数据：\(data)")
+            peripheralManager.updateValue(jsonData, for: notifyCharacteristic, onSubscribedCentrals: Array(connectedCentrals))
+        } catch {
+            logger.error("JSON序列化失败: \(error.localizedDescription)")
+        }
+    }
 }
 
 extension BlePeripheralService: CBPeripheralManagerDelegate {

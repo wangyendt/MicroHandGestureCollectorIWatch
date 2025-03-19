@@ -188,12 +188,30 @@ extension BleCentralService: CBPeripheralDelegate {
             return
         }
         
-        if characteristic.uuid == notifyCharacteristicUUID,
-           let data = characteristic.value,
-           let valueString = String(data: data, encoding: .utf8),
-           let value = Int(valueString) {
-            DispatchQueue.main.async {
-                self.currentValue = value
+        if characteristic.uuid == notifyCharacteristicUUID, let data = characteristic.value {
+            // 尝试解析为普通数字（计数器值）
+            if let valueString = String(data: data, encoding: .utf8), let value = Int(valueString) {
+                DispatchQueue.main.async {
+                    self.currentValue = value
+                }
+            } 
+            // 尝试解析为JSON数据
+            else if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                logger.info("收到JSON格式数据")
+                
+                // 发送通知，以便应用其他部分可以处理这些消息
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(
+                        name: .didReceiveBleJsonData,
+                        object: nil,
+                        userInfo: jsonObject
+                    )
+                    
+                    // 如果是手势结果更新，打印日志
+                    if let type = jsonObject["type"] as? String {
+                        self.logger.info("收到BLE消息类型: \(type)")
+                    }
+                }
             }
         }
     }
@@ -206,4 +224,9 @@ extension BleCentralService: CBPeripheralDelegate {
             logger.info("写入数据成功")
         }
     }
+}
+
+// 添加通知名称
+extension Notification.Name {
+    static let didReceiveBleJsonData = Notification.Name("didReceiveBleJsonData")
 } 

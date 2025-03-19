@@ -2,6 +2,7 @@ import Foundation
 import Network
 import WatchConnectivity
 import QuartzCore
+import CoreBluetooth
 
 // 添加手势操作日志记录器
 class GestureActionLogger {
@@ -340,19 +341,16 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     print("创建手势结果 - 身体: \(result.bodyGesture), 手臂: \(result.armGesture), 手指: \(result.fingerGesture)")
                     
                     // 发送更新的手势结果到手表
-                    if WCSession.default.isReachable {
-                        let updatedMessage: [String: Any] = [
-                            "type": "update_gesture_result",
-                            "id": id,
-                            "body_gesture": bodyGesture,
-                            "arm_gesture": armGesture,
-                            "finger_gesture": fingerGesture
-                        ]
-                        print("发送动作更新到手表 - ID: \(id), 身体: \(bodyGesture), 手臂: \(armGesture), 手指: \(fingerGesture)")
-                        WCSession.default.sendMessage(updatedMessage, replyHandler: nil) { error in
-                            print("发送动作更新失败: \(error.localizedDescription)")
-                        }
-                    }
+                    let updatedMessage: [String: Any] = [
+                        "type": "update_gesture_result",
+                        "id": id,
+                        "body_gesture": bodyGesture,
+                        "arm_gesture": armGesture,
+                        "finger_gesture": fingerGesture
+                    ]
+                    print("通过BLE发送动作更新到手表 - ID: \(id), 身体: \(bodyGesture), 手臂: \(armGesture), 手指: \(fingerGesture)")
+                    BlePeripheralService.shared.sendJSONData(updatedMessage)
+                    
                     // 记录当前的动作状态（合并为一行）
                     self.actionLogger.logGestureState(id: id, timestamp: timestamp, body: bodyGesture, arm: armGesture, finger: fingerGesture)
                     
@@ -421,15 +419,12 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
         
         // 发送删除消息到 Watch
-        if WCSession.default.isReachable {
-            let message = [
-                "type": "delete_result",
-                "id": result.id
-            ]
-            WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                print("发送删除消息失败: \(error.localizedDescription)")
-            }
-        }
+        let message = [
+            "type": "delete_result",
+            "id": result.id
+        ]
+        print("通过BLE发送删除消息 - ID: \(result.id)")
+        BlePeripheralService.shared.sendJSONData(message)
     }
     
     func session(_ session: WCSession, didReceive file: WCSessionFile) {

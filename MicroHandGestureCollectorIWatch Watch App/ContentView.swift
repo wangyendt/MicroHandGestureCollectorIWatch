@@ -722,6 +722,14 @@ struct ContentView: View {
                 handleMessage(message)
             }
         }
+        // 添加对BLE JSON数据的处理
+        .onReceive(NotificationCenter.default.publisher(for: .didReceiveBleJsonData)) { notification in
+            if let message = notification.userInfo as? [String: Any] {
+                print("通过BLE收到JSON数据：\(message)")
+                // 使用相同的处理方法处理BLE消息
+                handleMessage(message)
+            }
+        }
     }
     
     private func deleteAllData() {
@@ -736,6 +744,119 @@ struct ContentView: View {
             }
         } catch {
             print("Error deleting all files: \(error)")
+        }
+    }
+    
+    private func deleteResultFromFile(id: String) {
+        guard let folderURL = motionManager.currentFolderURL else {
+            print("❌ 没有设置当前文件夹")
+            return
+        }
+
+        let resultFileURL = folderURL.appendingPathComponent("result.txt")
+        let manualDeletedFileURL = folderURL.appendingPathComponent("manual_deleted.txt")
+        
+        print("🔍 在文件中查找记录: \(resultFileURL.path)")
+        
+        guard FileManager.default.fileExists(atPath: resultFileURL.path) else {
+            print("❌ 未找到结果文件: \(resultFileURL.path)")
+            return
+        }
+        
+        // 首先检查是否已经在manual_deleted.txt中
+        if FileManager.default.fileExists(atPath: manualDeletedFileURL.path) {
+            do {
+                let deletedContent = try String(contentsOf: manualDeletedFileURL, encoding: .utf8)
+                let deletedLines = deletedContent.components(separatedBy: .newlines)
+                for line in deletedLines {
+                    let components = line.components(separatedBy: ",")
+                    if components.count > 0 && components[0] == id {
+                        print("⚠️ 记录已标记为删除: \(id)")
+                        return
+                    }
+                }
+            } catch {
+                print("❌ 检查manual_deleted.txt时出错: \(error)")
+            }
+        }
+        
+        do {
+            print("📝 处理结果文件...")
+            print("🗑 查找ID: \(id)")
+            
+            // 读取文件内容
+            let content = try String(contentsOf: resultFileURL, encoding: .utf8)
+            let lines = content.components(separatedBy: .newlines)
+            print("📊 文件总行数: \(lines.count)")
+            
+            // 查找要删除的记录
+            for (index, line) in lines.enumerated() {
+                if index == 0 || line.isEmpty { continue }
+                
+                let components = line.components(separatedBy: ",")
+                if components.count >= 6 && components[5] == id {
+                    // 找到匹配的记录，保存到manual_deleted.txt
+                    if let timestamp = UInt64(components[0]),
+                       let relativeTime = Double(components[1]),
+                       let confidence = Double(components[3]) {
+                        saveManualDeletedRecord(
+                            id: id,
+                            timestamp: timestamp,
+                            relativeTime: relativeTime,
+                            gesture: components[2],
+                            confidence: confidence
+                        )
+                        print("✅ 找到并处理要删除的记录")
+                        return
+                    }
+                }
+            }
+            print("❌ 未找到匹配的记录，ID: \(id)")
+        } catch {
+            print("❌ 处理结果文件时出错: \(error)")
+        }
+    }
+    
+    private func saveManualDeletedRecord(id: String, timestamp: UInt64, relativeTime: Double, gesture: String, confidence: Double) {
+        guard let folderURL = motionManager.currentFolderURL else {
+            print("❌ 没有设置当前文件夹")
+            return
+        }
+        
+        let manualDeletedFileURL = folderURL.appendingPathComponent("manual_deleted.txt")
+        print("📝 保存手动删除的记录到: \(manualDeletedFileURL.path)")
+        
+        // 如果文件不存在，创建文件并写入表头
+        if !FileManager.default.fileExists(atPath: manualDeletedFileURL.path) {
+            let header = "id,timestamp_ns,relative_timestamp_s,gesture,confidence\n"
+            do {
+                try header.write(to: manualDeletedFileURL, atomically: true, encoding: .utf8)
+                print("创建新的manual_deleted.txt文件")
+            } catch {
+                print("创建manual_deleted.txt时出错: \(error)")
+                return
+            }
+        }
+        
+        // 构造记录字符串
+        let recordString = String(format: "%@,%llu,%.3f,%@,%.3f\n",
+                                id,
+                                timestamp,
+                                relativeTime,
+                                gesture,
+                                confidence)
+        
+        // 追加记录到文件
+        if let data = recordString.data(using: .utf8) {
+            do {
+                let fileHandle = try FileHandle(forWritingTo: manualDeletedFileURL)
+                fileHandle.seekToEndOfFile()
+                fileHandle.write(data)
+                fileHandle.closeFile()
+                print("✅ 成功保存手动删除的记录")
+            } catch {
+                print("❌ 保存手动删除的记录时出错: \(error)")
+            }
         }
     }
 
@@ -844,6 +965,51 @@ struct ContentView: View {
                         UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
                         FeedbackManager.enableVoiceFeedback = enableVoiceFeedback
                     }
+                }
+            case "update_true_gesture":
+                print("收到真实手势更新")
+                if let id = message["id"] as? String,
+                   let trueGesture = message["true_gesture"] as? String {
+                    print("收到真实手势更新，ID: \(id), 真实手势: \(trueGesture)")
+                    connectivityManager.updatedTrueGestures[id] = trueGesture
+                }
+            case "update_body_gesture":
+                print("收到身体动作更新")
+                if let id = message["id"] as? String,
+                   let bodyGesture = message["body_gesture"] as? String {
+                    print("收到身体动作更新，ID: \(id), 身体动作: \(bodyGesture)")
+                    connectivityManager.updatedBodyGestures[id] = bodyGesture
+                }
+            case "update_arm_gesture":
+                print("收到手臂动作更新")
+                if let id = message["id"] as? String,
+                   let armGesture = message["arm_gesture"] as? String {
+                    print("收到手臂动作更新，ID: \(id), 手臂动作: \(armGesture)")
+                    connectivityManager.updatedArmGestures[id] = armGesture
+                }
+            case "update_finger_gesture":
+                print("收到手指动作更新")
+                if let id = message["id"] as? String,
+                   let fingerGesture = message["finger_gesture"] as? String {
+                    print("收到手指动作更新，ID: \(id), 手指动作: \(fingerGesture)")
+                    connectivityManager.updatedFingerGestures[id] = fingerGesture
+                }
+            case "delete_result":
+                print("收到删除请求")
+                if let id = message["id"] as? String {
+                    deleteResultFromFile(id: id)
+                }
+            case "update_gesture_result":
+                if let id = message["id"] as? String,
+                   let bodyGesture = message["body_gesture"] as? String,
+                   let armGesture = message["arm_gesture"] as? String,
+                   let fingerGesture = message["finger_gesture"] as? String {
+                    print("收到动作更新 - ID: \(id)")
+                    print("动作信息 - 身体: \(bodyGesture), 手臂: \(armGesture), 手指: \(fingerGesture)")
+                    connectivityManager.updatedBodyGestures[id] = bodyGesture
+                    connectivityManager.updatedArmGestures[id] = armGesture
+                    connectivityManager.updatedFingerGestures[id] = fingerGesture
+                    print("已更新动作字典")
                 }
             default:
                 break

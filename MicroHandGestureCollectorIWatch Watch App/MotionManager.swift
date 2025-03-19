@@ -55,6 +55,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     private var lastTapTime: Date = Date()
     private var hasShownReminder: Bool = false
     
+    // 添加当前文件夹URL
+    public var currentFolderURL: URL?
+    
     private let modelMap: [String: (deviceType: String, size: String, variant: String, chipset: String, modelNumber: String)] = [
         
         // https://theapplewiki.com/wiki/List_of_Apple_Watches 
@@ -304,6 +307,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         // 创建文件夹
         do {
             try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+            
+            // 设置当前文件夹URL
+            self.currentFolderURL = folderURL
             
             // 保存设备信息
             saveDeviceInfo(
@@ -576,6 +582,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         selectedPeakFileHandle = nil
         quaternionFileHandle?.closeFile()
         quaternionFileHandle = nil
+        
+        // 清除当前文件夹URL
+        currentFolderURL = nil
         
         // 关闭手势数据文件
         signalProcessor.closeFiles()
