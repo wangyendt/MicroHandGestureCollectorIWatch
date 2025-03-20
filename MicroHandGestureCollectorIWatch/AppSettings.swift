@@ -38,6 +38,9 @@ class AppSettings: ObservableObject {
     @UserDefaultsBacked(key: "aiTemperature", defaultValue: 0.3)
     var aiTemperature: Double
     
+    @UserDefaultsBacked(key: "enableVideoRecording", defaultValue: true)
+    var enableVideoRecording: Bool
+    
     @Published var gestureMapping: [String: Set<String>] {
         didSet {
             if let data = try? JSONEncoder().encode(gestureMapping) {

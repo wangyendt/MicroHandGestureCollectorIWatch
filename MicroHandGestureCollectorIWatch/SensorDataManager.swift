@@ -431,6 +431,7 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let watchDataPath = documentsPath.appendingPathComponent("WatchData", isDirectory: true)
         let logsPath = documentsPath.appendingPathComponent("Logs", isDirectory: true)
+        let videosPath = documentsPath.appendingPathComponent("Videos", isDirectory: true)
         
         do {
             // 创建 WatchData 文件夹（如果不存在）
@@ -477,6 +478,23 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 }
             } else {
                 print("未找到对应的日志文件：\(logFileName)")
+            }
+            
+            // 检查并复制对应的视频文件
+            let videoFileName = "\(folderName).mp4"
+            let videoSourceURL = videosPath.appendingPathComponent(videoFileName)
+            let videoDestURL = folderPath.appendingPathComponent("record.mp4")
+            
+            if FileManager.default.fileExists(atPath: videoSourceURL.path) {
+                print("找到对应的视频文件：\(videoFileName)")
+                if !FileManager.default.fileExists(atPath: videoDestURL.path) {
+                    try FileManager.default.copyItem(at: videoSourceURL, to: videoDestURL)
+                    print("成功复制视频文件到数据文件夹")
+                } else {
+                    print("目标视频文件已存在")
+                }
+            } else {
+                print("未找到对应的视频文件：\(videoFileName)")
             }
             
             DispatchQueue.main.async {

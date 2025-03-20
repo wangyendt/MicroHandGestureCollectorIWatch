@@ -560,6 +560,7 @@ struct DataManagementView: View {
     private func syncSelectedFolders() {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let logsPath = documentsPath.appendingPathComponent("Logs", isDirectory: true)
+        let videosPath = documentsPath.appendingPathComponent("Videos", isDirectory: true)
         var successCount = 0
         var failedFolders: [String] = []
         
@@ -567,10 +568,13 @@ struct DataManagementView: View {
             if let file = dataManager.dataFiles.first(where: { $0.id == fileId }) {
                 let folderName = file.name
                 let logFileName = "\(folderName).log"
+                let videoFileName = "\(folderName).mp4"
                 let logFileURL = logsPath.appendingPathComponent(logFileName)
+                let videoFileURL = videosPath.appendingPathComponent(videoFileName)
                 
                 let dataFolderURL = file.url
                 let actionLogURL = dataFolderURL.appendingPathComponent("actions.log")
+                let recordVideoURL = dataFolderURL.appendingPathComponent("record.mp4")
                 let resultFileURL = dataFolderURL.appendingPathComponent("result.txt")
                 let manualResultFileURL = dataFolderURL.appendingPathComponent("manual_result.txt")
                 
@@ -590,6 +594,17 @@ struct DataManagementView: View {
                         print("复制日志文件失败：\(error)")
                         failedFolders.append("\(folderName): 复制日志文件失败")
                         continue
+                    }
+                }
+                
+                // 如果数据文件夹中没有record.mp4，但Videos文件夹中有对应的视频文件，则复制过来
+                if !FileManager.default.fileExists(atPath: recordVideoURL.path) && FileManager.default.fileExists(atPath: videoFileURL.path) {
+                    do {
+                        try FileManager.default.copyItem(at: videoFileURL, to: recordVideoURL)
+                        print("成功复制视频文件到数据文件夹：\(folderName)")
+                    } catch {
+                        print("复制视频文件失败：\(error)")
+                        failedFolders.append("\(folderName): 复制视频文件失败")
                     }
                 }
                 

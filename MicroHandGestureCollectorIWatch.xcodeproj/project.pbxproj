@@ -729,6 +729,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MicroHandGestureCollectorIWatch/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_NSCameraUsageDescription = "需要访问相机以便在采集手势数据时录制视频";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "需要访问麦克风以便在采集手势数据时录制音频";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -762,6 +764,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MicroHandGestureCollectorIWatch/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_NSCameraUsageDescription = "需要访问相机以便在采集手势数据时录制视频";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "需要访问麦克风以便在采集手势数据时录制音频";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -5,6 +5,11 @@ struct PhoneSettingsView: View {
     @ObservedObject var feedbackManager = FeedbackManager.shared
     @ObservedObject var settings = AppSettings.shared
     
+    // 清除缓存相关状态
+    @State private var showingCleanCacheAlert = false
+    @State private var cleanCacheResult = ""
+    @State private var showingCleanResultAlert = false
+    
     // AI API设置
     @AppStorage("aiApiKey") private var aiApiKey = ""
     @AppStorage("aiBaseURL") private var aiBaseURL = "https://api.deepseek.com/v1"
@@ -26,6 +31,32 @@ struct PhoneSettingsView: View {
                     Toggle(isOn: $feedbackManager.isVoiceEnabled) {
                         Label("语音播报", systemImage: "speaker.wave.2")
                     }
+                }
+                
+                Section(header: Text("视频录制")) {
+                    Toggle(isOn: Binding(
+                        get: { self.settings.enableVideoRecording },
+                        set: { self.settings.enableVideoRecording = $0 }
+                    )) {
+                        Label("录制视频", systemImage: "video")
+                    }
+                    
+                    Text("每次采集时将同步录制视频")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Section(header: Text("缓存管理")) {
+                    Button(action: {
+                        showingCleanCacheAlert = true
+                    }) {
+                        Label("清除缓存文件", systemImage: "trash")
+                            .foregroundColor(.red)
+                    }
+                    
+                    Text("将删除Videos和Logs目录下的所有文件，但不会影响已同步的数据")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 
                 Section(header: Text("阿里云OSS设置")) {
@@ -109,5 +140,79 @@ struct PhoneSettingsView: View {
                 }
             }
         }
+        .alert("清除缓存", isPresented: $showingCleanCacheAlert) {
+            Button("取消", role: .cancel) { }
+            Button("确认") {
+                cleanCache()
+            }
+        } message: {
+            Text("确定要清除缓存吗？")
+        }
+        .alert("缓存清除结果", isPresented: $showingCleanResultAlert) {
+            Button("关闭") { }
+        } message: {
+            Text(cleanCacheResult)
+        }
+    }
+    
+    private func cleanCache() {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            cleanCacheResult = "无法获取文档目录"
+            showingCleanResultAlert = true
+            return
+        }
+        
+        let videosPath = documentsPath.appendingPathComponent("Videos")
+        let logsPath = documentsPath.appendingPathComponent("Logs")
+        let fileManager = FileManager.default
+        var deletedFileCount = 0
+        var failedFiles: [String] = []
+        
+        // 清除视频文件
+        if fileManager.fileExists(atPath: videosPath.path) {
+            do {
+                let fileURLs = try fileManager.contentsOfDirectory(at: videosPath, includingPropertiesForKeys: nil)
+                for fileURL in fileURLs {
+                    do {
+                        try fileManager.removeItem(at: fileURL)
+                        deletedFileCount += 1
+                    } catch {
+                        print("删除视频文件失败: \(fileURL.lastPathComponent) - \(error.localizedDescription)")
+                        failedFiles.append("视频：\(fileURL.lastPathComponent)")
+                    }
+                }
+            } catch {
+                print("读取视频目录失败: \(error.localizedDescription)")
+                failedFiles.append("无法读取视频目录")
+            }
+        }
+        
+        // 清除日志文件
+        if fileManager.fileExists(atPath: logsPath.path) {
+            do {
+                let fileURLs = try fileManager.contentsOfDirectory(at: logsPath, includingPropertiesForKeys: nil)
+                for fileURL in fileURLs {
+                    do {
+                        try fileManager.removeItem(at: fileURL)
+                        deletedFileCount += 1
+                    } catch {
+                        print("删除日志文件失败: \(fileURL.lastPathComponent) - \(error.localizedDescription)")
+                        failedFiles.append("日志：\(fileURL.lastPathComponent)")
+                    }
+                }
+            } catch {
+                print("读取日志目录失败: \(error.localizedDescription)")
+                failedFiles.append("无法读取日志目录")
+            }
+        }
+        
+        // 构建结果消息
+        if failedFiles.isEmpty {
+            cleanCacheResult = "已成功清除\(deletedFileCount)个缓存文件"
+        } else {
+            cleanCacheResult = "已清除\(deletedFileCount)个文件，但\(failedFiles.count)个文件删除失败"
+        }
+        
+        showingCleanResultAlert = true
     }
 } 

@@ -22,6 +22,7 @@ struct ContentView: View {
     @StateObject private var sensorManager = SensorDataManager.shared
     @StateObject private var feedbackManager = FeedbackManager.shared
     @StateObject private var bleService = BlePeripheralService.shared  // 添加蓝牙服务状态观察
+    @StateObject private var videoRecordingService = VideoRecordingService.shared // 添加视频录制服务
     @State private var accDataX: [(Double, Double)] = [] // (seconds, value)
     @State private var accDataY: [(Double, Double)] = []
     @State private var accDataZ: [(Double, Double)] = []
@@ -326,16 +327,7 @@ struct ContentView: View {
                                         // 显示确认弹窗
                                         showingStopCollectionAlert = true
                                     } else {
-                                        // 发送开始采集消息到 Watch
-                                        if WCSession.default.isReachable {
-                                            WCSession.default.sendMessage([
-                                                "type": "start_collection",
-                                                "trigger_collection": true
-                                            ], replyHandler: nil) { error in
-                                                print("发送开始采集消息失败: \(error.localizedDescription)")
-                                            }
-                                        }
-                                        isCollecting = true
+                                        startCollection()
                                     }
                                 }) {
                                     HStack {
@@ -587,6 +579,29 @@ struct ContentView: View {
                         .edgesIgnoringSafeArea(.all)
                         .transition(.opacity)
                 }
+                
+                // 录制状态指示
+                if videoRecordingService.isRecording {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 8, height: 8)
+                                Text(formatTime(videoRecordingService.recordingTime))
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                            }
+                            .padding(6)
+                            .background(Color.black.opacity(0.7))
+                            .cornerRadius(12)
+                            .padding(.trailing, 8)
+                            .padding(.top, 4)
+                        }
+                        Spacer()
+                    }
+                }
             }
             .navigationTitle("传感器数据监控")
         }
@@ -617,7 +632,7 @@ struct ContentView: View {
                message["trigger_collection"] as? Bool == true {
                 print("开始采集")
                 DispatchQueue.main.async {
-                    isCollecting = true
+                    startCollection()
                 }
             }
         }
@@ -626,9 +641,7 @@ struct ContentView: View {
                message["trigger_collection"] as? Bool == true {
                 print("停止采集")
                 DispatchQueue.main.async {
-                    isCollecting = false
-                    sensorManager.resetState()
-                    resetChartData() // 重置图表数据
+                    stopCollection()
                 }
             }
         }
@@ -689,17 +702,7 @@ struct ContentView: View {
         .alert("确认停止采集", isPresented: $showingStopCollectionAlert) {
             Button("取消", role: .cancel) { }
             Button("停止", role: .destructive) {
-                // 发送停止采集消息到 Watch
-                if WCSession.default.isReachable {
-                    WCSession.default.sendMessage([
-                        "type": "stop_collection",
-                        "trigger_collection": true
-                    ], replyHandler: nil) { error in
-                        print("发送停止采集消息失败: \(error.localizedDescription)")
-                    }
-                }
-                isCollecting = false
-                sensorManager.resetState()
+                stopCollection()
             }
         } message: {
             Text("确定要停止当前的数据采集吗？")
@@ -837,6 +840,67 @@ struct ContentView: View {
         let positivePrecision = predictedPositiveCount > 0 ? Double(truePositiveCount) / Double(predictedPositiveCount) : 0.0
         
         return (gestureCounts, gestureAccuracy, overallAccuracy, positiveRecall, positivePrecision)
+    }
+    
+    // 开始采集时的处理
+    private func startCollection() {
+        // 先更新UI状态，确保界面响应
+        isCollecting = true
+        
+        // 发送开始采集消息到 Watch
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage([
+                "type": "start_collection",
+                "trigger_collection": true
+            ], replyHandler: nil) { error in
+                print("发送开始采集消息失败: \(error.localizedDescription)")
+            }
+        }
+        
+        // 如果启用了视频录制，则在后台线程开始录制
+        if AppSettings.shared.enableVideoRecording {
+            // 直接使用SensorDataManager中的文件夹名
+            if let folderName = sensorManager.currentFolderName {
+                // 在主线程更新完UI后，异步调用视频录制
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    // 开始视频录制
+                    self.videoRecordingService.startRecording(folderName: folderName)
+                }
+            }
+        }
+    }
+    
+    // 停止采集时的处理
+    private func stopCollection() {
+        // 先更新UI状态
+        isCollecting = false
+        
+        // 发送停止采集消息到 Watch
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage([
+                "type": "stop_collection",
+                "trigger_collection": true
+            ], replyHandler: nil) { error in
+                print("发送停止采集消息失败: \(error.localizedDescription)")
+            }
+        }
+        
+        // 如果正在录制视频，则停止录制（异步执行）
+        if videoRecordingService.isRecording {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.videoRecordingService.stopRecording()
+            }
+        }
+        
+        sensorManager.resetState()
+        resetChartData()
+    }
+    
+    // 格式化时间为 MM:SS 格式
+    private func formatTime(_ timeInterval: TimeInterval) -> String {
+        let minutes = Int(timeInterval) / 60
+        let seconds = Int(timeInterval) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
