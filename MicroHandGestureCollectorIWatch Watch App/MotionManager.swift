@@ -198,6 +198,16 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
     }()
     
+    // 添加时间戳差值属性
+    private var timestampOffset: TimeInterval?
+    
+    // 添加设置时间戳差值的方法
+    func setTimestampOffset(_ phoneStartTime: TimeInterval) {
+        let watchStartTime = collectionStartTime?.timeIntervalSince1970 ?? Date().timeIntervalSince1970
+        timestampOffset = phoneStartTime - watchStartTime
+        print("设置时间戳差值：\(String(describing: timestampOffset))")
+    }
+    
     public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
         motionManager = CMMotionManager()
@@ -911,6 +921,11 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         yamlString += "  note: \(collectionInfo["note"] ?? "")\n"
         yamlString += "  supervisor_name: \(collectionInfo["supervisor_name"] ?? "")\n"  // 添加监督者姓名
         yamlString += "  version: \(version)\n"
+        
+        // 添加时间戳差值
+        if let offset = timestampOffset {
+            yamlString += "  timestamp_offset: \(String(format: "%.3f", offset))\n"
+        }
         
         // 获取模型元数据并添加到YAML
         let modelMetadata = signalProcessor.gestureRecognizer.getModelMetadata()

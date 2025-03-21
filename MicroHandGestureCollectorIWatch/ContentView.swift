@@ -19,50 +19,46 @@ extension Array {
 }
 
 struct ContentView: View {
-    // MARK: - 服务管理
-    @StateObject private var sensorManager: SensorDataManager = .shared
-    @StateObject private var feedbackManager: FeedbackManager = .shared
-    @StateObject private var bleService: BlePeripheralService = .shared
-    @StateObject private var videoRecordingService: VideoRecordingService = .shared
-    
-    // MARK: - 传感器数据
-    @State private var accDataX: [(Double, Double)] = []
+    @StateObject private var sensorManager = SensorDataManager.shared
+    @StateObject private var feedbackManager = FeedbackManager.shared
+    @StateObject private var bleService = BlePeripheralService.shared  // 添加蓝牙服务状态观察
+    @StateObject private var videoRecordingService = VideoRecordingService.shared // 添加视频录制服务
+    @State private var accDataX: [(Double, Double)] = [] // (seconds, value)
     @State private var accDataY: [(Double, Double)] = []
     @State private var accDataZ: [(Double, Double)] = []
     @State private var gyroDataX: [(Double, Double)] = []
     @State private var gyroDataY: [(Double, Double)] = []
     @State private var gyroDataZ: [(Double, Double)] = []
-    
-    // MARK: - 基础UI状态
+    private let maxDataPoints = 100
     @State private var startTime: Date? = nil
-    @State private var isEditingIP: Bool = false
+    @State private var isEditingIP = false
     @State private var tempIP: String = ""
-    @State private var idleTimer: Timer? = nil
-    @State private var isCollecting: Bool = false
     
-    // MARK: - 视图展示状态
-    @State private var showingDataManagement: Bool = false
-    @State private var showingPhoneSettings: Bool = false
-    @State private var showingWatchSettings: Bool = false
-    @State private var showingCloudDataManagement: Bool = false
-    @State private var showingChatView: Bool = false
-    @State private var showingStopCollectionAlert: Bool = false
-    @State private var showingVisualFeedback: Bool = false
-    @State private var showingTetrisGame: Bool = false
+    // 添加防止锁屏的属性
+    @State private var idleTimer: Timer?
+    @State private var isCollecting = false
+    @State private var showingDataManagement = false
+    @State private var showingPhoneSettings = false
+    @State private var showingWatchSettings = false
+    @State private var showingCloudDataManagement = false
+    @State private var showingChatView = false
+    @State private var showingStopCollectionAlert = false
     
-    // MARK: - 手势反馈
-    @State private var lastGestureResult: (gesture: String, confidence: Double)? = nil
+    // 添加视觉反馈状态
+    @State private var showingVisualFeedback = false
+    @State private var lastGestureResult: (gesture: String, confidence: Double)?
     
-    // MARK: - 配置
-    @AppStorage("whoseModel") private var whoseModel: String = "haili"
+    // 添加一个属性来跟踪当前使用的模型
+    @AppStorage("whoseModel") private var whoseModel = "haili"
     
-    // MARK: - 防抖动
+    // 添加防抖动属性
     @State private var lastDeleteTime: Date = Date(timeIntervalSince1970: 0)
-    private let deleteDebounceInterval: TimeInterval = 0.3
+    private let deleteDebounceInterval: TimeInterval = 0.3  // 1秒内不重复删除
     
-    // MARK: - 常量
-    private let maxDataPoints: Int = 100
+    // 添加版本号
     private let version: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+    
+    @State private var showingTetrisGame = false
     
     var body: some View {
         NavigationView {
@@ -853,11 +849,24 @@ struct ContentView: View {
         
         // 发送开始采集消息到 Watch
         if WCSession.default.isReachable {
+            // 获取当前时间戳
+            let timestamp = Date().timeIntervalSince1970
+            
+            // 发送开始采集消息和时间戳
             WCSession.default.sendMessage([
                 "type": "start_collection",
-                "trigger_collection": true
+                "trigger_collection": true,
+                "timestamp": timestamp
             ], replyHandler: nil) { error in
                 print("发送开始采集消息失败: \(error.localizedDescription)")
+            }
+            
+            // 单独发送时间戳消息
+            WCSession.default.sendMessage([
+                "type": "phone_start_timestamp",
+                "timestamp": timestamp
+            ], replyHandler: nil) { error in
+                print("发送时间戳消息失败: \(error.localizedDescription)")
             }
         }
         

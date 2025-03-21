@@ -532,6 +532,8 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                 handleDeleteResult(message)
             case "update_gesture_result":
                 handleUpdateGestureResult(message)
+            case "phone_start_timestamp":
+                handlePhoneStartTimestamp(message)
             default:
                 print("未知消息类型: \(type)")
             }
@@ -687,6 +689,14 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             updatedArmGestures[id] = armGesture
             updatedFingerGestures[id] = fingerGesture
             print("已更新动作字典")
+        }
+    }
+    
+    // 添加处理时间戳消息的方法
+    private func handlePhoneStartTimestamp(_ message: [String: Any]) {
+        if let timestamp = message["timestamp"] as? TimeInterval {
+            print("收到手机端开始时间戳：\(timestamp)")
+            motionManager?.setTimestampOffset(timestamp)
         }
     }
 } 
