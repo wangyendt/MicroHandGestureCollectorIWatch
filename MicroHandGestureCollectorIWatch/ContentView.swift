@@ -849,24 +849,11 @@ struct ContentView: View {
         
         // 发送开始采集消息到 Watch
         if WCSession.default.isReachable {
-            // 获取当前时间戳
-            let timestamp = Date().timeIntervalSince1970
-            
-            // 发送开始采集消息和时间戳
             WCSession.default.sendMessage([
                 "type": "start_collection",
-                "trigger_collection": true,
-                "timestamp": timestamp
+                "trigger_collection": true
             ], replyHandler: nil) { error in
                 print("发送开始采集消息失败: \(error.localizedDescription)")
-            }
-            
-            // 单独发送时间戳消息
-            WCSession.default.sendMessage([
-                "type": "phone_start_timestamp",
-                "timestamp": timestamp
-            ], replyHandler: nil) { error in
-                print("发送时间戳消息失败: \(error.localizedDescription)")
             }
         }
         

@@ -10,6 +10,7 @@ class VideoRecordingService: NSObject, ObservableObject {
     private var movieFileOutput: AVCaptureMovieFileOutput?
     private var currentFolderName: String?
     private var videoOutputURL: URL?
+    private let bleService = BlePeripheralService.shared
     
     @Published var isRecording = false
     @Published var recordingTime: TimeInterval = 0
@@ -183,6 +184,15 @@ class VideoRecordingService: NSObject, ObservableObject {
 extension VideoRecordingService: AVCaptureFileOutputRecordingDelegate {
     func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, from connections: [AVCaptureConnection]) {
         print("开始录制到文件: \(fileURL.path)")
+        
+        // 获取视频开始录制的时间戳并通过BLE发送
+        let timestamp = Date().timeIntervalSince1970
+        let message: [String: Any] = [
+            "type": "phone_start_timestamp",
+            "timestamp": timestamp
+        ]
+        bleService.sendJSONData(message)
+        print("发送视频开始时间戳：\(timestamp)")
     }
     
     func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {

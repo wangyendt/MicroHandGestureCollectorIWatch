@@ -28,6 +28,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     // 添加采集开始时间属性
     private var collectionStartTime: Date?
+    private var firstImuFrameTime: Date?
+    private var timestampOffset: TimeInterval?
     
     @Published var isReady = true
     
@@ -198,16 +200,6 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
     }()
     
-    // 添加时间戳差值属性
-    private var timestampOffset: TimeInterval?
-    
-    // 添加设置时间戳差值的方法
-    func setTimestampOffset(_ phoneStartTime: TimeInterval) {
-        let watchStartTime = collectionStartTime?.timeIntervalSince1970 ?? Date().timeIntervalSince1970
-        timestampOffset = phoneStartTime - watchStartTime
-        print("设置时间戳差值：\(String(describing: timestampOffset))")
-    }
-    
     public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
         motionManager = CMMotionManager()
@@ -286,8 +278,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         bandType: String,
         supervisorName: String  // 添加监督者姓名参数
     ) {
-        // 记录开始时间
         collectionStartTime = Date()
+        firstImuFrameTime = nil
+        timestampOffset = nil
         
         // 重置计数器
         signalProcessor.resetCount()  // 重置计数
@@ -423,6 +416,12 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             guard let motion = motion else { return }
             
             let timestamp = UInt64(motion.timestamp * 1_000_000_000)
+            
+            // 记录第一帧 IMU 数据的时间戳
+            if self?.firstImuFrameTime == nil {
+                self?.firstImuFrameTime = Date()
+                print("记录第一帧 IMU 数据时间戳")
+            }
             
             // 检查丢帧
             if lastTimestamp != 0 {
@@ -629,17 +628,42 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                             
                             // 更新文件内容
                             var lines = content.components(separatedBy: .newlines)
-                            for (index, line) in lines.enumerated() {
+                            var updatedLines = [String]()
+                            var foundDuration = false
+                            var foundTimestampOffset = false
+                            
+                            for line in lines {
                                 if line.trimmingCharacters(in: .whitespaces).hasPrefix("duration:") {
-                                    lines[index] = "  duration: \(durationString)"
-                                    break
+                                    updatedLines.append("  duration: \(durationString)")
+                                    foundDuration = true
+                                } else if line.trimmingCharacters(in: .whitespaces).hasPrefix("timestamp_offset:") {
+                                    if let offset = self.timestampOffset {
+                                        updatedLines.append("  timestamp_offset: \(String(format: "%.3f", offset))")
+                                    }
+                                    foundTimestampOffset = true
+                                } else {
+                                    updatedLines.append(line)
+                                }
+                            }
+                            
+                            // 如果没有找到时间戳差值字段，添加它
+                            if !foundTimestampOffset, let offset = self.timestampOffset {
+                                // 在 version 字段后面添加 timestamp_offset
+                                for (index, line) in updatedLines.enumerated() {
+                                    if line.trimmingCharacters(in: .whitespaces).hasPrefix("version:") {
+                                        updatedLines.insert("  timestamp_offset: \(String(format: "%.3f", offset))", at: index + 1)
+                                        break
+                                    }
                                 }
                             }
                             
                             // 写回文件
-                            let updatedContent = lines.joined(separator: "\n")
+                            let updatedContent = updatedLines.joined(separator: "\n")
                             try updatedContent.write(to: infoURL, atomically: true, encoding: .utf8)
                             print("已更新采集时长: \(durationString)")
+                            if let offset = self.timestampOffset {
+                                print("已更新时间戳差值: \(String(format: "%.3f", offset))")
+                            }
                         }
                     }
                 } catch {
@@ -650,6 +674,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         // 重置采集开始时间
         collectionStartTime = nil
+        firstImuFrameTime = nil
+        timestampOffset = nil
         
         // 停止提醒定时器
         stopReminderTimer()
@@ -1050,6 +1076,18 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         lastTapTime = Date()
         hasShownReminder = false
         print("更新最后点击时间: \(lastTapTime)")
+    }
+    
+    // 修改设置时间戳差值的方法
+    func setTimestampOffset(_ phoneStartTime: TimeInterval) {
+        guard let firstImuTime = firstImuFrameTime else {
+            print("警告：尚未收到第一帧IMU数据，无法计算时间戳差值")
+            return
+        }
+        
+        let watchStartTime = firstImuTime.timeIntervalSince1970
+        timestampOffset = phoneStartTime - watchStartTime
+        print("设置时间戳差值：\(String(format: "%.3f", timestampOffset ?? 0))，手机时间戳：\(String(format: "%.3f", phoneStartTime))，手表时间戳：\(String(format: "%.3f", watchStartTime))")
     }
 }
 #endif
