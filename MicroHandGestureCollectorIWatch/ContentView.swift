@@ -19,46 +19,50 @@ extension Array {
 }
 
 struct ContentView: View {
-    @StateObject private var sensorManager = SensorDataManager.shared
-    @StateObject private var feedbackManager = FeedbackManager.shared
-    @StateObject private var bleService = BlePeripheralService.shared  // 添加蓝牙服务状态观察
-    @StateObject private var videoRecordingService = VideoRecordingService.shared // 添加视频录制服务
-    @State private var accDataX: [(Double, Double)] = [] // (seconds, value)
+    // MARK: - 服务管理
+    @StateObject private var sensorManager: SensorDataManager = .shared
+    @StateObject private var feedbackManager: FeedbackManager = .shared
+    @StateObject private var bleService: BlePeripheralService = .shared
+    @StateObject private var videoRecordingService: VideoRecordingService = .shared
+    
+    // MARK: - 传感器数据
+    @State private var accDataX: [(Double, Double)] = []
     @State private var accDataY: [(Double, Double)] = []
     @State private var accDataZ: [(Double, Double)] = []
     @State private var gyroDataX: [(Double, Double)] = []
     @State private var gyroDataY: [(Double, Double)] = []
     @State private var gyroDataZ: [(Double, Double)] = []
-    private let maxDataPoints = 100
+    
+    // MARK: - 基础UI状态
     @State private var startTime: Date? = nil
-    @State private var isEditingIP = false
+    @State private var isEditingIP: Bool = false
     @State private var tempIP: String = ""
+    @State private var idleTimer: Timer? = nil
+    @State private var isCollecting: Bool = false
     
-    // 添加防止锁屏的属性
-    @State private var idleTimer: Timer?
-    @State private var isCollecting = false
-    @State private var showingDataManagement = false
-    @State private var showingPhoneSettings = false
-    @State private var showingWatchSettings = false
-    @State private var showingCloudDataManagement = false
-    @State private var showingChatView = false
-    @State private var showingStopCollectionAlert = false
+    // MARK: - 视图展示状态
+    @State private var showingDataManagement: Bool = false
+    @State private var showingPhoneSettings: Bool = false
+    @State private var showingWatchSettings: Bool = false
+    @State private var showingCloudDataManagement: Bool = false
+    @State private var showingChatView: Bool = false
+    @State private var showingStopCollectionAlert: Bool = false
+    @State private var showingVisualFeedback: Bool = false
+    @State private var showingTetrisGame: Bool = false
     
-    // 添加视觉反馈状态
-    @State private var showingVisualFeedback = false
-    @State private var lastGestureResult: (gesture: String, confidence: Double)?
+    // MARK: - 手势反馈
+    @State private var lastGestureResult: (gesture: String, confidence: Double)? = nil
     
-    // 添加一个属性来跟踪当前使用的模型
-    @AppStorage("whoseModel") private var whoseModel = "haili"
+    // MARK: - 配置
+    @AppStorage("whoseModel") private var whoseModel: String = "haili"
     
-    // 添加防抖动属性
+    // MARK: - 防抖动
     @State private var lastDeleteTime: Date = Date(timeIntervalSince1970: 0)
-    private let deleteDebounceInterval: TimeInterval = 0.3  // 1秒内不重复删除
+    private let deleteDebounceInterval: TimeInterval = 0.3
     
-    // 添加版本号
+    // MARK: - 常量
+    private let maxDataPoints: Int = 100
     private let version: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
-    
-    @State private var showingTetrisGame = false
     
     var body: some View {
         NavigationView {
@@ -671,11 +675,6 @@ struct ContentView: View {
                         }
                     }
                     
-                    // 获取当前动作状态
-                    let bodyGesture = sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无"
-                    let armGesture = sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无"
-                    let fingerGesture = sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
-                    
                     // 添加到手势识别结果列表
                     let result = GestureResult(
                         id: id,
@@ -684,22 +683,17 @@ struct ContentView: View {
                         confidence: confidence,
                         peakValue: peakValue,
                         trueGesture: gesture, // 初始时将真实手势设为识别结果
-                        bodyGesture: bodyGesture,
-                        armGesture: armGesture,
-                        fingerGesture: fingerGesture
+                        bodyGesture: sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无",
+                        armGesture: sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无",
+                        fingerGesture: sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
                     )
                     sensorManager.gestureResults.append(result)
                     
-                    // 记录动作状态（使用 SensorDataManager 中的 actionLogger）
-                    sensorManager.actionLogger.logGestureState(
-                        id: id,
-                        timestamp: timestamp,
-                        body: bodyGesture,
-                        arm: armGesture,
-                        finger: fingerGesture
-                    )
-                    
                     // 使用消息处理服务发送更新
+                    let bodyGesture = sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无"
+                    let armGesture = sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无"
+                    let fingerGesture = sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
+                    
                     MessageHandlerService.shared.sendGestureResultUpdate(
                         id: id,
                         bodyGesture: bodyGesture,
