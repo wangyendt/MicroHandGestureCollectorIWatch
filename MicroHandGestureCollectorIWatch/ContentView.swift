@@ -671,6 +671,11 @@ struct ContentView: View {
                         }
                     }
                     
+                    // 获取当前动作状态
+                    let bodyGesture = sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无"
+                    let armGesture = sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无"
+                    let fingerGesture = sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
+                    
                     // 添加到手势识别结果列表
                     let result = GestureResult(
                         id: id,
@@ -679,17 +684,22 @@ struct ContentView: View {
                         confidence: confidence,
                         peakValue: peakValue,
                         trueGesture: gesture, // 初始时将真实手势设为识别结果
-                        bodyGesture: sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无",
-                        armGesture: sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无",
-                        fingerGesture: sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
+                        bodyGesture: bodyGesture,
+                        armGesture: armGesture,
+                        fingerGesture: fingerGesture
                     )
                     sensorManager.gestureResults.append(result)
                     
-                    // 使用消息处理服务发送更新
-                    let bodyGesture = sensorManager.currentBodyGesture != "无" ? sensorManager.currentBodyGesture : "无"
-                    let armGesture = sensorManager.currentArmGesture != "无" ? sensorManager.currentArmGesture : "无"
-                    let fingerGesture = sensorManager.currentFingerGesture != "无" ? sensorManager.currentFingerGesture : "无"
+                    // 记录动作状态（使用 SensorDataManager 中的 actionLogger）
+                    sensorManager.actionLogger.logGestureState(
+                        id: id,
+                        timestamp: timestamp,
+                        body: bodyGesture,
+                        arm: armGesture,
+                        finger: fingerGesture
+                    )
                     
+                    // 使用消息处理服务发送更新
                     MessageHandlerService.shared.sendGestureResultUpdate(
                         id: id,
                         bodyGesture: bodyGesture,
