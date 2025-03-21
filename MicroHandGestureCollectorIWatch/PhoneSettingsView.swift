@@ -41,6 +41,16 @@ struct PhoneSettingsView: View {
                         Label("录制视频", systemImage: "video")
                     }
                     
+                    Picker("视频分辨率", selection: Binding(
+                        get: { self.settings.videoResolution },
+                        set: { self.settings.videoResolution = $0 }
+                    )) {
+                        Text("640x480").tag("vga640x480")
+                        Text("352x288").tag("cif352x288")
+                        Text("192x144").tag("qcif192x144")
+                    }
+                    .pickerStyle(.menu)
+                    
                     Text("每次采集时将同步录制视频")
                         .font(.caption)
                         .foregroundColor(.secondary)

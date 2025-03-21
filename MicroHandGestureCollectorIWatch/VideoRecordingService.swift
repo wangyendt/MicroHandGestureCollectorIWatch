@@ -27,7 +27,7 @@ class VideoRecordingService: NSObject, ObservableObject {
     
     private func setupCaptureSession() {
         captureSession = AVCaptureSession()
-        captureSession?.sessionPreset = AVCaptureSession.Preset.medium // 设置为中等质量，减小视频体积
+        captureSession?.sessionPreset = AVCaptureSession.Preset.low // 设置为中等质量，减小视频体积
         
         guard let captureSession = captureSession else { return }
         
@@ -68,9 +68,36 @@ class VideoRecordingService: NSObject, ObservableObject {
                 return
             }
             
-            // 设置视频分辨率
-            if captureSession.canSetSessionPreset(AVCaptureSession.Preset.vga640x480) {
-                captureSession.sessionPreset = AVCaptureSession.Preset.vga640x480
+            // 设置最低分辨率和帧率
+            let resolution = AppSettings.shared.videoResolution
+            switch resolution {
+            case "vga640x480":
+                if captureSession.canSetSessionPreset(AVCaptureSession.Preset.vga640x480) {
+                    captureSession.sessionPreset = AVCaptureSession.Preset.vga640x480
+                }
+            case "cif352x288":
+                if captureSession.canSetSessionPreset(AVCaptureSession.Preset.cif352x288) {
+                    captureSession.sessionPreset = AVCaptureSession.Preset.cif352x288
+                }
+            case "qcif192x144":
+                if captureSession.canSetSessionPreset(AVCaptureSession.Preset.cif352x288) {
+                    captureSession.sessionPreset = AVCaptureSession.Preset.cif352x288
+                    // 由于没有直接的192x144预设，我们使用352x288并在输出时进行缩放
+                    if let connection = movieFileOutput?.connection(with: .video) {
+                        let compression: [String: Any] = [
+                            AVVideoWidthKey: 192,
+                            AVVideoHeightKey: 144,
+                            AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill
+                        ]
+                        movieFileOutput?.setOutputSettings([
+                            AVVideoCompressionPropertiesKey: compression
+                        ], for: connection)
+                    }
+                }
+            default:
+                if captureSession.canSetSessionPreset(AVCaptureSession.Preset.vga640x480) {
+                    captureSession.sessionPreset = AVCaptureSession.Preset.vga640x480
+                }
             }
             
             captureSession.commitConfiguration()

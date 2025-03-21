@@ -41,6 +41,9 @@ class AppSettings: ObservableObject {
     @UserDefaultsBacked(key: "enableVideoRecording", defaultValue: true)
     var enableVideoRecording: Bool
     
+    @UserDefaultsBacked(key: "videoResolution", defaultValue: "vga640x480")
+    var videoResolution: String
+    
     @Published var gestureMapping: [String: Set<String>] {
         didSet {
             if let data = try? JSONEncoder().encode(gestureMapping) {
