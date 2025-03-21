@@ -9,12 +9,18 @@ struct PhoneSettingsView: View {
     @State private var showingCleanCacheAlert = false
     @State private var cleanCacheResult = ""
     @State private var showingCleanResultAlert = false
+    @State private var selectedResolution: String
     
     // AI API设置
     @AppStorage("aiApiKey") private var aiApiKey = ""
     @AppStorage("aiBaseURL") private var aiBaseURL = "https://api.deepseek.com/v1"
     @AppStorage("aiModel") private var aiModel = "deepseek-chat"
     @AppStorage("aiMaxTokens") private var aiMaxTokens = 8192
+    
+    init() {
+        // 初始化选中的分辨率
+        _selectedResolution = State(initialValue: AppSettings.shared.videoResolution)
+    }
     
     var body: some View {
         NavigationView {
@@ -41,15 +47,15 @@ struct PhoneSettingsView: View {
                         Label("录制视频", systemImage: "video")
                     }
                     
-                    Picker("视频分辨率", selection: Binding(
-                        get: { self.settings.videoResolution },
-                        set: { self.settings.videoResolution = $0 }
-                    )) {
+                    Picker("视频分辨率", selection: $selectedResolution) {
                         Text("640x480").tag("vga640x480")
                         Text("352x288").tag("cif352x288")
-                        Text("192x144").tag("qcif192x144")
                     }
                     .pickerStyle(.menu)
+                    .onChange(of: selectedResolution) { newValue in
+                        settings.videoResolution = newValue
+                        print("视频分辨率已更改为：\(newValue)")  // 添加调试输出
+                    }
                     
                     Text("每次采集时将同步录制视频")
                         .font(.caption)

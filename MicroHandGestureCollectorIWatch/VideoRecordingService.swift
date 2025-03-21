@@ -68,45 +68,47 @@ class VideoRecordingService: NSObject, ObservableObject {
                 return
             }
             
-            // 设置最低分辨率和帧率
-            let resolution = AppSettings.shared.videoResolution
-            switch resolution {
-            case "vga640x480":
-                if captureSession.canSetSessionPreset(AVCaptureSession.Preset.vga640x480) {
-                    captureSession.sessionPreset = AVCaptureSession.Preset.vga640x480
-                }
-            case "cif352x288":
-                if captureSession.canSetSessionPreset(AVCaptureSession.Preset.cif352x288) {
-                    captureSession.sessionPreset = AVCaptureSession.Preset.cif352x288
-                }
-            case "qcif192x144":
-                if captureSession.canSetSessionPreset(AVCaptureSession.Preset.cif352x288) {
-                    captureSession.sessionPreset = AVCaptureSession.Preset.cif352x288
-                    // 由于没有直接的192x144预设，我们使用352x288并在输出时进行缩放
-                    if let connection = movieFileOutput?.connection(with: .video) {
-                        let compression: [String: Any] = [
-                            AVVideoWidthKey: 192,
-                            AVVideoHeightKey: 144,
-                            AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill
-                        ]
-                        movieFileOutput?.setOutputSettings([
-                            AVVideoCompressionPropertiesKey: compression
-                        ], for: connection)
-                    }
-                }
-            default:
-                if captureSession.canSetSessionPreset(AVCaptureSession.Preset.vga640x480) {
-                    captureSession.sessionPreset = AVCaptureSession.Preset.vga640x480
-                }
-            }
+            // 应用当前的分辨率设置
+            applyVideoSettings()
             
             captureSession.commitConfiguration()
-            
             print("摄像头配置完成")
             
         } catch {
             print("设置视频捕获会话失败: \(error)")
         }
+    }
+    
+    private func applyVideoSettings() {
+        guard let captureSession = captureSession,
+              let movieFileOutput = movieFileOutput else { return }
+        
+        captureSession.beginConfiguration()
+        
+        // 获取当前的分辨率设置
+        let resolution = AppSettings.shared.videoResolution
+        print("正在应用视频设置，分辨率：\(resolution)")
+        
+        // 设置视频质量
+        switch resolution {
+        case "vga640x480":
+            if captureSession.canSetSessionPreset(AVCaptureSession.Preset.vga640x480) {
+                captureSession.sessionPreset = AVCaptureSession.Preset.vga640x480
+                print("已设置分辨率为：640x480")
+            }
+        case "cif352x288":
+            if captureSession.canSetSessionPreset(AVCaptureSession.Preset.cif352x288) {
+                captureSession.sessionPreset = AVCaptureSession.Preset.cif352x288
+                print("已设置分辨率为：352x288")
+            }
+        default:
+            if captureSession.canSetSessionPreset(AVCaptureSession.Preset.vga640x480) {
+                captureSession.sessionPreset = AVCaptureSession.Preset.vga640x480
+                print("已设置默认分辨率：640x480")
+            }
+        }
+        
+        captureSession.commitConfiguration()
     }
     
     func startRecording(folderName: String) {
@@ -115,6 +117,9 @@ class VideoRecordingService: NSObject, ObservableObject {
               !isRecording else {
             return
         }
+        
+        // 在开始录制前重新应用视频设置
+        applyVideoSettings()
         
         currentFolderName = folderName
         
