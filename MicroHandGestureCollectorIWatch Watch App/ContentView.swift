@@ -513,7 +513,7 @@ struct ContentView: View {
                 
                 // 开始/停止按钮
                 Button(action: {
-                    guard motionManager.isReady else { return }
+                    guard motionManager.isReady && !motionManager.isTransitioning else { return }
                     isCollecting.toggle()
                     
                     if isCollecting {
@@ -562,7 +562,7 @@ struct ContentView: View {
                     }
                 }) {
                     HStack {
-                        if !motionManager.isReady {
+                        if !motionManager.isReady || motionManager.isTransitioning {
                             ProgressView()
                                 .tint(.white)
                         } else {
@@ -574,16 +574,18 @@ struct ContentView: View {
                     .padding(.vertical, 8)
                     .background(isCollecting ? Color.red : Color.blue)
                     .cornerRadius(8)
+                    .opacity(motionManager.isTransitioning ? 0.5 : 1.0)  // 添加透明度表示禁用状态
                 }
-                .disabled(!motionManager.isReady)
+                .disabled(!motionManager.isReady || motionManager.isTransitioning)
                 .padding(.top, 10)
                 
                 // 导出按钮
                 Button(action: {
+                    guard !motionManager.isTransitioning else { return }
                     motionManager.exportData()
                 }) {
                     HStack {
-                        if connectivityManager.isSending {
+                        if connectivityManager.isSending || motionManager.isTransitioning {
                             ProgressView()
                                 .tint(.white)
                         } else {
@@ -595,8 +597,9 @@ struct ContentView: View {
                     .padding(.vertical, 8)
                     .background(Color.green)
                     .cornerRadius(8)
+                    .opacity((connectivityManager.isSending || motionManager.isTransitioning) ? 0.5 : 1.0)
                 }
-                .disabled(connectivityManager.isSending)
+                .disabled(connectivityManager.isSending || motionManager.isTransitioning)
                 
                 // 状态消息
                 if !connectivityManager.lastMessage.isEmpty {
@@ -608,6 +611,7 @@ struct ContentView: View {
                 
                 // 删除全部数据按钮
                 Button(action: {
+                    guard !motionManager.isTransitioning else { return }
                     showingDeleteAllAlert = true
                 }) {
                     HStack {
@@ -618,7 +622,9 @@ struct ContentView: View {
                     .padding(.vertical, 8)
                     .background(Color.red)
                     .cornerRadius(8)
+                    .opacity(motionManager.isTransitioning ? 0.5 : 1.0)
                 }
+                .disabled(motionManager.isTransitioning)
                 .alert("确认删除", isPresented: $showingDeleteAllAlert) {
                     Button("取消", role: .cancel) { }
                     Button("删除", role: .destructive) {
@@ -630,13 +636,16 @@ struct ContentView: View {
                 
                 // 数据管理按钮
                 Button(action: {
+                    guard !motionManager.isTransitioning else { return }
                     showingDataManagement = true
                 }) {
                     HStack {
                         Text("📁 数据管理")
                             .foregroundColor(.blue)
                     }
+                    .opacity(motionManager.isTransitioning ? 0.5 : 1.0)
                 }
+                .disabled(motionManager.isTransitioning)
                 .sheet(isPresented: $showingDataManagement) {
                     NavigationView {
                         DataManagementView()

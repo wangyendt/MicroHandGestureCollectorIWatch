@@ -26,6 +26,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     private var isCollecting = false
     private var logger: OSLog
     
+    // 添加状态转换锁，防止同时触发开始和停止操作
+    @Published var isTransitioning = false
+    
     // 添加采集开始时间属性
     private var collectionStartTime: Date?
     private var firstImuFrameTime: Date?
@@ -303,6 +306,15 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         bandType: String,
         supervisorName: String  // 添加监督者姓名参数
     ) {
+        // 如果正在转换状态，直接返回，防止重复触发
+        guard !isTransitioning && !isCollecting else { return }
+        
+        // 设置状态转换锁
+        DispatchQueue.main.async {
+            self.isTransitioning = true
+            self.isReady = false // 禁用UI交互
+        }
+        
         // 先清理旧的数据缓冲区和文件句柄
         cleanUpResources()
         
@@ -327,7 +339,14 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         motionManager.gyroUpdateInterval = 1.0 / 200.0  // 200Hz
         
         // 创建文件夹和文件
-        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { 
+            // 发生错误时解锁状态
+            DispatchQueue.main.async {
+                self.isTransitioning = false
+                self.isReady = true
+            }
+            return 
+        }
         
         // 使用新的文件命名格式
         let dateFormatter = DateFormatter()
@@ -436,6 +455,11 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             
         } catch {
             print("Error creating directory or files: \(error)")
+            // 发生错误时解锁状态
+            DispatchQueue.main.async {
+                self.isTransitioning = false
+                self.isReady = true
+            }
             return
         }
         
@@ -567,9 +591,35 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         // 启动提醒定时器
         startReminderTimer()
+        
+        // 延迟解锁状态，确保UI元素更新完成
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            self.isTransitioning = false
+            self.isReady = true
+        }
     }
     
     public func stopDataCollection() {
+        // 如果正在转换状态，或者当前没有采集，直接返回
+        guard !isTransitioning && isCollecting else { return }
+        
+        // 设置状态转换锁
+        DispatchQueue.main.async {
+            self.isTransitioning = true
+            self.isReady = false  // 禁用UI交互
+        }
+        
+        // 先停止设备运动更新
+        motionManager.stopDeviceMotionUpdates()
+        
+        // 更新状态
+        isCollecting = false
+        
+        // 清理UI相关状态
+        accelerationData = nil
+        rotationData = nil
+        
         // 确保最后的缓冲数据被写入
         if !dataBuffer.isEmpty {
             let finalData = dataBuffer
@@ -598,18 +648,18 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 
                 // 清理
                 self.cleanUpResources()
+                self.finishStopProcess()
             }
         } else {
             // 即使没有缓冲数据需要写入，也进行资源清理
             cleanUpResources()
+            finishStopProcess()
         }
-        
-        motionManager.stopDeviceMotionUpdates()
-        isCollecting = false
-        
-        accelerationData = nil
-        rotationData = nil
-        
+    }
+    
+    // 添加一个方法来完成停止采集后的处理
+    private func finishStopProcess() {
+        // 发送停止信号到手机
         WatchConnectivityManager.shared.resetState()
         
         // 关闭手势数据文件
@@ -619,6 +669,21 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         signalProcessor.resetStartTime()  // 重置开始时间
         
         // 更新 info.yaml 文件中的采集时长
+        updateInfoFileWithDuration()
+        
+        // 停止提醒定时器
+        stopReminderTimer()
+        
+        // 延迟解锁状态，确保UI元素更新完成
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+            self.isTransitioning = false
+            self.isReady = true
+        }
+    }
+    
+    // 将更新info.yaml文件的代码封装为一个单独的方法
+    private func updateInfoFileWithDuration() {
         if let startTime = collectionStartTime {
             // 获取当前文件夹路径
             if let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
@@ -693,9 +758,6 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         collectionStartTime = nil
         firstImuFrameTime = nil
         timestampOffset = nil
-        
-        // 停止提醒定时器
-        stopReminderTimer()
     }
     
     public var isGyroAvailable: Bool {
