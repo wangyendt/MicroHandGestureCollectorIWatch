@@ -48,11 +48,6 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     }
     
     func sendRealtimeData(accData: CMAcceleration, gyroData: CMRotationRate, timestamp: UInt64) {
-        // 检查是否启用了实时数据发送
-        guard UserDefaults.standard.bool(forKey: "enableRealtimeData") else {
-            return
-        }
-        
         // 使用异步方式更新时间戳历史
         DispatchQueue.main.async {
             // 更新时间戳历史，使用滑动窗口方式
@@ -70,6 +65,11 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                 self.samplingRate = samplingRate
                 self.lastTimestamp = timestamp
             }
+        }
+
+        // 检查是否启用了实时数据发送
+        guard UserDefaults.standard.bool(forKey: "enableRealtimeData") else {
+            return
         }
         
         // 数据缓冲处理放在单独的队列中
@@ -169,6 +169,15 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
             } else {
                 self.lastMessage = "传输完成: \(transferredCount) 个文件"
             }
+        }
+    }
+    
+    // 新增方法，只重置时间戳历史和采样率，不发送停止信号
+    func resetTimestampHistory() {
+        DispatchQueue.main.async {
+            self.timestampHistory.removeAll()
+            self.lastTimestamp = 0
+            self.samplingRate = 0
         }
     }
     

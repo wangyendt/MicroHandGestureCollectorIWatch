@@ -319,6 +319,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         lastTapTime = Date()
         hasShownReminder = false
         
+        // 重置WatchConnectivityManager的时间戳历史，但不发送停止信号
+        WatchConnectivityManager.shared.resetTimestampHistory()
+        
         // 设置更新间隔
         motionManager.accelerometerUpdateInterval = 1.0 / 200.0  // 200Hz
         motionManager.gyroUpdateInterval = 1.0 / 200.0  // 200Hz
@@ -468,6 +471,13 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             // 更新UI数据（使用总加速度）
             self?.accelerationData = CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ)
             self?.rotationData = motion.rotationRate
+            
+            // 向WatchConnectivityManager发送实时数据以更新采样率
+            WatchConnectivityManager.shared.sendRealtimeData(
+                accData: CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ),
+                gyroData: motion.rotationRate,
+                timestamp: timestamp
+            )
 
             // 计算总加速度范数并进行峰值检测
             let accNorm = self?.signalProcessor.calculateNorm(
@@ -534,13 +544,6 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                     self.gyroFileHandle?.write(gyroData)
                 }
             }
-            
-            // 发送数据到手机
-            WatchConnectivityManager.shared.sendRealtimeData(
-                accData: CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ),
-                gyroData: motion.rotationRate,
-                timestamp: timestamp
-            )
             
             // 每100帧打印一次状态
             printCounter += 1
