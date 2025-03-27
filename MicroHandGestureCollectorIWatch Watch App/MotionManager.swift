@@ -266,6 +266,31 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         print("识别到手势: \(gesture), 置信度: \(confidence)")
     }
     
+    // 封装清理资源的方法
+    private func cleanUpResources() {
+        // 清理数据缓冲区
+        dataBuffer.removeAll()
+        
+        // 关闭并置空所有文件句柄
+        accFileHandle?.closeFile()
+        accFileHandle = nil
+        gyroFileHandle?.closeFile()
+        gyroFileHandle = nil
+        peakFileHandle?.closeFile()
+        peakFileHandle = nil
+        valleyFileHandle?.closeFile()
+        valleyFileHandle = nil
+        selectedPeakFileHandle?.closeFile()
+        selectedPeakFileHandle = nil
+        quaternionFileHandle?.closeFile()
+        quaternionFileHandle = nil
+        
+        // 清除当前文件夹URL
+        currentFolderURL = nil
+        
+        print("已清理所有资源")
+    }
+    
     public func startDataCollection(
         name: String,
         hand: String,
@@ -278,6 +303,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         bandType: String,
         supervisorName: String  // 添加监督者姓名参数
     ) {
+        // 先清理旧的数据缓冲区和文件句柄
+        cleanUpResources()
+        
         collectionStartTime = Date()
         firstImuFrameTime = nil
         timestampOffset = nil
@@ -566,12 +594,11 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 }
                 
                 // 清理
-                self.dataBuffer.removeAll()
-                self.accFileHandle?.closeFile()
-                self.accFileHandle = nil
-                self.gyroFileHandle?.closeFile()
-                self.gyroFileHandle = nil
+                self.cleanUpResources()
             }
+        } else {
+            // 即使没有缓冲数据需要写入，也进行资源清理
+            cleanUpResources()
         }
         
         motionManager.stopDeviceMotionUpdates()
@@ -581,19 +608,6 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         rotationData = nil
         
         WatchConnectivityManager.shared.resetState()
-        
-        // 关闭所有文件句柄
-        peakFileHandle?.closeFile()
-        peakFileHandle = nil
-        valleyFileHandle?.closeFile()
-        valleyFileHandle = nil
-        selectedPeakFileHandle?.closeFile()
-        selectedPeakFileHandle = nil
-        quaternionFileHandle?.closeFile()
-        quaternionFileHandle = nil
-        
-        // 清除当前文件夹URL
-        currentFolderURL = nil
         
         // 关闭手势数据文件
         signalProcessor.closeFiles()
