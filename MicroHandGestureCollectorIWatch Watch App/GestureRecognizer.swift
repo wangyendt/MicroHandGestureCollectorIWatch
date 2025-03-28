@@ -79,6 +79,19 @@ public class GestureRecognizer {
         return 2 * modelInputLength
     }
     
+    // 在GestureRecognizer类中添加性能分析相关属性
+    private var profilingEnabled = false
+    private var processingTimes: [String: Double] = [:]
+    private var recognitionCount = 0
+    
+    // 在类定义开始添加预加载模型实例
+    private var wayneCachedModel: GestureClassifier?
+    private var hailiCachedModel: GestureModel_1?
+    
+    // 添加推理队列
+    private let inferenceQueue = DispatchQueue(label: "com.wayne.inferenceQueue", qos: .userInitiated)
+    
+    // 修改init方法，预加载模型
     public init(whoseModel: String = "haili") {
         self.whoseModel = whoseModel
         guard let params = modelConfigs[whoseModel] else {
@@ -90,17 +103,29 @@ public class GestureRecognizer {
         self.saveGestureData = UserDefaults.standard.bool(forKey: "saveGestureData")
         print("GestureRecognizer: 初始化时读取 saveGestureData = \(self.saveGestureData)")
         
+        // 预加载模型
         do {
             let config = MLModelConfiguration()
-            if let processor = modelProcessors[whoseModel] {
-                if whoseModel == "wayne" {
-                    gestureClassifier = try GestureClassifier(configuration: config)
-                } else if whoseModel == "haili" {
-                    gestureClassifier = try GestureModel_1(configuration: config)
-                }
+            // 设置计算单元优先级，尽可能使用GPU或ANE
+            config.computeUnits = .all
+            
+            if whoseModel == "wayne" {
+                wayneCachedModel = try GestureClassifier(configuration: config)
+                // 预热模型
+                let dummyInput = try MLMultiArray(shape: [1, 6, 60], dataType: .float32)
+                let dummyInputObj = GestureClassifierInput(input: dummyInput)
+                _ = try wayneCachedModel?.prediction(input: dummyInputObj)
+                print("Wayne模型预加载完成")
+            } else if whoseModel == "haili" {
+                hailiCachedModel = try GestureModel_1(configuration: config)
+                // 预热模型
+                let dummyInput = try MLMultiArray(shape: [1, 6, 4, 100], dataType: .float32)
+                let dummyInputObj = GestureModel_1Input(input: dummyInput)
+                _ = try hailiCachedModel?.prediction(input: dummyInputObj)
+                print("Haili模型预加载完成")
             }
         } catch {
-            print("Error loading model: \(error)")
+            print("Error preloading model: \(error)")
         }
     }
     
@@ -111,7 +136,246 @@ public class GestureRecognizer {
         }
     }
     
+    // 添加异步推理方法
+    public func recognizeGestureAsync(atPeakTime peakTime: TimeInterval, completion: @escaping ((gesture: String, confidence: Double)?) -> Void) {
+        let recognitionStartTime = CFAbsoluteTimeGetCurrent()
+        
+        // 找到峰值在缓冲区中的位置
+        guard let peakIndex = imuBuffer.firstIndex(where: { $0.timestamp >= peakTime }) else {
+            completion(nil)
+            return
+        }
+        
+        // 确保有足够的前后数据
+        if peakIndex < currentModelParams.halfWindowSize || imuBuffer.count - peakIndex < currentModelParams.halfWindowSize {
+            print("峰值位置不满足前后\(currentModelParams.halfWindowSize)帧的要求")
+            completion(nil)
+            return
+        }
+        
+        // 提取前后数据
+        let startIndex = peakIndex - currentModelParams.halfWindowSize
+        let endIndex = peakIndex + (currentModelParams.halfWindowSize - 1)
+        let data = Array(imuBuffer[startIndex...endIndex])
+        
+        // 确保正好所需帧数
+        guard data.count == modelInputLength else {
+            print("数据帧数不正确: \(data.count)")
+            completion(nil)
+            return
+        }
+        
+        // 性能分析：数据提取阶段
+        let dataExtractTime = (CFAbsoluteTimeGetCurrent() - recognitionStartTime) * 1000
+        
+        // 分离加速度和陀螺仪数据
+        let dataProcessStartTime = CFAbsoluteTimeGetCurrent()
+        var accData = [[Double]]()
+        var gyroData = [[Double]]()
+        
+        for sample in data {
+            accData.append([sample.acc.x, sample.acc.y, sample.acc.z])
+            gyroData.append([sample.gyro.x, sample.gyro.y, sample.gyro.z])
+        }
+        
+        let dataSplitTime = (CFAbsoluteTimeGetCurrent() - dataProcessStartTime) * 1000
+        
+        // 对加速度和陀螺仪数据进行滤波和格式化
+        let filterAndFormatData = { () -> [Double] in
+            let filterStartTime = CFAbsoluteTimeGetCurrent()
+            
+            // 对加速度数据进行带通滤波
+            let accFiltered_low = self.butterBandpassFilter(
+                data: accData,
+                coefficientType: .low
+            ).map { $0.map { $0 / 9.81 } }  // 转换为g
+
+            let accFiltered_mid = self.butterBandpassFilter(
+                data: accData,
+                coefficientType: .mid
+            ).map { $0.map { $0 / 9.81 } }  // 转换为g
+
+            let accFiltered_high = self.butterBandpassFilter(
+                data: accData,
+                coefficientType: .high
+            ).map { $0.map { $0 / 9.81 } }  // 转换为g
+            
+            // 对陀螺仪数据进行带通滤波
+            let gyroFiltered_low = self.butterBandpassFilter(
+                data: gyroData,
+                coefficientType: .low
+            )
+
+            let gyroFiltered_mid = self.butterBandpassFilter(
+                data: gyroData,
+                coefficientType: .mid
+            )
+
+            let gyroFiltered_high = self.butterBandpassFilter(
+                data: gyroData,
+                coefficientType: .high
+            )
+            
+            let filterTime = (CFAbsoluteTimeGetCurrent() - filterStartTime) * 1000
+            
+            if self.profilingEnabled {
+                self.processingTimes["filtering"] = (self.processingTimes["filtering"] ?? 0) + filterTime
+            }
+
+            // 组合处理后的数据用于模型输入
+            let dataFormatStartTime = CFAbsoluteTimeGetCurrent()
+            var modelInputData = [Double]()
+            
+            // 构造模型输入数据
+            for c in 0..<3 {
+                for i in 0..<self.modelInputLength {
+                    modelInputData.append(accData[i][c])
+                }
+                for i in 0..<self.modelInputLength {
+                    modelInputData.append(accFiltered_low[i][c])
+                }
+                for i in 0..<self.modelInputLength {
+                    modelInputData.append(accFiltered_mid[i][c])
+                }
+                for i in 0..<self.modelInputLength {
+                    modelInputData.append(accFiltered_high[i][c])
+                }
+            }
+            for c in 0..<3 {
+                for i in 0..<self.modelInputLength {
+                    modelInputData.append(gyroData[i][c])
+                }
+                for i in 0..<self.modelInputLength {
+                    modelInputData.append(gyroFiltered_low[i][c])
+                }
+                for i in 0..<self.modelInputLength {
+                    modelInputData.append(gyroFiltered_mid[i][c])
+                }
+                for i in 0..<self.modelInputLength {
+                    modelInputData.append(gyroFiltered_high[i][c])
+                }
+            }
+            
+            let dataFormatTime = (CFAbsoluteTimeGetCurrent() - dataFormatStartTime) * 1000
+            
+            if self.profilingEnabled {
+                self.processingTimes["data_format"] = (self.processingTimes["data_format"] ?? 0) + dataFormatTime
+            }
+            
+            return modelInputData
+        }
+        
+        // 先在主线程处理数据预处理，然后在后台线程执行模型推理
+        let modelInputData = filterAndFormatData()
+        
+        // 在后台线程执行模型推理
+        inferenceQueue.async {
+            let modelStartTime = CFAbsoluteTimeGetCurrent()
+            let prediction = self.predictOptimized(processedData: modelInputData)
+            let modelInferenceTime = (CFAbsoluteTimeGetCurrent() - modelStartTime) * 1000
+            
+            // 保存数据（原始数据和处理后的数据）
+            let saveStartTime = CFAbsoluteTimeGetCurrent()
+            if prediction != nil {
+                let rawData = data.map { ($0.acc, $0.gyro) }
+                let processedData = zip(accData, gyroData).map { (acc: $0, gyro: $1) }
+                self.saveGestureData(rawData: rawData, processedData: processedData, prediction: prediction)
+            }
+            let saveTime = (CFAbsoluteTimeGetCurrent() - saveStartTime) * 1000
+            
+            // 记录性能指标
+            if self.profilingEnabled {
+                DispatchQueue.main.async {
+                    self.recognitionCount += 1
+                    self.processingTimes["data_extract"] = (self.processingTimes["data_extract"] ?? 0) + dataExtractTime
+                    self.processingTimes["data_split"] = (self.processingTimes["data_split"] ?? 0) + dataSplitTime
+                    self.processingTimes["model_inference"] = (self.processingTimes["model_inference"] ?? 0) + modelInferenceTime
+                    self.processingTimes["data_save"] = (self.processingTimes["data_save"] ?? 0) + saveTime
+                    
+                    // 计算总时间
+                    let totalTime = (CFAbsoluteTimeGetCurrent() - recognitionStartTime) * 1000
+                    self.processingTimes["total_recognition"] = (self.processingTimes["total_recognition"] ?? 0) + totalTime
+                    
+                    // 每10次识别打印一次性能报告
+                    if self.recognitionCount % 10 == 0 {
+                        self.printRecognitionPerformanceReport()
+                    }
+                }
+            }
+            
+            // 返回结果到主线程
+            DispatchQueue.main.async {
+                completion(prediction)
+            }
+        }
+    }
+    
+    // 添加优化的预测方法
+    private func predictOptimized(processedData: [Double]) -> (gesture: String, confidence: Double)? {
+        let predictStartTime = CFAbsoluteTimeGetCurrent()
+        
+        do {
+            // 创建输入数组
+            guard let inputArray = try? MLMultiArray(shape: currentModelParams.inputShape,
+                                                   dataType: .float32) else {
+                print("Failed to create input array")
+                return nil
+            }
+            
+            // 重排数据
+            let reshapeStartTime = CFAbsoluteTimeGetCurrent()
+            currentModelParams.reshapeData(processedData, inputArray)
+            let reshapeTime = (CFAbsoluteTimeGetCurrent() - reshapeStartTime) * 1000
+            
+            // 进行预测 - 使用预加载的模型直接推理
+            let inferenceStartTime = CFAbsoluteTimeGetCurrent()
+            
+            var output: MLMultiArray
+            
+            if whoseModel == "wayne" {
+                guard let model = wayneCachedModel else {
+                    print("Wayne model not preloaded")
+                    return nil
+                }
+                let input = GestureClassifierInput(input: inputArray)
+                let result = try model.prediction(input: input)
+                output = result.output
+            } else { // haili
+                guard let model = hailiCachedModel else {
+                    print("Haili model not preloaded")
+                    return nil
+                }
+                let input = GestureModel_1Input(input: inputArray)
+                let result = try model.prediction(input: input)
+                output = result.output
+            }
+            
+            let inferenceTime = (CFAbsoluteTimeGetCurrent() - inferenceStartTime) * 1000
+            
+            // 处理输出
+            let postProcessStartTime = CFAbsoluteTimeGetCurrent()
+            let result = processOutput(output, gestureNames: currentModelParams.gestureNames)
+            let postProcessTime = (CFAbsoluteTimeGetCurrent() - postProcessStartTime) * 1000
+            
+            // 记录性能指标
+            if profilingEnabled {
+                processingTimes["data_reshape"] = (processingTimes["data_reshape"] ?? 0) + reshapeTime
+                processingTimes["model_inference_only"] = (processingTimes["model_inference_only"] ?? 0) + inferenceTime
+                processingTimes["post_process"] = (processingTimes["post_process"] ?? 0) + postProcessTime
+                processingTimes["predict_total"] = (processingTimes["predict_total"] ?? 0) + (CFAbsoluteTimeGetCurrent() - predictStartTime) * 1000
+            }
+            
+            return result
+        } catch {
+            print("Prediction error: \(error)")
+            return nil
+        }
+    }
+    
+    // 保留旧的同步方法作为备份，同时更新它使用优化的预测方法
     public func recognizeGesture(atPeakTime peakTime: TimeInterval) -> (gesture: String, confidence: Double)? {
+        let recognitionStartTime = CFAbsoluteTimeGetCurrent()
+        
         // 找到峰值在缓冲区中的位置
         guard let peakIndex = imuBuffer.firstIndex(where: { $0.timestamp >= peakTime }) else {
             return nil
@@ -134,7 +398,11 @@ public class GestureRecognizer {
             return nil
         }
         
+        // 性能分析：数据提取阶段
+        let dataExtractTime = (CFAbsoluteTimeGetCurrent() - recognitionStartTime) * 1000
+        
         // 分离加速度和陀螺仪数据
+        let dataProcessStartTime = CFAbsoluteTimeGetCurrent()
         var accData = [[Double]]()
         var gyroData = [[Double]]()
         
@@ -143,7 +411,10 @@ public class GestureRecognizer {
             gyroData.append([sample.gyro.x, sample.gyro.y, sample.gyro.z])
         }
         
+        let dataSplitTime = (CFAbsoluteTimeGetCurrent() - dataProcessStartTime) * 1000
+        
         // 对加速度数据进行带通滤波
+        let filterStartTime = CFAbsoluteTimeGetCurrent()
         let accFiltered_low = butterBandpassFilter(
             data: accData,
             coefficientType: .low
@@ -175,9 +446,11 @@ public class GestureRecognizer {
             data: gyroData,
             coefficientType: .high
         )
-
+        
+        let filterTime = (CFAbsoluteTimeGetCurrent() - filterStartTime) * 1000
 
         // 组合处理后的数据用于模型输入
+        let dataFormatStartTime = CFAbsoluteTimeGetCurrent()
         var modelInputData = [Double]()
         for c in 0..<3 {
             for i in 0..<modelInputLength {
@@ -208,46 +481,43 @@ public class GestureRecognizer {
             }
         }
         
-        // 进行预测
-        let prediction = predict(processedData: modelInputData)
+        let dataFormatTime = (CFAbsoluteTimeGetCurrent() - dataFormatStartTime) * 1000
+        
+        // 进行预测 - 使用优化版本
+        let modelStartTime = CFAbsoluteTimeGetCurrent()
+        let prediction = predictOptimized(processedData: modelInputData)
+        let modelInferenceTime = (CFAbsoluteTimeGetCurrent() - modelStartTime) * 1000
         
         // 保存数据（原始数据和处理后的数据）
+        let saveStartTime = CFAbsoluteTimeGetCurrent()
         if prediction != nil {
             let rawData = data.map { ($0.acc, $0.gyro) }
             let processedData = zip(accData, gyroData).map { (acc: $0, gyro: $1) }
             saveGestureData(rawData: rawData, processedData: processedData, prediction: prediction)
         }
+        let saveTime = (CFAbsoluteTimeGetCurrent() - saveStartTime) * 1000
+        
+        // 记录性能指标
+        if profilingEnabled {
+            recognitionCount += 1
+            processingTimes["data_extract"] = (processingTimes["data_extract"] ?? 0) + dataExtractTime
+            processingTimes["data_split"] = (processingTimes["data_split"] ?? 0) + dataSplitTime
+            processingTimes["filtering"] = (processingTimes["filtering"] ?? 0) + filterTime
+            processingTimes["data_format"] = (processingTimes["data_format"] ?? 0) + dataFormatTime
+            processingTimes["model_inference"] = (processingTimes["model_inference"] ?? 0) + modelInferenceTime
+            processingTimes["data_save"] = (processingTimes["data_save"] ?? 0) + saveTime
+            
+            // 计算总时间
+            let totalTime = (CFAbsoluteTimeGetCurrent() - recognitionStartTime) * 1000
+            processingTimes["total_recognition"] = (processingTimes["total_recognition"] ?? 0) + totalTime
+            
+            // 每10次识别打印一次性能报告
+            if recognitionCount % 10 == 0 {
+                printRecognitionPerformanceReport()
+            }
+        }
         
         return prediction
-    }
-    
-    private func predict(processedData: [Double]) -> (gesture: String, confidence: Double)? {
-        guard let inputArray = try? MLMultiArray(shape: currentModelParams.inputShape,
-                                               dataType: .float32) else {
-            print("Failed to create input array")
-            return nil
-        }
-        
-        // 使用配置中的重排列函数
-        currentModelParams.reshapeData(processedData, inputArray)
-        
-        // 打印数据形状和部分值以便调试
-//        print("输入数据形状: \(currentModelParams.inputShape)")
-//        print("输入数据前几个值: \(Array(processedData.prefix(10)))")
-        
-        // 进行预测
-        do {
-            guard let processor = modelProcessors[whoseModel] else {
-                print("No processor found for model: \(whoseModel)")
-                return nil
-            }
-            
-            let output = try processor(inputArray)
-            return processOutput(output, gestureNames: currentModelParams.gestureNames)
-        } catch {
-            print("Prediction error: \(error)")
-            return nil
-        }
     }
     
     // 添加处理输出的辅助函数
@@ -324,6 +594,8 @@ public class GestureRecognizer {
         data: [[Double]], 
         coefficientType: FilterCoefficients = .standard
     ) -> [[Double]] {
+        let filterStartTime = CFAbsoluteTimeGetCurrent()
+        
         // 获取选定的滤波器系数
         let (b, a) = coefficientType.coefficients
         
@@ -351,6 +623,12 @@ public class GestureRecognizer {
                     filtered[i][ch] = data[i][ch]
                 }
             }
+        }
+        
+        if profilingEnabled && currentModelParams.halfWindowSize > 0 {
+            let filterTime = (CFAbsoluteTimeGetCurrent() - filterStartTime) * 1000
+            let channelCount = data[0].count
+            processingTimes["single_filter_\(coefficientType)"] = (processingTimes["single_filter_\(coefficientType)"] ?? 0) + filterTime / Double(channelCount)
         }
         
         return filtered
@@ -699,5 +977,31 @@ public class GestureRecognizer {
         
         // 计算 softmax
         return exps.map { $0 / sum }
+    }
+    
+    // 添加性能报告打印方法
+    private func printRecognitionPerformanceReport() {
+        guard profilingEnabled && recognitionCount > 0 else { return }
+        
+        print("\n========== 手势识别性能分析报告 ==========")
+        print("总识别次数: \(recognitionCount)")
+        
+        for (operation, totalTime) in processingTimes.sorted(by: { $0.key < $1.key }) {
+            let avgTime = totalTime / Double(recognitionCount)
+            print("\(operation): 总计 \(String(format: "%.3f", totalTime)) ms, 平均 \(String(format: "%.3f", avgTime)) ms")
+        }
+        
+        // 计算各阶段占比
+        if let totalTime = processingTimes["total_recognition"] {
+            print("\n各阶段耗时占比:")
+            for (operation, time) in processingTimes.sorted(by: { $0.key < $1.key }) {
+                if operation != "total_recognition" {
+                    let percentage = time / totalTime * 100
+                    print("\(operation): \(String(format: "%.2f", percentage))%")
+                }
+            }
+        }
+        
+        print("==========================================\n")
     }
 }
