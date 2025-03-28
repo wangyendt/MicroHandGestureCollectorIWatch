@@ -1,15 +1,83 @@
-# 1. iWatch 运行截图：
+# 微手势采集与识别系统
 
-# ![Screenshot 2024-12-11 at 10.31.38](https://wangye-main-bucket.oss-cn-shenzhen.aliyuncs.com/Screenshot%202024-12-11%20at%2010.31.38.png)
+![iWatch截图](https://wangye-main-bucket.oss-cn-shenzhen.aliyuncs.com/Screenshot%202024-12-11%20at%2010.31.38.png) ![iPhone截图](https://wangye-main-bucket.oss-cn-shenzhen.aliyuncs.com/Screenshot%202024-12-11%20at%2010.32.21.png)
 
-# 2. iPhone 运行截图：
+## 🌟 项目简介
 
-![Screenshot 2024-12-11 at 10.32.21](https://wangye-main-bucket.oss-cn-shenzhen.aliyuncs.com/Screenshot%202024-12-11%20at%2010.32.21.png)
+微手势采集与识别系统是一款创新的应用，利用Apple Watch和iPhone实现精确的手势识别、数据采集与分析。系统通过智能算法识别各种微小手势动作，为人机交互、健康监测和游戏控制等领域提供强大支持。
 
-# 3. pybind_libs下面的cmakelists执行代码：
+## ✨ 核心功能
+
+### 📱 手机端功能
+
+- **蓝牙通信中心**：基于CoreBluetooth实现稳定的BLE通信，支持实时数据传输和指令收发
+- **手势游戏互动**：内置俄罗斯方块游戏，通过手势实现直观控制
+- **AI助手**：集成DeepSeek AI模型，提供智能交互体验
+- **多模式反馈系统**：支持视觉、触觉和语音三种反馈方式
+- **云端数据存储**：与阿里云OSS无缝集成，支持数据自动同步和备份
+- **飞书机器人集成**：支持测试结果直接推送至飞书群组
+
+### ⌚ 手表端功能
+
+- **精确传感器数据采集**：利用手表内置传感器采集高精度运动数据
+- **实时手势识别**：基于峰值检测算法实现低延迟手势识别
+- **丰富的配置选项**：支持自定义峰值阈值、窗口大小等关键参数
+- **本地数据管理**：便捷的数据存储、导出和删除功能
+- **多层次手势分类**：支持身体、手臂和手指三个层次的动作分类
+
+## 🛠️ 技术特点
+
+- **高性能C++算法**：核心算法采用C++实现，通过Swift桥接提供高性能计算能力
+- **实时数据处理**：采用高效的数据流处理架构，保证识别的低延迟
+- **多设备协同**：手表与手机无缝协作，数据互通
+- **可扩展架构**：模块化设计，支持轻松添加新手势和新功能
+- **隐私保护**：数据处理优先在本地完成，保护用户隐私
+
+## 🎮 应用场景
+
+- **游戏控制**：使用微小手势直观控制游戏
+- **健康监测**：跟踪手部运动模式，辅助康复训练
+- **人机交互研究**：为新型交互方式提供数据支持
+- **可穿戴应用开发**：为开发者提供手势识别开发参考
+
+## 📊 数据可视化
+
+系统提供丰富的数据可视化功能，帮助研究人员和开发者深入分析手势特征：
+
+- 实时动作识别结果展示
+- 手势峰值和波形图表
+- 身体-手臂-手指三级动作关联分析
+
+## 🔄 快速上手
+
+1. 在iPhone和Apple Watch上安装应用
+2. 配置基本设置（可选择默认参数快速开始）
+3. 开始采集和识别手势
+4. 通过游戏或AI助手体验手势交互
+
+## 🧩 开发者资源
+
+项目支持扩展开发，提供以下资源：
+
+- C++算法接口（通过Swift桥接）
+- 蓝牙通信协议
+- 数据格式规范
+- 自定义手势配置
+
+---
+
+## 系统要求
+
+- iPhone: iOS 16.0+
+- Apple Watch: watchOS 9.0+
+- Xcode 15.0+
+
+## 构建说明
+
+C++库编译（pybind_libs目录）:
 
 ```bash
-cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE=E:/Github/tools/vcpkg/scripts/buildsystems/vcpkg.cmake ..
+cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE=路径/vcpkg/scripts/buildsystems/vcpkg.cmake ..
 cmake --build . --config Release
 ```
 
