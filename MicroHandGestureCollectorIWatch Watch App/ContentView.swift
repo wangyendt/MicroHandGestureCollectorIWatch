@@ -662,17 +662,17 @@ struct ContentView: View {
 //                    .padding()
                 
                 // 添加时间戳和采样率显示
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("采样信息").font(.headline)
-                    Text(String(format: "时间戳: %llu", connectivityManager.lastTimestamp))
-                        .font(.system(.body, design: .monospaced))
-                    Text(String(format: "采样率: %.1f Hz", connectivityManager.samplingRate))
-                        .font(.system(.body, design: .monospaced))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(10)
+//                VStack(alignment: .leading, spacing: 5) {
+//                    Text("采样信息").font(.headline)
+//                    Text(String(format: "时间戳: %llu", connectivityManager.lastTimestamp))
+//                        .font(.system(.body, design: .monospaced))
+//                    Text(String(format: "采样率: %.1f Hz", connectivityManager.samplingRate))
+//                        .font(.system(.body, design: .monospaced))
+//                }
+//                .frame(maxWidth: .infinity, alignment: .leading)
+//                .padding()
+//                .background(Color.gray.opacity(0.1))
+//                .cornerRadius(10)
             }
             .padding(.horizontal, 10)
         }
@@ -936,29 +936,29 @@ struct RealTimeDataView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            if let accData = accData {
-                Text("加速度计")
-                    .font(.headline)
-                    .opacity(isLuminanceReduced ? 0.6 : 1.0)
-                Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
-                          accData.x,
-                          accData.y,
-                          accData.z))
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(isLuminanceReduced ? .gray : .green)
-            }
-            
-            if let rotationData = rotationData {
-                Text("陀螺仪")
-                    .font(.headline)
-                    .opacity(isLuminanceReduced ? 0.6 : 1.0)
-                Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
-                          rotationData.x,
-                          rotationData.y,
-                          rotationData.z))
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(isLuminanceReduced ? .gray : .blue)
-            }
+//            if let accData = accData {
+//                Text("加速度计")
+//                    .font(.headline)
+//                    .opacity(isLuminanceReduced ? 0.6 : 1.0)
+//                Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
+//                          accData.x,
+//                          accData.y,
+//                          accData.z))
+//                    .font(.system(.body, design: .monospaced))
+//                    .foregroundColor(isLuminanceReduced ? .gray : .green)
+//            }
+//            
+//            if let rotationData = rotationData {
+//                Text("陀螺仪")
+//                    .font(.headline)
+//                    .opacity(isLuminanceReduced ? 0.6 : 1.0)
+//                Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
+//                          rotationData.x,
+//                          rotationData.y,
+//                          rotationData.z))
+//                    .font(.system(.body, design: .monospaced))
+//                    .foregroundColor(isLuminanceReduced ? .gray : .blue)
+//            }
         }
         .padding()
         .background(Color.black.opacity(isLuminanceReduced ? 0.5 : 0.1))

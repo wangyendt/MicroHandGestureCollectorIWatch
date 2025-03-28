@@ -11,7 +11,7 @@ import WatchKit
 @main
 struct MicroHandGestureCollectorIWatch_Watch_AppApp: App {
     // 添加 ExtensionDelegate 作为委托
-    @WKExtensionDelegateAdaptor(ExtensionDelegate.self) var extensionDelegate
+    // @WKExtensionDelegateAdaptor(ExtensionDelegate.self) var extensionDelegate
     
     // 添加环境对象来监控应用生命周期
     @Environment(\.scenePhase) private var scenePhase
@@ -58,7 +58,7 @@ struct MicroHandGestureCollectorIWatch_Watch_AppApp: App {
             case .active:
                 print("📱 应用变为活动状态 - 由Scene触发")
                 // 应用变为活动状态时，尝试启动ExtendedRuntimeSession
-                ExtendedRuntimeSessionManager.shared.startSession()
+                // ExtendedRuntimeSessionManager.shared.startSession()
                 
                 // 自动开始蓝牙扫描
                 bleService.startScanning()

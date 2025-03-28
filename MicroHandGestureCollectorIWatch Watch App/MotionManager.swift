@@ -590,7 +590,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         WatchConnectivityManager.shared.setCurrentFolder(folderURL)  // 设置当前文件夹
         
         // 启动提醒定时器
-        startReminderTimer()
+        // startReminderTimer()
         
         // 延迟解锁状态，确保UI元素更新完成
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -672,7 +672,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         updateInfoFileWithDuration()
         
         // 停止提醒定时器
-        stopReminderTimer()
+        // stopReminderTimer()
         
         // 延迟解锁状态，确保UI元素更新完成
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
@@ -1105,50 +1105,50 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     }
     
     // 添加定时器管理方法
-    private func startReminderTimer() {
-        // 停止现有定时器
-        stopReminderTimer()
-        
-        // 重置提醒状态
-        hasShownReminder = false
-        
-        print("开始设置提醒定时器")
-        
-        // 创建新定时器，每1秒触发一次检查
-        reminderTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            
-            // 检查距离上次点击是否已经过去10秒
-            let timeSinceLastTap = Date().timeIntervalSince(self.lastTapTime)
-            print("距离上次点击已经过去: \(String(format: "%.1f", timeSinceLastTap))秒")
-            
-            if timeSinceLastTap >= 60.0 && !self.hasShownReminder {
-                print("触发提醒：已超过60秒未操作")
-                // 使用 FeedbackManager 播放语音提示
-                FeedbackManager.playFeedback(
-                    style: .notification,
-                    withFlash: false,
-                    speak: "滑动手表屏幕",
-                    forceSpeak: true  // 强制播报
-                )
-                self.hasShownReminder = true
-                // 重置最后点击时间，开始新的10秒计时
-                self.lastTapTime = Date()
-                // 重置提醒状态，这样下一个10秒周期可以继续提醒
-                self.hasShownReminder = false
-            }
-        }
-        
-        print("提醒定时器设置完成")
-    }
+//    private func startReminderTimer() {
+//        // 停止现有定时器
+//        stopReminderTimer()
+//        
+//        // 重置提醒状态
+//        hasShownReminder = false
+//        
+//        print("开始设置提醒定时器")
+//        
+//        // 创建新定时器，每1秒触发一次检查
+//        reminderTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+//            guard let self = self else { return }
+//            
+//            // 检查距离上次点击是否已经过去10秒
+//            let timeSinceLastTap = Date().timeIntervalSince(self.lastTapTime)
+//            print("距离上次点击已经过去: \(String(format: "%.1f", timeSinceLastTap))秒")
+//            
+//            if timeSinceLastTap >= 60.0 && !self.hasShownReminder {
+//                print("触发提醒：已超过60秒未操作")
+//                // 使用 FeedbackManager 播放语音提示
+//                FeedbackManager.playFeedback(
+//                    style: .notification,
+//                    withFlash: false,
+//                    speak: "滑动手表屏幕",
+//                    forceSpeak: true  // 强制播报
+//                )
+//                self.hasShownReminder = true
+//                // 重置最后点击时间，开始新的10秒计时
+//                self.lastTapTime = Date()
+//                // 重置提醒状态，这样下一个10秒周期可以继续提醒
+//                self.hasShownReminder = false
+//            }
+//        }
+//        
+//        print("提醒定时器设置完成")
+//    }
     
-    private func stopReminderTimer() {
-        if reminderTimer != nil {
-            print("停止提醒定时器")
-            reminderTimer?.invalidate()
-            reminderTimer = nil
-        }
-    }
+//    private func stopReminderTimer() {
+//        if reminderTimer != nil {
+//            print("停止提醒定时器")
+//            reminderTimer?.invalidate()
+//            reminderTimer = nil
+//        }
+//    }
     
     // 添加更新最后点击时间的方法
     public func updateLastTapTime() {

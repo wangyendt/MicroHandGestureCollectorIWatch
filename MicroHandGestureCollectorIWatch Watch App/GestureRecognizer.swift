@@ -260,15 +260,15 @@ public class GestureRecognizer {
         let probabilities = softmax(logits)
         
         // 打印完整的概率向量和原始logits
-        print("原始 logits 值:")
-        for i in 0..<gestureNames.count {
-            print("类别 \(i) (\(gestureNames[i])): \(logits[i])")
-        }
+        // print("原始 logits 值:")
+        // for i in 0..<gestureNames.count {
+        //     print("类别 \(i) (\(gestureNames[i])): \(logits[i])")
+        // }
         
-        print("\n完整预测概率向量:")
-        for i in 0..<gestureNames.count {
-            print("类别 \(i) (\(gestureNames[i])): \(probabilities[i])")
-        }
+        // print("\n完整预测概率向量:")
+        // for i in 0..<gestureNames.count {
+        //     print("类别 \(i) (\(gestureNames[i])): \(probabilities[i])")
+        // }
         
         // 获取最高概率的类别
         var maxProb: Float = 0
