@@ -31,7 +31,7 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     private var motionManager: MotionManager?
     
     // 定义负样本列表
-    private let negativeGestures = ["其它"]
+    private let negativeGestures = ["其它", "日常"]
     
     private override init() {
         super.init()

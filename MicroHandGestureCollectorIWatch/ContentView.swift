@@ -795,7 +795,7 @@ struct ContentView: View {
     ) {
         var gestureCounts: [String: Int] = [:]
         var correctCounts: [String: Int] = [:]
-        let negativeGestures = ["其它"]  // 定义负样本列表
+        let negativeGestures = ["其它", "日常"]  // 定义负样本列表
         
         var totalCount = 0
         var totalCorrect = 0
