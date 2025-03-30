@@ -246,7 +246,7 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
                         if !FileManager.default.fileExists(atPath: logsPath.path) {
                             try FileManager.default.createDirectory(at: logsPath, withIntermediateDirectories: true, attributes: nil)
                         }
-                        actionLogger.setCurrentFolder(logsPath, folderName: folderName)
+                        self.actionLogger.setCurrentFolder(logsPath, folderName: folderName)
                     } catch {
                         print("创建 Logs 文件夹失败：\(error)")
                     }
