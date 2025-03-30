@@ -112,7 +112,7 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     private let maxHistorySize = 1000 // 记录更多样本用于统计
     private let minHistorySize = 100  // 最小保留样本数
     
-    private let actionLogger = GestureActionLogger()
+    let actionLogger = GestureActionLogger()
     
     private override init() {
         // 从UserDefaults读取保存的IP地址，如果没有则使用默认值

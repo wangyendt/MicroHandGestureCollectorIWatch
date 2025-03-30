@@ -696,6 +696,15 @@ struct ContentView: View {
                         armGesture: armGesture,
                         fingerGesture: fingerGesture
                     )
+                    
+                    // 记录手势状态更新
+                    sensorManager.actionLogger.logGestureState(
+                        id: id, 
+                        timestamp: timestamp, 
+                        body: bodyGesture, 
+                        arm: armGesture, 
+                        finger: fingerGesture
+                    )
                 }
             }
         }
