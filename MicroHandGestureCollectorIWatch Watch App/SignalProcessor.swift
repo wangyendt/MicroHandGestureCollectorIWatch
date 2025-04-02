@@ -157,11 +157,23 @@ public class SignalProcessor {
                 printQuatCounter = 0
             }
             
-            gestureRecognizer.addIMUData(
-                timestamp: timestamp,
-                acc: SIMD3(acc.x, acc.y, acc.z),
-                gyro: SIMD3(gyro.x, gyro.y, gyro.z)
-            )
+            // 根据手性选择决定是否翻转坐标
+            let selectedHand = UserDefaults.standard.string(forKey: "selectedHand") ?? "左手"
+            if selectedHand == "右手" {
+                // 右手需要翻转坐标
+                gestureRecognizer.addIMUData(
+                    timestamp: timestamp,
+                    acc: SIMD3(-acc.x, acc.y, acc.z),
+                    gyro: SIMD3(gyro.x, -gyro.y, -gyro.z)
+                )
+            } else {
+                // 左手保持原样
+                gestureRecognizer.addIMUData(
+                    timestamp: timestamp,
+                    acc: SIMD3(acc.x, acc.y, acc.z),
+                    gyro: SIMD3(gyro.x, gyro.y, gyro.z)
+                )
+            }
         }
         
         // 计算加速度范数的差分

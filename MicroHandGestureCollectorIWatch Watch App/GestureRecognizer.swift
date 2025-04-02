@@ -552,7 +552,19 @@ public class GestureRecognizer {
             }
         }
         
-        let predictedGesture = gestureNames[predictedClass]
+        var predictedGesture = gestureNames[predictedClass]
+        
+        // 根据手性决定是否交换左右摆手势
+        let selectedHand = UserDefaults.standard.string(forKey: "selectedHand") ?? "左手"
+        if selectedHand == "右手" {
+            // 右手需要交换左右摆
+            if predictedGesture == "左摆" {
+                predictedGesture = "右摆"
+            } else if predictedGesture == "右摆" {
+                predictedGesture = "左摆"
+            }
+        }
+        
         print("预测结果: \(predictedGesture) (类别 \(predictedClass)), 置信度: \(maxProb)")
         
         return (gesture: predictedGesture, confidence: Double(maxProb))
