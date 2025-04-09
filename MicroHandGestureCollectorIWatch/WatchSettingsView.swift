@@ -101,59 +101,63 @@ struct WatchSettingsView: View {
                         ]
                         
                         onComplete(settings)
+                        
+                        // 同步设置到手表 (改为BLE)
+                        BlePeripheralService.shared.sendSettingsUpdate(settings: settings)
+                        /*
+                        if WCSession.default.isReachable {
+                            WCSession.default.sendMessage(settings, replyHandler: nil) { error in
+                                print("发送设置到手表失败: \(error.localizedDescription)")
+                            }
+                        }
+                        */
                         dismiss()
                     }
                 }
             }
         }
         .onAppear {
-            NotificationCenter.default.addObserver(
-                forName: NSNotification.Name("WatchSettingsUpdated"),
-                object: nil,
-                queue: .main
-            ) { notification in
-                if let settings = notification.userInfo {
-                    if let value = settings["peakThreshold"] as? Double {
-                        peakThreshold = value
-                    }
-                    if let value = settings["peakWindow"] as? Double {
-                        peakWindow = value
-                    }
-                    if let value = settings["savePeaks"] as? Bool {
-                        savePeaks = value
-                    }
-                    if let value = settings["saveValleys"] as? Bool {
-                        saveValleys = value
-                    }
-                    if let value = settings["saveSelectedPeaks"] as? Bool {
-                        saveSelectedPeaks = value
-                    }
-                    if let value = settings["saveQuaternions"] as? Bool {
-                        saveQuaternions = value
-                    }
-                    if let value = settings["saveGestureData"] as? Bool {
-                        saveGestureData = value
-                    }
-                    if let value = settings["saveResultFile"] as? Bool {
-                        saveResultFile = value
-                    }
-                    if let value = settings["enableVisualFeedback"] as? Bool {
-                        enableVisualFeedback = value
-                    }
-                    if let value = settings["enableHapticFeedback"] as? Bool {
-                        enableHapticFeedback = value
-                    }
-                    if let value = settings["enableVoiceFeedback"] as? Bool {
-                        enableVoiceFeedback = value
-                    }
-                    if let value = settings["feedbackType"] as? String {
-                        feedbackType = value
-                    }
-                    if let value = settings["enableRealtimeData"] as? Bool {
-                        enableRealtimeData = value
-                    }
+            // Load initial values (redundant for @AppStorage but good practice)
+            peakThreshold = UserDefaults.standard.double(forKey: "peakThreshold")
+            peakWindow = UserDefaults.standard.double(forKey: "peakWindow")
+            savePeaks = UserDefaults.standard.bool(forKey: "savePeaks")
+            saveValleys = UserDefaults.standard.bool(forKey: "saveValleys")
+            saveSelectedPeaks = UserDefaults.standard.bool(forKey: "saveSelectedPeaks")
+            saveQuaternions = UserDefaults.standard.bool(forKey: "saveQuaternions")
+            saveGestureData = UserDefaults.standard.bool(forKey: "saveGestureData")
+            saveResultFile = UserDefaults.standard.bool(forKey: "saveResultFile")
+            enableVisualFeedback = UserDefaults.standard.bool(forKey: "enableVisualFeedback")
+            enableHapticFeedback = UserDefaults.standard.bool(forKey: "enableHapticFeedback")
+            enableVoiceFeedback = UserDefaults.standard.bool(forKey: "enableVoiceFeedback")
+            feedbackType = UserDefaults.standard.string(forKey: "feedbackType") ?? "gesture"
+            enableRealtimeData = UserDefaults.standard.bool(forKey: "enableRealtimeData")
+            
+            // Observe settings updates from the watch via MessageHandlerService
+            NotificationCenter.default.addObserver(forName: .settingsUpdated, object: nil, queue: .main) { notification in
+                print("WatchSettingsView received settingsUpdated notification")
+                if let settings = notification.userInfo as? [String: Any] {
+                    updateSettings(from: settings)
                 }
             }
         }
+    }
+    
+    // Helper function to update AppStorage from received dictionary
+    private func updateSettings(from settings: [String: Any]) {
+        print("Updating settings in WatchSettingsView: \(settings)")
+        if let value = settings["peakThreshold"] as? Double { peakThreshold = value }
+        if let value = settings["peakWindow"] as? Double { peakWindow = value }
+        if let value = settings["savePeaks"] as? Bool { savePeaks = value }
+        if let value = settings["saveValleys"] as? Bool { saveValleys = value }
+        if let value = settings["saveSelectedPeaks"] as? Bool { saveSelectedPeaks = value }
+        if let value = settings["saveQuaternions"] as? Bool { saveQuaternions = value }
+        if let value = settings["saveGestureData"] as? Bool { saveGestureData = value }
+        if let value = settings["saveResultFile"] as? Bool { saveResultFile = value }
+        if let value = settings["enableVisualFeedback"] as? Bool { enableVisualFeedback = value }
+        if let value = settings["enableHapticFeedback"] as? Bool { enableHapticFeedback = value }
+        if let value = settings["enableVoiceFeedback"] as? Bool { enableVoiceFeedback = value }
+        if let value = settings["feedbackType"] as? String { feedbackType = value }
+        if let value = settings["enableRealtimeData"] as? Bool { enableRealtimeData = value }
+        print("Settings updated in WatchSettingsView")
     }
 } 

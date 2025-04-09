@@ -118,6 +118,28 @@ class BlePeripheralService: NSObject, ObservableObject {
             logger.error("JSON序列化失败: \(error.localizedDescription)")
         }
     }
+    
+    // 新增：发送设置更新到已连接的中心设备
+    func sendSettingsUpdate(settings: [String: Any]) {
+        guard !connectedCentrals.isEmpty else {
+            print("没有已连接的设备，跳过发送设置更新")
+            return
+        }
+        
+        do {
+            // 确保 'type' 字段存在
+            var updatedSettings = settings
+            if updatedSettings["type"] == nil {
+                updatedSettings["type"] = "update_settings"
+            }
+            
+            let jsonData = try JSONSerialization.data(withJSONObject: updatedSettings)
+            print("通过BLE发送设置更新：\(updatedSettings)")
+            peripheralManager.updateValue(jsonData, for: notifyCharacteristic, onSubscribedCentrals: Array(connectedCentrals))
+        } catch {
+            logger.error("设置更新JSON序列化失败: \(error.localizedDescription)")
+        }
+    }
 }
 
 extension BlePeripheralService: CBPeripheralManagerDelegate {

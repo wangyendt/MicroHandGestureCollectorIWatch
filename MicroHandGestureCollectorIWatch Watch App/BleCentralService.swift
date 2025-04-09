@@ -111,6 +111,30 @@ class BleCentralService: NSObject, ObservableObject {
             logger.error("控制指令序列化失败: \(error.localizedDescription)")
         }
     }
+    
+    // 添加发送设置更新的方法
+    func sendSettingsUpdate(settings: [String: Any]) {
+        guard let peripheral = peripheral,
+              let characteristic = writeCharacteristic else {
+            lastError = "无法发送设置更新"
+            return
+        }
+        
+        do {
+            // 确保 'type' 字段存在
+            var updatedSettings = settings
+            if updatedSettings["type"] == nil {
+                updatedSettings["type"] = "update_settings"
+            }
+            
+            let jsonData = try JSONSerialization.data(withJSONObject: updatedSettings, options: [])
+            peripheral.writeValue(jsonData, for: characteristic, type: .withResponse)
+            logger.info("通过BLE发送设置更新")
+        } catch {
+            lastError = "设置更新序列化失败: \(error.localizedDescription)"
+            logger.error("设置更新序列化失败: \(error.localizedDescription)")
+        }
+    }
 }
 
 extension BleCentralService: CBCentralManagerDelegate {
@@ -224,19 +248,30 @@ extension BleCentralService: CBPeripheralDelegate {
                 
                 // 发送通知，以便应用其他部分可以处理这些消息
                 DispatchQueue.main.async {
-                    // 使用WatchConnectivityManager处理消息
-                    WatchConnectivityManager.shared.processMessage(jsonObject)
-                    
-                    // 同时仍然发送通知，保持向后兼容
-                    NotificationCenter.default.post(
-                        name: .didReceiveBleJsonData,
-                        object: nil,
-                        userInfo: jsonObject
-                    )
-                    
-                    // 如果是手势结果更新，打印日志
-                    if let type = jsonObject["type"] as? String {
-                        self.logger.info("收到BLE消息类型: \(type)")
+                    // 检查是否是设置更新消息
+                    if let type = jsonObject["type"] as? String, type == "update_settings" {
+                        self.logger.info("收到手表设置更新")
+                        NotificationCenter.default.post(
+                            name: .didReceiveSettingsUpdate, // 使用新的通知名称
+                            object: nil,
+                            userInfo: jsonObject
+                        )
+                    } else {
+                        // 其他 JSON 消息继续走之前的逻辑
+                        // 发送通知给 MessageHandlerService (通过 WatchConnectivityManager 间接触发)
+                        WatchConnectivityManager.shared.processMessage(jsonObject)
+                        
+                        // 同时仍然发送通知，保持向后兼容 (可能可以移除，取决于 MessageHandler 是否完全依赖 WCSession 触发)
+                        NotificationCenter.default.post(
+                            name: .didReceiveBleJsonData,
+                            object: nil,
+                            userInfo: jsonObject
+                        )
+                        
+                        // 如果是手势结果更新，打印日志
+                        if let type = jsonObject["type"] as? String {
+                            self.logger.info("收到BLE消息类型: \(type)")
+                        }
                     }
                 }
             }
