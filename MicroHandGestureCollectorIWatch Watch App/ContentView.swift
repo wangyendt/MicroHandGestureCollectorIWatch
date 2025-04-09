@@ -482,14 +482,7 @@ struct ContentView: View {
                 .sheet(isPresented: $showingSettings) {
                     WatchAppSettingsView(
                         peakThreshold: $peakThreshold,
-                        peakWindow: $peakWindow,
-                        motionManager: motionManager,
-                        onSettingsChanged: { threshold, window in
-                            motionManager.signalProcessor.updateSettings(
-                                peakThreshold: threshold,
-                                peakWindow: window
-                            )
-                        }
+                        peakWindow: $peakWindow
                     )
                 }
 
@@ -828,6 +821,14 @@ struct ContentView: View {
                 deleteResultFromFile(id: id)
             }
         }
+        // 添加对新BLE设置更新通知的处理
+        .onReceive(NotificationCenter.default.publisher(for: .userSettingsUpdatedViaBLE)) { notification in
+            print("ContentView: Received userSettingsUpdatedViaBLE notification.")
+            if let settings = notification.userInfo as? [String: Any] {
+                print("ContentView: Applying settings from BLE: \(settings)")
+                applySettings(from: settings)
+            }
+        }
     }
     
     private func deleteAllData() {
@@ -956,6 +957,52 @@ struct ContentView: View {
                 print("❌ 保存手动删除的记录时出错: \(error)")
             }
         }
+    }
+
+    // 新增：将应用设置的逻辑提取到单独的函数
+    private func applySettings(from settings: [String: Any]) {
+        // 读取设置值，如果不存在则使用当前的 AppStorage 值或默认值
+        let newPeakThreshold = settings["peakThreshold"] as? Double ?? peakThreshold
+        let newPeakWindow = settings["peakWindow"] as? Double ?? peakWindow
+        let newSavePeaks = settings["savePeaks"] as? Bool ?? UserDefaults.standard.bool(forKey: "savePeaks")
+        let newSaveValleys = settings["saveValleys"] as? Bool ?? UserDefaults.standard.bool(forKey: "saveValleys")
+        let newSaveSelectedPeaks = settings["saveSelectedPeaks"] as? Bool ?? UserDefaults.standard.bool(forKey: "saveSelectedPeaks")
+        let newSaveQuaternions = settings["saveQuaternions"] as? Bool ?? UserDefaults.standard.bool(forKey: "saveQuaternions")
+        let newSaveGestureData = settings["saveGestureData"] as? Bool ?? UserDefaults.standard.bool(forKey: "saveGestureData")
+        let newSaveResultFile = settings["saveResultFile"] as? Bool ?? UserDefaults.standard.bool(forKey: "saveResultFile")
+        let newEnableVisualFeedback = settings["enableVisualFeedback"] as? Bool ?? UserDefaults.standard.bool(forKey: "enableVisualFeedback")
+        let newEnableHapticFeedback = settings["enableHapticFeedback"] as? Bool ?? UserDefaults.standard.bool(forKey: "enableHapticFeedback")
+        let newEnableVoiceFeedback = settings["enableVoiceFeedback"] as? Bool ?? UserDefaults.standard.bool(forKey: "enableVoiceFeedback")
+        let newEnableRealtimeData = settings["enableRealtimeData"] as? Bool ?? UserDefaults.standard.bool(forKey: "enableRealtimeData")
+        let newFeedbackType = settings["feedbackType"] as? String ?? UserDefaults.standard.string(forKey: "feedbackType") ?? "gesture"
+
+        // 更新 AppStorage 变量 (确保 UI 反映最新值)
+        peakThreshold = newPeakThreshold
+        peakWindow = newPeakWindow
+        // 更新其他 AppStorage 变量...
+
+        // 更新 MotionManager 的设置
+        motionManager.signalProcessor.updateSettings(peakThreshold: newPeakThreshold, peakWindow: newPeakWindow)
+        motionManager.updateSaveSettings(
+            peaks: newSavePeaks,
+            valleys: newSaveValleys,
+            selectedPeaks: newSaveSelectedPeaks,
+            quaternions: newSaveQuaternions,
+            gestureData: newSaveGestureData,
+            resultFile: newSaveResultFile
+        )
+        // 更新 GestureRecognizer 中的保存开关
+        motionManager.signalProcessor.gestureRecognizer.updateSettings(saveGestureData: newSaveGestureData)
+        // 更新 SignalProcessor 中的结果保存开关
+        motionManager.signalProcessor.updateSettings(saveResult: newSaveResultFile)
+
+        // 更新 FeedbackManager 的设置
+        FeedbackManager.enableVisualFeedback = newEnableVisualFeedback
+        FeedbackManager.enableHapticFeedback = newEnableHapticFeedback
+        FeedbackManager.enableVoiceFeedback = newEnableVoiceFeedback
+
+        // 打印日志确认所有设置都被应用
+        print("ContentView: Settings applied: threshold=\(newPeakThreshold), window=\(newPeakWindow), savePeaks=\(newSavePeaks), saveValleys=\(newSaveValleys), saveSelected=\(newSaveSelectedPeaks), saveQuat=\(newSaveQuaternions), saveGesture=\(newSaveGestureData), saveResult=\(newSaveResultFile), realTime=\(newEnableRealtimeData), vis=\(newEnableVisualFeedback), haptic=\(newEnableHapticFeedback), voice=\(newEnableVoiceFeedback), feedbackType=\(newFeedbackType)")
     }
 }
 

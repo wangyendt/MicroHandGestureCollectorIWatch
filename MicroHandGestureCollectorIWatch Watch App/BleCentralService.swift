@@ -318,6 +318,10 @@ extension BleCentralService: CBPeripheralDelegate {
             UserDefaults.standard.set(settings["enableRealtimeData"] as? Bool ?? false, forKey: "enableRealtimeData")
             UserDefaults.standard.synchronize()
             print("Watch App BleCentralService: Finished updating UserDefaults.")
+
+            // 发送通知，告知设置已通过BLE更新
+            NotificationCenter.default.post(name: .userSettingsUpdatedViaBLE, object: nil, userInfo: settings)
+            print("Watch App BleCentralService: Posted userSettingsUpdatedViaBLE notification.")
         }
     }
     
@@ -334,4 +338,5 @@ extension BleCentralService: CBPeripheralDelegate {
 // 添加通知名称
 extension Notification.Name {
     static let didReceiveBleJsonData = Notification.Name("didReceiveBleJsonData")
+    static let userSettingsUpdatedViaBLE = Notification.Name("userSettingsUpdatedViaBLE")
 } 

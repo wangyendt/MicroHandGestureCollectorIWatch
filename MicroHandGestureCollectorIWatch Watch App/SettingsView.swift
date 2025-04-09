@@ -24,10 +24,6 @@ struct WatchAppSettingsView: View {
     // 反馈类型设置，默认为 "gesture"
     @AppStorage("feedbackType") private var feedbackType: String = "gesture"
     
-    @ObservedObject var motionManager: MotionManager
-    
-    let onSettingsChanged: (Double, Double) -> Void
-    
     var body: some View {
         NavigationView {
             Form {
@@ -91,35 +87,9 @@ struct WatchAppSettingsView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") {
-                        // 更新本地设置
-                        onSettingsChanged(peakThreshold, peakWindow)
-                        motionManager.updateSaveSettings(
-                            peaks: savePeaks,
-                            valleys: saveValleys,
-                            selectedPeaks: saveSelectedPeaks,
-                            quaternions: saveQuaternions,
-                            gestureData: saveGestureData,
-                            resultFile: saveResultFile
-                        )
-                        
-                        // 更新反馈设置
-                        FeedbackManager.enableVisualFeedback = enableVisualFeedback
-                        FeedbackManager.enableHapticFeedback = enableHapticFeedback
-                        FeedbackManager.enableVoiceFeedback = enableVoiceFeedback
-                        
-                        // 保存到 UserDefaults 并立即同步
-                        UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
-                        UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
-                        UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
-                        UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
-                        UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
-                        UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
-                        UserDefaults.standard.set(enableRealtimeData, forKey: "enableRealtimeData")
-                        UserDefaults.standard.synchronize()
-                        
-                        // 同步设置到手机 (改为BLE)
+                        // 1. 准备 settings 字典
                         let settings: [String: Any] = [
-                            "type": "update_settings", // 保持类型不变
+                            "type": "update_settings", // 保持类型不变，以便BLE和WCS兼容
                             "feedbackType": feedbackType,
                             "peakThreshold": peakThreshold,
                             "peakWindow": peakWindow,
@@ -134,15 +104,33 @@ struct WatchAppSettingsView: View {
                             "enableVoiceFeedback": enableVoiceFeedback,
                             "enableRealtimeData": enableRealtimeData
                         ]
-                        BleCentralService.shared.sendSettingsUpdate(settings: settings)
-                        /*
-                        if WCSession.default.isReachable {
-                            WCSession.default.sendMessage(settings, replyHandler: nil) { error in
-                                print("发送设置更新失败: \(error.localizedDescription)")
-                            }
-                        }
-                        */
                         
+                        // 2. 更新 UserDefaults (虽然@AppStorage会自动做，但显式调用 synchronize 确保立即生效)
+                        UserDefaults.standard.set(peakThreshold, forKey: "peakThreshold")
+                        UserDefaults.standard.set(peakWindow, forKey: "peakWindow")
+                        UserDefaults.standard.set(savePeaks, forKey: "savePeaks")
+                        UserDefaults.standard.set(saveValleys, forKey: "saveValleys")
+                        UserDefaults.standard.set(saveSelectedPeaks, forKey: "saveSelectedPeaks")
+                        UserDefaults.standard.set(saveQuaternions, forKey: "saveQuaternions")
+                        UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
+                        UserDefaults.standard.set(saveResultFile, forKey: "saveResultFile")
+                        UserDefaults.standard.set(enableRealtimeData, forKey: "enableRealtimeData")
+                        UserDefaults.standard.set(enableVisualFeedback, forKey: "enableVisualFeedback")
+                        UserDefaults.standard.set(enableHapticFeedback, forKey: "enableHapticFeedback")
+                        UserDefaults.standard.set(enableVoiceFeedback, forKey: "enableVoiceFeedback")
+                        UserDefaults.standard.set(feedbackType, forKey: "feedbackType")
+                        UserDefaults.standard.synchronize()
+                        print("WatchAppSettingsView: Updated UserDefaults.")
+
+                        // 3. 发送通知给 ContentView 应用设置
+                        NotificationCenter.default.post(name: .userSettingsUpdatedViaBLE, object: nil, userInfo: settings)
+                        print("WatchAppSettingsView: Posted userSettingsUpdatedViaBLE notification.")
+                        
+                        // 4. 同步设置到手机 (通过 BLE)
+                        BleCentralService.shared.sendSettingsUpdate(settings: settings)
+                        print("WatchAppSettingsView: Sent settings update via BLE.")
+                        
+                        // 5. 关闭视图
                         dismiss()
                     }
                 }
