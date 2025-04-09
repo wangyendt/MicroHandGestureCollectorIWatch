@@ -10,11 +10,8 @@ import WatchKit
 
 @main
 struct MicroHandGestureCollectorIWatch_Watch_AppApp: App {
-    // 添加 ExtensionDelegate 作为委托
-    // @WKExtensionDelegateAdaptor(ExtensionDelegate.self) var extensionDelegate
-    
-    // 添加环境对象来监控应用生命周期
-    @Environment(\.scenePhase) private var scenePhase
+    // 添加 AppDelegate 作为委托
+    @WKApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     // 初始化蓝牙服务单例
     private let bleService = BleCentralService.shared
@@ -52,26 +49,6 @@ struct MicroHandGestureCollectorIWatch_Watch_AppApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-        }
-        .onChange(of: scenePhase) { newPhase in
-            switch newPhase {
-            case .active:
-                print("📱 应用变为活动状态 - 由Scene触发")
-                // 应用变为活动状态时，尝试启动ExtendedRuntimeSession
-                // ExtendedRuntimeSessionManager.shared.startSession()
-                
-                // 自动开始蓝牙扫描
-                bleService.startScanning()
-                print("📱 自动启动蓝牙扫描")
-                
-            case .background:
-                print("📱 应用进入后台 - 由Scene触发")
-                // 应用进入后台，确保会话继续运行
-            case .inactive:
-                print("📱 应用变为非活动状态 - 由Scene触发")
-            @unknown default:
-                print("📱 应用状态未知")
-            }
         }
     }
 }
