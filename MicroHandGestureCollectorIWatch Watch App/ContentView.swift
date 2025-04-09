@@ -470,7 +470,7 @@ struct ContentView: View {
 
                 // 添加蓝牙状态显示
                 HStack {
-                    Image(systemName: bleService.isConnected ? "bluetooth.circle.fill" : "bluetooth.circle")
+                    Image(systemName: bleService.isConnected ? "bolt.circle.fill" : "bolt.circle")
                         .foregroundColor(bleService.isConnected ? .blue : .gray)
                     Text(bleService.isConnected ? "已连接" : (bleService.isScanning ? "扫描中..." : "未连接"))
                         .foregroundColor(bleService.isConnected ? .blue : (bleService.isScanning ? .orange : .gray))

@@ -102,7 +102,7 @@ struct ContentView: View {
                                 
                                 // 蓝牙状态
                                 HStack {
-                                    Image(systemName: bleService.isAdvertising ? "bluetooth" : "bluetooth.slash")
+                                    Image(systemName: bleService.isAdvertising ? "bolt.circle.fill" : "bolt.slash.circle.fill")
                                         .foregroundColor(bleService.isAdvertising ? .blue : .red)
                                     Text(bleService.isAdvertising ? "蓝牙已启动" : "蓝牙未启动")
                                     Spacer()
