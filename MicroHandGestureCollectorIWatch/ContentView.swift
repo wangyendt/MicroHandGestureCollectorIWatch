@@ -60,6 +60,9 @@ struct ContentView: View {
     
     @State private var showingTetrisGame = false
     
+    // 添加对实时数据开关的访问
+    @AppStorage("enableRealtimeData") private var enableRealtimeData = false
+    
     var body: some View {
         NavigationView {
             ZStack {  // 添加ZStack来显示视觉反馈
@@ -151,35 +154,37 @@ struct ContentView: View {
                             .padding(.vertical, 8)
                         }
                         
-//                        // 传感器数据区域
-//                        GroupBox(label: Text("传感器数据").font(.headline)) {
-//                            VStack(spacing: 20) {
-//                                // 加速度计图表
-//                                ChartView(
-//                                    title: "加速度计 (m/s²)",
-//                                    dataX: accDataX,
-//                                    dataY: accDataY,
-//                                    dataZ: accDataZ,
-//                                    xData: sensorManager.lastReceivedData["acc_x"] ?? 0,
-//                                    yData: sensorManager.lastReceivedData["acc_y"] ?? 0,
-//                                    zData: sensorManager.lastReceivedData["acc_z"] ?? 0
-//                                )
-//                                .frame(height: 350)
-//                                
-//                                // 陀螺仪图表
-//                                ChartView(
-//                                    title: "陀螺仪 (rad/s)",
-//                                    dataX: gyroDataX,
-//                                    dataY: gyroDataY,
-//                                    dataZ: gyroDataZ,
-//                                    xData: sensorManager.lastReceivedData["gyro_x"] ?? 0,
-//                                    yData: sensorManager.lastReceivedData["gyro_y"] ?? 0,
-//                                    zData: sensorManager.lastReceivedData["gyro_z"] ?? 0
-//                                )
-//                                .frame(height: 350)
-//                            }
-//                            .padding(.vertical, 8)
-//                        }
+                        // 传感器数据区域 (根据设置条件显示)
+                        if enableRealtimeData {
+                            GroupBox(label: Text("传感器数据").font(.headline)) {
+                                VStack(spacing: 20) {
+                                    // 加速度计图表
+                                    ChartView(
+                                        title: "加速度计 (m/s²)",
+                                        dataX: accDataX,
+                                        dataY: accDataY,
+                                        dataZ: accDataZ,
+                                        xData: sensorManager.lastReceivedData["acc_x"] ?? 0,
+                                        yData: sensorManager.lastReceivedData["acc_y"] ?? 0,
+                                        zData: sensorManager.lastReceivedData["acc_z"] ?? 0
+                                    )
+                                    .frame(height: 350)
+                                    
+                                    // 陀螺仪图表
+                                    ChartView(
+                                        title: "陀螺仪 (rad/s)",
+                                        dataX: gyroDataX,
+                                        dataY: gyroDataY,
+                                        dataZ: gyroDataZ,
+                                        xData: sensorManager.lastReceivedData["gyro_x"] ?? 0,
+                                        yData: sensorManager.lastReceivedData["gyro_y"] ?? 0,
+                                        zData: sensorManager.lastReceivedData["gyro_z"] ?? 0
+                                    )
+                                    .frame(height: 350)
+                                }
+                                .padding(.vertical, 8)
+                            }
+                        }
                         
                         // 控制区域
                         GroupBox(label: Text("数据采集").font(.headline)) {
