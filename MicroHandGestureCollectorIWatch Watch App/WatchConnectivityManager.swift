@@ -105,20 +105,30 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     }
     
     func sendDataToPhone(fileURLs: [URL]) {
-        guard WCSession.default.isReachable else {
-            self.lastMessage = "iPhone 未连接"
+        // Add logging before sending
+        let reachable = WCSession.default.isReachable
+        print("🔵 Watch: Attempting sendDataToPhone. Reachable = \(reachable)")
+        
+        guard reachable else {
+            DispatchQueue.main.async {
+                 self.lastMessage = "iPhone 未连接"
+            }
             return
         }
         
-        self.isSending = true
+        DispatchQueue.main.async {
+             self.isSending = true
+        }
         var transferredCount = 0
         var skippedCount = 0
         
         for fileURL in fileURLs {
+            print("  - Preparing to transfer folder/file: \(fileURL.lastPathComponent)")
             do {
                 // 检查是否是文件夹
                 var isDirectory: ObjCBool = false
                 guard FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory) else {
+                    print("    - Skipping, file does not exist: \(fileURL.path)")
                     continue
                 }
                 
@@ -135,7 +145,7 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                             "name": contentURL.lastPathComponent,
                             "folder": fileURL.lastPathComponent
                         ]
-                        
+                        print("    - Transferring file \(contentURL.lastPathComponent) from folder \(fileURL.lastPathComponent)")
                         WCSession.default.transferFile(contentURL, metadata: metadata)
                         transferredCount += 1
                         
@@ -149,7 +159,7 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                         "name": fileURL.lastPathComponent,
                         "folder": fileURL.deletingLastPathComponent().lastPathComponent
                     ]
-                    
+                    print("    - Transferring single file \(fileURL.lastPathComponent)")
                     WCSession.default.transferFile(fileURL, metadata: metadata)
                     transferredCount += 1
                     
@@ -158,17 +168,18 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                     }
                 }
             } catch {
-                print("Error processing file/folder: \(error)")
+                print("    - Error processing file/folder: \(error)")
             }
         }
         
-        DispatchQueue.main.async {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { // Add slight delay for UI update
             self.isSending = false
             if skippedCount > 0 {
                 self.lastMessage = "传输完成: \(transferredCount) 个文件，\(skippedCount) 个文件已存在"
             } else {
                 self.lastMessage = "传输完成: \(transferredCount) 个文件"
             }
+            print("🔵 Watch: sendDataToPhone finished. Transferred: \(transferredCount)")
         }
     }
     
@@ -365,10 +376,16 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     }
     
     func sendMessage(_ message: [String: Any]) {
-        if WCSession.default.isReachable {
+        let reachable = WCSession.default.isReachable
+        let messageType = message["type"] as? String ?? "Unknown Type"
+        print("🔵 Watch: Attempting sendMessage. Type = \(messageType), Reachable = \(reachable)")
+        
+        if reachable {
             WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                print("发送消息失败: \(error.localizedDescription)")
+                print("❌ Watch: 发送消息失败: \(error.localizedDescription)")
             }
+        } else {
+            print("⚠️ Watch: sendMessage skipped, iPhone not reachable.")
         }
     }
     

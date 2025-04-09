@@ -219,15 +219,56 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        if let error = error {
-            lastMessage = "Watch连接失败: \(error.localizedDescription)"
+        // Explicitly log activation result
+        DispatchQueue.main.async {
+            switch activationState {
+            case .activated:
+                print("✅ iPhone WCSession Activated")
+                self.lastMessage = "Watch已连接"
+            case .inactive:
+                print("⚠️ iPhone WCSession Inactive")
+                self.lastMessage = "Watch连接非活动"
+            case .notActivated:
+                print("❌ iPhone WCSession Not Activated")
+                self.lastMessage = "Watch连接未激活"
+            @unknown default:
+                print("❓ iPhone WCSession Unknown State")
+                self.lastMessage = "Watch连接状态未知"
+            }
+            
+            if let error = error {
+                print("❌ WCSession activation failed with error: \(error.localizedDescription)")
+                self.lastMessage = "Watch连接失败: \(error.localizedDescription)"
+            }
         }
     }
     
-    func sessionDidBecomeInactive(_ session: WCSession) {}
-    func sessionDidDeactivate(_ session: WCSession) {}
+    func sessionDidBecomeInactive(_ session: WCSession) {
+        // Log state change
+        DispatchQueue.main.async {
+            print("⚠️ iPhone WCSession Did Become Inactive")
+            self.lastMessage = "Watch连接变为非活动"
+        }
+    }
+    
+    func sessionDidDeactivate(_ session: WCSession) {
+        // Log state change and attempt reactivation
+        DispatchQueue.main.async {
+            print("❌ iPhone WCSession Did Deactivate. Reactivating...")
+            self.lastMessage = "Watch连接已断开，尝试重连..."
+        }
+        // Activation must be performed on a background thread
+        DispatchQueue.global().async {
+             WCSession.default.activate()
+        }
+    }
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        // Log message reception immediately
+        DispatchQueue.main.async {
+             print("🔵 iPhone didReceiveMessage: \(message["type"] ?? "Unknown Type")")
+        }
+        
         // 首先，检查消息类型
         let messageType = message["type"] as? String
         
