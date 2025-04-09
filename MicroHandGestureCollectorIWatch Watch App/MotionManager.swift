@@ -441,17 +441,14 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             selectedPeakFileHandle?.seekToEndOfFile()
             quaternionFileHandle?.seekToEndOfFile()
             
-            // 发送文件夹名到手机
-            if WCSession.default.isReachable {
-                let message: [String: Any] = [
-                    "type": "start_collection",
-                    "trigger_collection": true,
-                    "folder_name": folderName
-                ]
-                WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                    print("发送文件夹名到手机失败: \(error.localizedDescription)")
-                }
-            }
+            // 发送文件夹名到手机 (改为BLE)
+            let message: [String: Any] = [
+                "type": "start_collection",
+                "trigger_collection": true,
+                "folder_name": folderName
+            ]
+            BleCentralService.shared.sendGestureResult(resultDict: message)
+            print("通过BLE发送文件夹名到手机: \(folderName)")
             
         } catch {
             print("Error creating directory or files: \(error)")

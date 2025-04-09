@@ -104,8 +104,14 @@ class MessageHandlerService {
     // MARK: - 消息处理方法
     
     private func handleStartCollection(_ message: [String: Any]) {
-        logger.info("收到开始采集消息")
-        
+        logger.info("收到开始采集消息 (来自 BLE)")
+
+        if let folderName = message["folder_name"] as? String {
+            SensorDataManager.shared.updateFolderNameAndLogger(folderName)
+        } else {
+            logger.warning("开始采集消息中未找到 folder_name")
+        }
+
         // 通过通知中心广播消息
         NotificationCenter.default.post(
             name: .startCollectionRequested,

@@ -274,25 +274,6 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
         
         // 处理设置更新消息
         switch messageType {
-        case "start_collection":
-            if let folderName = message["folder_name"] as? String {
-                print("收到开始采集消息，文件夹名：\(folderName)")
-                currentFolderName = folderName
-                
-                // 更新日志文件名
-                if let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                    // 创建 Logs 文件夹
-                    let logsPath = documentsPath.appendingPathComponent("Logs", isDirectory: true)
-                    do {
-                        if !FileManager.default.fileExists(atPath: logsPath.path) {
-                            try FileManager.default.createDirectory(at: logsPath, withIntermediateDirectories: true, attributes: nil)
-                        }
-                        self.actionLogger.setCurrentFolder(logsPath, folderName: folderName)
-                    } catch {
-                        print("创建 Logs 文件夹失败：\(error)")
-                    }
-                }
-            }
         case "update_settings":
             DispatchQueue.main.async {
                 // 更新 UserDefaults 中的设置
@@ -348,7 +329,7 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
             DispatchQueue.main.async {
                 // 只打印非传感器数据的消息
                 if messageType != nil {
-                    print("iPhone收到消息: \(messageType!)")
+                    print("iPhone收到消息(WCS): \(messageType!)") // 标记来源为 WCS
                 }
                 
                 // 处理手势识别结果
@@ -583,5 +564,28 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func updateTrueGesture(id: String, gesture: String, timestamp: Double) {
         // 记录真实手势更新
         self.actionLogger.logTrueGestureUpdate(id: id, gesture: gesture, timestamp: timestamp)
+    }
+    
+    // 添加更新文件夹名称和配置日志记录器的函数
+    func updateFolderNameAndLogger(_ folderName: String) {
+        DispatchQueue.main.async {
+            self.currentFolderName = folderName
+            print("更新文件夹名为: \(folderName)")
+
+            // 更新日志文件名
+            if let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                // 创建 Logs 文件夹
+                let logsPath = documentsPath.appendingPathComponent("Logs", isDirectory: true)
+                do {
+                    if !FileManager.default.fileExists(atPath: logsPath.path) {
+                        try FileManager.default.createDirectory(at: logsPath, withIntermediateDirectories: true, attributes: nil)
+                    }
+                    // 使用新的文件夹名配置actionLogger
+                    self.actionLogger.setCurrentFolder(logsPath, folderName: folderName)
+                } catch {
+                    print("创建 Logs 文件夹或设置 Logger 失败：\(error)")
+                }
+            }
+        }
     }
 }
