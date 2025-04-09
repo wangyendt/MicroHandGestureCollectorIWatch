@@ -1168,5 +1168,18 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         timestampOffset = phoneStartTime - watchStartTime
         print("设置时间戳差值：\(String(format: "%.3f", timestampOffset ?? 0))，手机时间戳：\(String(format: "%.3f", phoneStartTime))，手表时间戳：\(String(format: "%.3f", watchStartTime))")
     }
+
+    // MARK: - Data Sending
+    private func sendBatchDataToPhone(_ batch: [[String: Any]]) {
+        // Check if real-time data sending is enabled
+        let shouldSendRealtime = UserDefaults.standard.bool(forKey: "enableRealtimeData")
+        guard shouldSendRealtime else { return } // Don't send if disabled
+
+        let message: [String: Any] = ["type": "batch_data", "data": batch]
+
+        // Send via BLE instead of WCSession
+        BleCentralService.shared.sendGestureResult(resultDict: message)
+        // Note: Error handling for BLE send happens within BleCentralService
+    }
 }
 #endif
