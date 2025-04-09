@@ -181,6 +181,186 @@ struct ContentView: View {
     let tightnessOptions = ["松", "紧"]
     let bandTypeOptions = ["金属", "真皮", "编织", "运动", "橡胶"]
     
+    // Helper view for Hand Picker
+    private var handPickerSection: some View {
+        Button(action: { showHandPicker = true }) {
+            HStack {
+                Text("手性").font(.headline)
+                Spacer()
+                Text(selectedHand)
+                    .foregroundColor(.gray)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(8)
+        }
+        .sheet(isPresented: $showHandPicker) {
+            List {
+                ForEach(handOptions, id: \.self) { option in
+                    Button(action: {
+                        selectedHand = option
+                        showHandPicker = false
+                    }) {
+                        HStack {
+                            Text(option)
+                            Spacer()
+                            if selectedHand == option {
+                                Text("✓")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Helper view for Gender Picker
+    private var genderPickerSection: some View {
+        Button(action: { showGenderPicker = true }) {
+            HStack {
+                Text("性别").font(.headline)
+                Spacer()
+                Text(selectedGender)
+                    .foregroundColor(.gray)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(8)
+        }
+        .sheet(isPresented: $showGenderPicker) {
+            List {
+                ForEach(genderOptions, id: \.self) { option in
+                    Button(action: {
+                        selectedGender = option
+                        showGenderPicker = false
+                    }) {
+                        HStack {
+                            Text(option)
+                            Spacer()
+                            if selectedGender == option {
+                                Text("✓")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Helper view for Band Type Picker
+    private var bandTypePickerSection: some View {
+        Button(action: { showBandTypePicker = true }) {
+            HStack {
+                Text("表带").font(.headline)
+                Spacer()
+                Text(selectedBandType)
+                    .foregroundColor(.gray)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(8)
+        }
+        .sheet(isPresented: $showBandTypePicker) {
+            List {
+                ForEach(bandTypeOptions, id: \.self) { option in
+                    Button(action: {
+                        selectedBandType = option
+                        showBandTypePicker = false
+                    }) {
+                        HStack {
+                            Text(option)
+                            Spacer()
+                            if selectedBandType == option {
+                                Text("✓")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Helper view for Tightness Picker
+    private var tightnessPickerSection: some View {
+        Button(action: { showTightnessPicker = true }) {
+            HStack {
+                Text("松紧").font(.headline)
+                Spacer()
+                Text(selectedTightness)
+                    .foregroundColor(.gray)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(8)
+        }
+        .sheet(isPresented: $showTightnessPicker) {
+            List {
+                ForEach(tightnessOptions, id: \.self) { option in
+                    Button(action: {
+                        selectedTightness = option
+                        showTightnessPicker = false
+                    }) {
+                        HStack {
+                            Text(option)
+                            Spacer()
+                            if selectedTightness == option {
+                                Text("✓")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Helper view for Gesture Picker
+    private var gesturePickerSection: some View {
+        Button(action: { showGesturePicker = true }) {
+            HStack {
+                Text("手势").font(.headline)
+                Spacer()
+                Text(selectedGesture)
+                    .foregroundColor(.gray)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(8)
+        }
+        .sheet(isPresented: $showGesturePicker) {
+            List {
+                ForEach(gestureOptions, id: \.self) { option in
+                    Button(action: {
+                        selectedGesture = option
+                        showGesturePicker = false
+                    }) {
+                        HStack {
+                            Text(option)
+                            Spacer()
+                            if selectedGesture == option {
+                                Text("✓")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 15) {
@@ -193,175 +373,20 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 8)
                 
-                // 手性选择
-                Button(action: { showHandPicker = true }) {
-                    HStack {
-                        Text("手性").font(.headline)
-                        Spacer()
-                        Text(selectedHand)
-                            .foregroundColor(.gray)
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.gray)
-                    }
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                }
-                .sheet(isPresented: $showHandPicker) {
-                    List {
-                        ForEach(handOptions, id: \.self) { option in
-                            Button(action: {
-                                selectedHand = option
-                                showHandPicker = false
-                            }) {
-                                HStack {
-                                    Text(option)
-                                    Spacer()
-                                    if selectedHand == option {
-                                        Text("✓")
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // Use the helper view
+                handPickerSection
                 
-                // 性别选择
-                Button(action: { showGenderPicker = true }) {
-                    HStack {
-                        Text("性别").font(.headline)
-                        Spacer()
-                        Text(selectedGender)
-                            .foregroundColor(.gray)
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.gray)
-                    }
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                }
-                .sheet(isPresented: $showGenderPicker) {
-                    List {
-                        ForEach(genderOptions, id: \.self) { option in
-                            Button(action: {
-                                selectedGender = option
-                                showGenderPicker = false
-                            }) {
-                                HStack {
-                                    Text(option)
-                                    Spacer()
-                                    if selectedGender == option {
-                                        Text("✓")
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // Use the helper view for Gender
+                genderPickerSection
                 
-                // 表带类型选择
-                Button(action: { showBandTypePicker = true }) {
-                    HStack {
-                        Text("表带").font(.headline)
-                        Spacer()
-                        Text(selectedBandType)
-                            .foregroundColor(.gray)
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.gray)
-                    }
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                }
-                .sheet(isPresented: $showBandTypePicker) {
-                    List {
-                        ForEach(bandTypeOptions, id: \.self) { option in
-                            Button(action: {
-                                selectedBandType = option
-                                showBandTypePicker = false
-                            }) {
-                                HStack {
-                                    Text(option)
-                                    Spacer()
-                                    if selectedBandType == option {
-                                        Text("✓")
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // Use the helper view for Band Type
+                bandTypePickerSection
                 
-                // 松紧度选择
-                Button(action: { showTightnessPicker = true }) {
-                    HStack {
-                        Text("松紧").font(.headline)
-                        Spacer()
-                        Text(selectedTightness)
-                            .foregroundColor(.gray)
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.gray)
-                    }
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                }
-                .sheet(isPresented: $showTightnessPicker) {
-                    List {
-                        ForEach(tightnessOptions, id: \.self) { option in
-                            Button(action: {
-                                selectedTightness = option
-                                showTightnessPicker = false
-                            }) {
-                                HStack {
-                                    Text(option)
-                                    Spacer()
-                                    if selectedTightness == option {
-                                        Text("✓")
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // Use the helper view for Tightness
+                tightnessPickerSection
                 
-                // 手势选择
-                Button(action: { showGesturePicker = true }) {
-                    HStack {
-                        Text("手势").font(.headline)
-                        Spacer()
-                        Text(selectedGesture)
-                            .foregroundColor(.gray)
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.gray)
-                    }
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                }
-                .sheet(isPresented: $showGesturePicker) {
-                    List {
-                        ForEach(gestureOptions, id: \.self) { option in
-                            Button(action: {
-                                selectedGesture = option
-                                showGesturePicker = false
-                            }) {
-                                HStack {
-                                    Text(option)
-                                    Spacer()
-                                    if selectedGesture == option {
-                                        Text("✓")
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // Use the helper view for Gesture
+                gesturePickerSection
                 
                 // 力度选择
                 Button(action: { showForcePicker = true }) {
@@ -533,31 +558,37 @@ struct ContentView: View {
                             bandType: selectedBandType,
                             supervisorName: supervisorName  // 添加监督者姓名参数
                         )
-                        // 向iPhone发送开始采集的消息
+                        // 向iPhone发送开始采集的消息 (改为BLE)
+                        bleService.sendControlMessage(type: "start_collection")
+                        /*
                         if WCSession.default.isReachable {
                             let message: [String: Any] = [
                                 "type": "start_collection" as String,
                                 "trigger_collection": true as Bool
                             ]
                             WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                                print("发送开始采集消息失败: \(error.localizedDescription)")
+                                print("发送开始采集消息失败: \\(error.localizedDescription)")
                             }
                         }
+                        */
                     } else {
                         FeedbackManager.playFeedback(
                             style: .stop,
                             speak: "停止采集"
                         )
-                        // 向iPhone发送停止采集的消息
+                        // 向iPhone发送停止采集的消息 (改为BLE)
+                        bleService.sendControlMessage(type: "stop_collection")
+                        /*
                         if WCSession.default.isReachable {
                             let message: [String: Any] = [
                                 "type": "stop_collection" as String,
                                 "trigger_collection": true as Bool
                             ]
                             WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                                print("发送停止采集消息失败: \(error.localizedDescription)")
+                                print("发送停止采集消息失败: \\(error.localizedDescription)")
                             }
                         }
+                        */
                         motionManager.stopDataCollection()
                     }
                 }) {

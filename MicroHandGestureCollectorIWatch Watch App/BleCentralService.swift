@@ -88,6 +88,29 @@ class BleCentralService: NSObject, ObservableObject {
             logger.error("数据序列化失败: \(error.localizedDescription)")
         }
     }
+    
+    // 添加发送控制指令的方法
+    func sendControlMessage(type: String) {
+        guard let peripheral = peripheral,
+              let characteristic = writeCharacteristic else {
+            lastError = "无法发送控制指令"
+            return
+        }
+        
+        let messageDict: [String: Any] = [
+            "type": type,
+            "trigger_collection": true // 与之前WCSession保持一致
+        ]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: messageDict, options: [])
+            peripheral.writeValue(jsonData, for: characteristic, type: .withResponse)
+            logger.info("通过BLE发送控制指令: \(type)")
+        } catch {
+            lastError = "控制指令序列化失败: \(error.localizedDescription)"
+            logger.error("控制指令序列化失败: \(error.localizedDescription)")
+        }
+    }
 }
 
 extension BleCentralService: CBCentralManagerDelegate {
