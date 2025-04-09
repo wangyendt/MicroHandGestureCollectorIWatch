@@ -246,6 +246,37 @@ extension BleCentralService: CBPeripheralDelegate {
             else if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
                 logger.info("收到JSON格式数据")
                 
+                // 直接处理start_collection和stop_collection消息（添加）
+                if let type = jsonObject["type"] as? String {
+                    logger.info("收到BLE消息类型: \(type)")
+                    
+                    // 针对特殊消息类型直接发送通知
+                    if type == "start_collection" || type == "stop_collection" || type == "request_export" {
+                        let notificationName: Notification.Name
+                        switch type {
+                        case "start_collection":
+                            notificationName = NSNotification.Name("StartCollectionRequested")
+                            logger.info("收到开始采集请求，直接发送通知")
+                        case "stop_collection":
+                            notificationName = NSNotification.Name("StopCollectionRequested")
+                            logger.info("收到停止采集请求，直接发送通知")
+                        case "request_export":
+                            notificationName = NSNotification.Name("ExportDataRequested")
+                            logger.info("收到导出数据请求，直接发送通知")
+                        default:
+                            notificationName = NSNotification.Name("UnknownRequestType")
+                        }
+                        
+                        DispatchQueue.main.async {
+                            NotificationCenter.default.post(
+                                name: notificationName,
+                                object: nil, 
+                                userInfo: jsonObject
+                            )
+                        }
+                    }
+                }
+                
                 // 发送通知，以便应用其他部分可以处理这些消息
                 DispatchQueue.main.async {
                     // 检查是否是设置更新消息
@@ -267,11 +298,6 @@ extension BleCentralService: CBPeripheralDelegate {
                             object: nil,
                             userInfo: jsonObject
                         )
-                        
-                        // 如果是手势结果更新，打印日志
-                        if let type = jsonObject["type"] as? String {
-                            self.logger.info("收到BLE消息类型: \(type)")
-                        }
                     }
                 }
             }

@@ -861,15 +861,15 @@ struct ContentView: View {
         // 先更新UI状态，确保界面响应
         isCollecting = true
         
-        // 发送开始采集消息到 Watch
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage([
-                "type": "start_collection",
-                "trigger_collection": true
-            ], replyHandler: nil) { error in
-                print("发送开始采集消息失败: \(error.localizedDescription)")
-            }
-        }
+        // 创建开始采集消息
+        let startMessage: [String: Any] = [
+            "type": "start_collection",
+            "trigger_collection": true
+        ]
+        
+        // 通过BLE发送开始采集消息
+        BlePeripheralService.shared.sendJSONData(startMessage)
+        print("通过BLE发送开始采集消息")
         
         // 如果启用了视频录制，则在后台线程开始录制
         if AppSettings.shared.enableVideoRecording {
@@ -889,15 +889,15 @@ struct ContentView: View {
         // 先更新UI状态
         isCollecting = false
         
-        // 发送停止采集消息到 Watch
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage([
-                "type": "stop_collection",
-                "trigger_collection": true
-            ], replyHandler: nil) { error in
-                print("发送停止采集消息失败: \(error.localizedDescription)")
-            }
-        }
+        // 创建停止采集消息
+        let stopMessage: [String: Any] = [
+            "type": "stop_collection",
+            "trigger_collection": true
+        ]
+        
+        // 通过BLE发送停止采集消息
+        BlePeripheralService.shared.sendJSONData(stopMessage)
+        print("通过BLE发送停止采集消息")
         
         // 如果正在录制视频，则停止录制（异步执行）
         if videoRecordingService.isRecording {
