@@ -21,6 +21,8 @@ class BleCentralService: NSObject, ObservableObject {
     
     // 添加自动重连标志
     private var shouldAutoReconnect = true
+    // 添加数据缓冲区用于组装分块数据
+    private var incomingDataBuffer = Data()
     
     private let logger = Logger(subsystem: "com.wayne.MicroHandGestureCollectorIWatch", category: "BleCentral")
     
@@ -236,71 +238,86 @@ extension BleCentralService: CBPeripheralDelegate {
         }
         
         if characteristic.uuid == notifyCharacteristicUUID, let data = characteristic.value {
+            print("Watch App BleCentralService: Received raw data on notify characteristic (size: \(data.count) bytes): \(data as NSData)")
+            if let stringData = String(data: data, encoding: .utf8) {
+                print("Watch App BleCentralService: Raw data as UTF8 string: \(stringData)")
+            } else {
+                print("Watch App BleCentralService: Raw data could not be decoded as UTF8 string.")
+            }
+            
             // 尝试解析为普通数字（计数器值）
             if let valueString = String(data: data, encoding: .utf8), let value = Int(valueString) {
+                // 收到计数器值，表示之前的 JSON 数据传输完成（如果有）
+                print("Watch App BleCentralService: Received counter value: \(value). Processing buffered data (size: \(incomingDataBuffer.count) bytes).")
+                if !incomingDataBuffer.isEmpty {
+                    processBufferedData()
+                    incomingDataBuffer.removeAll() // 清空缓冲区
+                }
+                
+                // 更新UI上的计数器值
                 DispatchQueue.main.async {
                     self.currentValue = value
                 }
             } 
-            // 尝试解析为JSON数据
-            else if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                logger.info("收到JSON格式数据")
-                
-                // 直接处理start_collection和stop_collection消息（添加）
-                if let type = jsonObject["type"] as? String {
-                    logger.info("收到BLE消息类型: \(type)")
-                    
-                    // 针对特殊消息类型直接发送通知
-                    if type == "start_collection" || type == "stop_collection" || type == "request_export" {
-                        let notificationName: Notification.Name
-                        switch type {
-                        case "start_collection":
-                            notificationName = NSNotification.Name("StartCollectionRequested")
-                            logger.info("收到开始采集请求，直接发送通知")
-                        case "stop_collection":
-                            notificationName = NSNotification.Name("StopCollectionRequested")
-                            logger.info("收到停止采集请求，直接发送通知")
-                        case "request_export":
-                            notificationName = NSNotification.Name("ExportDataRequested")
-                            logger.info("收到导出数据请求，直接发送通知")
-                        default:
-                            notificationName = NSNotification.Name("UnknownRequestType")
-                        }
-                        
-                        DispatchQueue.main.async {
-                            NotificationCenter.default.post(
-                                name: notificationName,
-                                object: nil, 
-                                userInfo: jsonObject
-                            )
-                        }
-                    }
-                }
-                
-                // 发送通知，以便应用其他部分可以处理这些消息
-                DispatchQueue.main.async {
-                    // 检查是否是设置更新消息
-                    if let type = jsonObject["type"] as? String, type == "update_settings" {
-                        self.logger.info("收到手表设置更新")
-                        NotificationCenter.default.post(
-                            name: .didReceiveSettingsUpdate, // 使用新的通知名称
-                            object: nil,
-                            userInfo: jsonObject
-                        )
-                    } else {
-                        // 其他 JSON 消息继续走之前的逻辑
-                        // 发送通知给 MessageHandlerService (通过 WatchConnectivityManager 间接触发)
-                        WatchConnectivityManager.shared.processMessage(jsonObject)
-                        
-                        // 同时仍然发送通知，保持向后兼容 (可能可以移除，取决于 MessageHandler 是否完全依赖 WCSession 触发)
-                        NotificationCenter.default.post(
-                            name: .didReceiveBleJsonData,
-                            object: nil,
-                            userInfo: jsonObject
-                        )
-                    }
-                }
+            // 尝试解析为JSON数据 (如果不是计数器值，则认为是 JSON 数据块)
+            else {
+                // 将数据块添加到缓冲区
+                print("Watch App BleCentralService: Received data chunk. Appending to buffer (current size: \(incomingDataBuffer.count) bytes).")
+                incomingDataBuffer.append(data)
             }
+        }
+    }
+    
+    // 新增：处理缓冲区的完整数据
+    private func processBufferedData() {
+        print("Watch App BleCentralService: processBufferedData() called.")
+        // 尝试解析为JSON数据
+        if let jsonObject = try? JSONSerialization.jsonObject(with: incomingDataBuffer, options: []) as? [String: Any] {
+            print("Watch App BleCentralService: Successfully parsed buffered data as JSON: \(jsonObject)")
+            
+            // 检查是否是设置更新消息
+            if let type = jsonObject["type"] as? String, type == "update_settings" {
+                self.logger.info("Watch App BleCentralService: Received settings update from buffer.")
+                updateUserDefaults(from: jsonObject)
+            } else {
+                // 其他 JSON 消息继续走之前的逻辑
+                // 发送通知给 MessageHandlerService (通过 WatchConnectivityManager 间接触发)
+                print("Watch App BleCentralService: Forwarding non-settings JSON from buffer to MessageHandler/WCSession.")
+                WatchConnectivityManager.shared.processMessage(jsonObject)
+                
+                // 同时仍然发送通知，保持向后兼容 (可能可以移除，取决于 MessageHandler 是否完全依赖 WCSession 触发)
+                print("Watch App BleCentralService: Posting .didReceiveBleJsonData notification from buffer.")
+                NotificationCenter.default.post(
+                    name: .didReceiveBleJsonData,
+                    object: nil,
+                    userInfo: jsonObject
+                )
+            }
+        } else {
+            print("Watch App BleCentralService: Failed to parse buffered data as JSON.")
+        }
+        // 注意：无论解析是否成功，缓冲区都在调用此方法后被清空
+    }
+    
+    // 新增：直接更新 UserDefaults 的辅助函数
+    private func updateUserDefaults(from settings: [String: Any]) {
+        print("Watch App BleCentralService: updateUserDefaults called with: \(settings)")
+        DispatchQueue.main.async {
+            UserDefaults.standard.set(settings["feedbackType"] as? String ?? "gesture", forKey: "feedbackType")
+            UserDefaults.standard.set(settings["peakThreshold"] as? Double ?? 0.5, forKey: "peakThreshold")
+            UserDefaults.standard.set(settings["peakWindow"] as? Double ?? 0.6, forKey: "peakWindow")
+            UserDefaults.standard.set(settings["saveGestureData"] as? Bool ?? false, forKey: "saveGestureData")
+            UserDefaults.standard.set(settings["savePeaks"] as? Bool ?? false, forKey: "savePeaks")
+            UserDefaults.standard.set(settings["saveValleys"] as? Bool ?? false, forKey: "saveValleys")
+            UserDefaults.standard.set(settings["saveSelectedPeaks"] as? Bool ?? false, forKey: "saveSelectedPeaks")
+            UserDefaults.standard.set(settings["saveQuaternions"] as? Bool ?? false, forKey: "saveQuaternions")
+            UserDefaults.standard.set(settings["saveResultFile"] as? Bool ?? true, forKey: "saveResultFile")
+            UserDefaults.standard.set(settings["enableVisualFeedback"] as? Bool ?? false, forKey: "enableVisualFeedback")
+            UserDefaults.standard.set(settings["enableHapticFeedback"] as? Bool ?? false, forKey: "enableHapticFeedback")
+            UserDefaults.standard.set(settings["enableVoiceFeedback"] as? Bool ?? false, forKey: "enableVoiceFeedback")
+            UserDefaults.standard.set(settings["enableRealtimeData"] as? Bool ?? false, forKey: "enableRealtimeData")
+            UserDefaults.standard.synchronize()
+            print("Watch App BleCentralService: Finished updating UserDefaults.")
         }
     }
     

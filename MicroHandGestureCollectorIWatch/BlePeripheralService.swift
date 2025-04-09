@@ -14,6 +14,8 @@ class BlePeripheralService: NSObject, ObservableObject {
     private var writeCharacteristic: CBMutableCharacteristic!
     private var connectedCentrals: Set<CBCentral> = []
     private var timer: Timer?
+    private var dataToSendQueue: [Data] = []
+    private var isReadyToSend = true
     
     @Published var isAdvertising = false
     @Published var isConnected = false
@@ -122,7 +124,7 @@ class BlePeripheralService: NSObject, ObservableObject {
     // 新增：发送设置更新到已连接的中心设备
     func sendSettingsUpdate(settings: [String: Any]) {
         guard !connectedCentrals.isEmpty else {
-            print("没有已连接的设备，跳过发送设置更新")
+            print("Phone BlePeripheralService: No connected centrals, skipping settings update.")
             return
         }
         
@@ -134,10 +136,59 @@ class BlePeripheralService: NSObject, ObservableObject {
             }
             
             let jsonData = try JSONSerialization.data(withJSONObject: updatedSettings)
-            print("通过BLE发送设置更新：\(updatedSettings)")
-            peripheralManager.updateValue(jsonData, for: notifyCharacteristic, onSubscribedCentrals: Array(connectedCentrals))
+            print("Phone BlePeripheralService: Serialized settings JSON (\(jsonData.count) bytes): \(String(data: jsonData, encoding: .utf8) ?? "Invalid UTF8")")
+            
+            // 发送数据（分块）
+            dataToSendQueue.removeAll() // 清空旧队列
+            let chunkSize = 20 // MTU 安全块大小
+            let totalSize = jsonData.count
+            var offset = 0
+            
+            while offset < totalSize {
+                let chunkEnd = min(offset + chunkSize, totalSize)
+                let chunk = jsonData.subdata(in: offset..<chunkEnd)
+                dataToSendQueue.append(chunk) // 将块添加到队列
+                offset += chunkSize
+            }
+            print("Phone BlePeripheralService: Added \(dataToSendQueue.count) chunks to send queue.")
+            
+            // 启动发送过程
+            sendNextChunk()
+            
         } catch {
+            print("Phone BlePeripheralService: JSON serialization failed for settings update: \(error.localizedDescription)")
             logger.error("设置更新JSON序列化失败: \(error.localizedDescription)")
+        }
+    }
+    
+    // 新增：发送队列中的下一个数据块
+    private func sendNextChunk() {
+        guard isReadyToSend, !dataToSendQueue.isEmpty else {
+            if !isReadyToSend {
+                print("Phone BlePeripheralService: sendNextChunk - Not ready to send, waiting for callback.")
+            }
+            if dataToSendQueue.isEmpty {
+                print("Phone BlePeripheralService: sendNextChunk - Queue is empty, all chunks sent.")
+            }
+            return
+        }
+        
+        // 取出下一个块
+        let chunk = dataToSendQueue.removeFirst()
+        
+        print("Phone BlePeripheralService: Sending chunk (remaining: \(dataToSendQueue.count)), size: \(chunk.count) bytes")
+        let success = peripheralManager.updateValue(chunk, for: notifyCharacteristic, onSubscribedCentrals: nil)
+        print("Phone BlePeripheralService: updateValue returned: \(success)")
+        
+        if success {
+            // 如果发送成功，立即尝试发送下一个
+            print("Phone BlePeripheralService: Chunk sent successfully, trying next chunk immediately.")
+            sendNextChunk()
+        } else {
+            // 如果发送失败（队列满），将块放回队列前面，并等待回调
+            print("Phone BlePeripheralService: updateValue returned false, queue might be full. Re-queueing chunk and waiting.")
+            dataToSendQueue.insert(chunk, at: 0)
+            isReadyToSend = false
         }
     }
 }
@@ -185,6 +236,7 @@ extension BlePeripheralService: CBPeripheralManagerDelegate {
                 if let jsonObject = try? JSONSerialization.jsonObject(with: value, options: []) as? [String: Any] {
                     // 直接发送原始JSON数据通知，不在BLE服务中解析业务数据
                     logger.info("收到JSON格式数据")
+                    print("Phone BlePeripheralService: Received JSON data: \(jsonObject)")
                     NotificationCenter.default.post(
                         name: .didReceiveJsonData,
                         object: nil,
@@ -207,6 +259,13 @@ extension BlePeripheralService: CBPeripheralManagerDelegate {
                 peripheral.respond(to: request, withResult: .success)
             }
         }
+    }
+    
+    // MARK: - CBPeripheralManagerDelegate Flow Control
+    func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {
+        print("Phone BlePeripheralService: Peripheral manager is ready to send data again.")
+        isReadyToSend = true
+        sendNextChunk() // 尝试发送队列中的下一个块
     }
 }
 

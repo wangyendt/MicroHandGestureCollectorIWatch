@@ -148,31 +148,6 @@ struct WatchAppSettingsView: View {
                 }
             }
         }
-        // 添加观察者以接收来自手机的设置更新
-        .onAppear {
-            NotificationCenter.default.addObserver(forName: .didReceiveSettingsUpdate, object: nil, queue: .main) { notification in
-                if let updatedSettings = notification.userInfo as? [String: Any] {
-                    updateSettings(from: updatedSettings)
-                }
-            }
-        }
-    }
-    
-    // 添加一个方法来处理接收到的设置更新
-    private func updateSettings(from settings: [String: Any]) {
-        if let value = settings["feedbackType"] as? String { feedbackType = value }
-        if let value = settings["peakThreshold"] as? Double { peakThreshold = value }
-        if let value = settings["peakWindow"] as? Double { peakWindow = value }
-        if let value = settings["saveGestureData"] as? Bool { saveGestureData = value }
-        if let value = settings["savePeaks"] as? Bool { savePeaks = value }
-        if let value = settings["saveValleys"] as? Bool { saveValleys = value }
-        if let value = settings["saveSelectedPeaks"] as? Bool { saveSelectedPeaks = value }
-        if let value = settings["saveQuaternions"] as? Bool { saveQuaternions = value }
-        if let value = settings["saveResultFile"] as? Bool { saveResultFile = value }
-        if let value = settings["enableVisualFeedback"] as? Bool { enableVisualFeedback = value }
-        if let value = settings["enableHapticFeedback"] as? Bool { enableHapticFeedback = value }
-        if let value = settings["enableVoiceFeedback"] as? Bool { enableVoiceFeedback = value }
-        if let value = settings["enableRealtimeData"] as? Bool { enableRealtimeData = value }
     }
 }
 
