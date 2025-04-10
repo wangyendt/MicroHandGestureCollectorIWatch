@@ -168,6 +168,17 @@ class MessageHandlerService {
     
     // MARK: - 发送消息方法
     
+    // 请求手表端导出数据
+    func sendRequestExport() {
+        let message: [String: Any] = [
+            "type": "request_export",
+            "trigger_export": true
+        ]
+        
+        logger.info("发送导出数据请求")
+        bleService.sendJSONData(message)
+    }
+    
     // 发送手势结果更新
     func sendGestureResultUpdate(id: String, bodyGesture: String, armGesture: String, fingerGesture: String) {
         let message: [String: Any] = [

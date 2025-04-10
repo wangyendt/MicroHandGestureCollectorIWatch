@@ -251,14 +251,8 @@ struct ContentView: View {
                                 
                                 // 导入数据按钮
                                 Button(action: {
-                                    if WCSession.default.isReachable {
-                                        WCSession.default.sendMessage([
-                                            "type": "request_export",
-                                            "trigger_export": true
-                                        ], replyHandler: nil) { error in
-                                            print("发送导出请求失败: \(error.localizedDescription)")
-                                        }
-                                    }
+                                    // 使用BLE发送导出请求
+                                    MessageHandlerService.shared.sendRequestExport()
                                 }) {
                                     HStack {
                                         Image(systemName: "square.and.arrow.down")
@@ -272,7 +266,7 @@ struct ContentView: View {
                                     .foregroundColor(.white)
                                     .cornerRadius(10)
                                 }
-                                .disabled(!WCSession.default.isReachable)
+                                .disabled(!BlePeripheralService.shared.isConnected)
                                 
                                 // 设置按钮行
                                 HStack(spacing: 10) {
