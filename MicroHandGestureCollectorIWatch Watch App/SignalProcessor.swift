@@ -157,23 +157,38 @@ public class SignalProcessor {
                 printQuatCounter = 0
             }
             
-            // 根据手性选择决定是否翻转坐标
+            // 获取手性和表冠位置设置
             let selectedHand = UserDefaults.standard.string(forKey: "selectedHand") ?? "左手"
-            if selectedHand == "右手" {
-                // 右手需要翻转坐标
-                gestureRecognizer.addIMUData(
-                    timestamp: timestamp,
-                    acc: SIMD3(-acc.x, acc.y, acc.z),
-                    gyro: SIMD3(gyro.x, -gyro.y, -gyro.z)
-                )
-            } else {
-                // 左手保持原样
-                gestureRecognizer.addIMUData(
-                    timestamp: timestamp,
-                    acc: SIMD3(acc.x, acc.y, acc.z),
-                    gyro: SIMD3(gyro.x, gyro.y, gyro.z)
-                )
+            let selectedCrownPosition = UserDefaults.standard.string(forKey: "selectedCrownPosition") ?? "右"
+
+            // 根据手性和表冠位置应用不同的IMU数据符号变换
+            var transformedAcc: SIMD3<Double>
+            var transformedGyro: SIMD3<Double>
+
+            switch (selectedHand, selectedCrownPosition) {
+            case ("左手", "右"): // 基准
+                transformedAcc = SIMD3(acc.x, acc.y, acc.z)
+                transformedGyro = SIMD3(gyro.x, gyro.y, gyro.z)
+            case ("左手", "左"):
+                transformedAcc = SIMD3(-acc.x, -acc.y, acc.z)
+                transformedGyro = SIMD3(-gyro.x, -gyro.y, gyro.z)
+            case ("右手", "右"):
+                transformedAcc = SIMD3(-acc.x, acc.y, acc.z)
+                transformedGyro = SIMD3(gyro.x, -gyro.y, -gyro.z)
+            case ("右手", "左"):
+                transformedAcc = SIMD3(acc.x, -acc.y, acc.z)
+                transformedGyro = SIMD3(-gyro.x, gyro.y, -gyro.z)
+            default: // 默认为基准
+                transformedAcc = SIMD3(acc.x, acc.y, acc.z)
+                transformedGyro = SIMD3(gyro.x, gyro.y, gyro.z)
             }
+
+            // 将变换后的数据传递给手势识别器
+            gestureRecognizer.addIMUData(
+                timestamp: timestamp,
+                acc: transformedAcc,
+                gyro: transformedGyro
+            )
         }
         
         // 计算加速度范数的差分
