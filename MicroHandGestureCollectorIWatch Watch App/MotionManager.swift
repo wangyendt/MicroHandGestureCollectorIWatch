@@ -324,7 +324,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         note: String,
         wristSize: String,
         bandType: String,
-        supervisorName: String  // 添加监督者姓名参数
+        supervisorName: String,  // 添加监督者姓名参数
+        crownPosition: String   // 添加表冠位置参数
     ) {
         // 如果正在转换状态，直接返回，防止重复触发
         guard !isTransitioning && !isCollecting else { return }
@@ -396,7 +397,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 note: note,
                 wristSize: wristSize,
                 bandType: bandType,
-                supervisorName: supervisorName  // 添加监督者姓名
+                supervisorName: supervisorName,  // 添加监督者姓名
+                crownPosition: crownPosition     // 添加表冠位置
             )
             
             // 创建必需的文件
@@ -938,7 +940,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         note: String,
         wristSize: String,
         bandType: String,
-        supervisorName: String  // 添加监督者姓名参数
+        supervisorName: String,  // 添加监督者姓名参数
+        crownPosition: String    // 添加表冠位置参数
     ) {
         var info = collectDeviceInfo()
         
@@ -965,6 +968,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         info["wrist_size"] = wristSize
         info["band_type"] = bandType
         info["supervisor_name"] = supervisorName  // 添加监督者姓名
+        info["crown_position"] = crownPosition   // 添加表冠位置
         
         let infoFileURL = folderURL.appendingPathComponent("info.yaml")
         
@@ -1049,7 +1053,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         let collectionKeys = [
             "collection_time", "collection_duration", "participant_name", 
             "hand", "gesture", "force", "gender", "tightness", 
-            "note", "wrist_size", "band_type", "supervisor_name"
+            "note", "wrist_size", "band_type", "supervisor_name",
+            "crown_position" // 添加表冠位置键
         ]
         
         // 分类信息
@@ -1076,6 +1081,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         yamlString += "  band_type: \(collectionInfo["band_type"] ?? "")\n"
         yamlString += "  note: \(collectionInfo["note"] ?? "")\n"
         yamlString += "  supervisor_name: \(collectionInfo["supervisor_name"] ?? "")\n"  // 添加监督者姓名
+        yamlString += "  crown_position: \(collectionInfo["crown_position"] ?? "")\n" // 添加表冠位置
         yamlString += "  version: \(version)\n"
         
         // 添加时间戳差值

@@ -141,6 +141,10 @@ struct ContentView: View {
     @State private var showHandPicker = false
     @State private var showGesturePicker = false
     @State private var showForcePicker = false
+    @State private var showGenderPicker = false
+    @State private var showTightnessPicker = false
+    @State private var showBandTypePicker = false
+    @State private var showCrownPicker = false
     
     @State private var showingDataManagement = false
     @State private var showingDeleteAllAlert = false
@@ -160,12 +164,12 @@ struct ContentView: View {
     
     @AppStorage("selectedGender") private var selectedGender: String = "男"
     @AppStorage("selectedTightness") private var selectedTightness: String = "松"
-    @State private var showGenderPicker = false
-    @State private var showTightnessPicker = false
+    
+    // 添加表冠位置状态
+    @AppStorage("selectedCrownPosition") private var selectedCrownPosition: String = "右"
     
     // 添加表带相关状态
     @AppStorage("selectedBandType") private var selectedBandType: String = "运动"
-    @State private var showBandTypePicker = false
     
     // 添加版本号
     private let version: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
@@ -180,6 +184,7 @@ struct ContentView: View {
     let genderOptions = ["男", "女"]
     let tightnessOptions = ["松", "紧"]
     let bandTypeOptions = ["金属", "真皮", "编织", "运动", "橡胶"]
+    let crownPositionOptions = ["左", "右"]
     
     // Helper view for Hand Picker
     private var handPickerSection: some View {
@@ -207,6 +212,42 @@ struct ContentView: View {
                             Text(option)
                             Spacer()
                             if selectedHand == option {
+                                Text("✓")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Helper view for Crown Position Picker
+    private var crownPickerSection: some View {
+        Button(action: { showCrownPicker = true }) {
+            HStack {
+                Text("表冠").font(.headline)
+                Spacer()
+                Text(selectedCrownPosition)
+                    .foregroundColor(.gray)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(8)
+        }
+        .sheet(isPresented: $showCrownPicker) {
+            List {
+                ForEach(crownPositionOptions, id: \.self) { option in
+                    Button(action: {
+                        selectedCrownPosition = option
+                        showCrownPicker = false
+                    }) {
+                        HStack {
+                            Text(option)
+                            Spacer()
+                            if selectedCrownPosition == option {
                                 Text("✓")
                                     .foregroundColor(.blue)
                             }
@@ -375,6 +416,9 @@ struct ContentView: View {
                 
                 // Use the helper view
                 handPickerSection
+                
+                // Add Crown Picker Section
+                crownPickerSection
                 
                 // Use the helper view for Gender
                 genderPickerSection
@@ -549,7 +593,8 @@ struct ContentView: View {
                             note: noteText,
                             wristSize: wristSize,
                             bandType: selectedBandType,
-                            supervisorName: supervisorName  // 添加监督者姓名参数
+                            supervisorName: supervisorName,  // 添加监督者姓名参数
+                            crownPosition: selectedCrownPosition // 添加表冠位置参数
                         )
                         // 向iPhone发送开始采集的消息 (改为BLE)
                         bleService.sendControlMessage(type: "start_collection")
@@ -777,7 +822,8 @@ struct ContentView: View {
                         note: noteText,
                         wristSize: wristSize,
                         bandType: selectedBandType,
-                        supervisorName: supervisorName  // 添加监督者姓名参数
+                        supervisorName: supervisorName,  // 添加监督者姓名参数
+                        crownPosition: selectedCrownPosition // 添加表冠位置参数
                     )
                 }
             }
