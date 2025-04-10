@@ -750,12 +750,6 @@ struct ContentView: View {
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ReceivedWatchMessage"))) { notification in
-            if let message = notification.userInfo as? [String: Any] {
-                // 已由WatchConnectivityManager处理，这里不再需要进行处理
-                print("收到消息通知")
-            }
-        }
         // 添加对BLE JSON数据的处理
         .onReceive(NotificationCenter.default.publisher(for: .didReceiveBleJsonData)) { _ in
             // 已由WatchConnectivityManager处理，这里不再需要进行处理

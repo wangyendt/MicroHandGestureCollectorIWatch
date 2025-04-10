@@ -90,14 +90,13 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                     return data
                 }
                 
-                let message: [String: Any] = [
-                    "type": "batch_data",
-                    "data": batchData
-                ]
+                // WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                //     print("发送批量数据失败: \(error.localizedDescription)")
+                // }
                 
-                WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                    print("发送批量数据失败: \(error.localizedDescription)")
-                }
+                // 通过 BLE 发送批量数据 (如果需要，可以添加 BLE 发送逻辑)
+                // BleCentralService.shared.sendBatchData(batchData) // 假设有这个方法
+                print("WatchConnectivityManager: Skipping WCSession batch data send.") // 暂时只打印日志
                 
                 self.dataBuffer.removeAll()
             }
@@ -199,15 +198,16 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     
     func sendStopSignal() {
         // 立即发送停止信号到手机
-        if WCSession.default.isReachable {
-            let message: [String: Any] = [
-                "type": "stop_collection" as String,
-                "trigger_collection": true as Bool
-            ]
-            WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                print("发送停止采集消息失败: \(error.localizedDescription)")
-            }
-        }
+        // if WCSession.default.isReachable {
+        //     let message: [String: Any] = [
+        //         "type": "stop_collection" as String,
+        //         "trigger_collection": true as Bool
+        //     ]
+        //     WCSession.default.sendMessage(message, replyHandler: nil) { error in
+        //         print("发送停止采集消息失败: \(error.localizedDescription)")
+        //     }
+        // }
+        print("WatchConnectivityManager: Skipping WCSession stop signal send.") // 替换为日志
         
         // 生成 manual_result.txt
         generateManualResult()
@@ -362,7 +362,8 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
     #endif
     
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        processMessage(message)
+        // processMessage(message)
+        print("WatchConnectivityManager: Received WCSession message (type: \(message["type"] ?? "Unknown")), but processing is now handled via BLE path. Ignoring.")
     }
     
     func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
@@ -375,18 +376,21 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
         }
     }
     
+    // 此函数可能不再被外部调用，保留定义以防万一，但移除其内容
     func sendMessage(_ message: [String: Any]) {
-        let reachable = WCSession.default.isReachable
+        // let reachable = WCSession.default.isReachable
+        // let messageType = message["type"] as? String ?? "Unknown Type"
+        // print("🔵 Watch: Attempting sendMessage. Type = \(messageType), Reachable = \(reachable)")
+        // 
+        // if reachable {
+        //     WCSession.default.sendMessage(message, replyHandler: nil) { error in
+        //         print("❌ Watch: 发送消息失败: \(error.localizedDescription)")
+        //     }
+        // } else {
+        //     print("⚠️ Watch: sendMessage skipped, iPhone not reachable.")
+        // }
         let messageType = message["type"] as? String ?? "Unknown Type"
-        print("🔵 Watch: Attempting sendMessage. Type = \(messageType), Reachable = \(reachable)")
-        
-        if reachable {
-            WCSession.default.sendMessage(message, replyHandler: nil) { error in
-                print("❌ Watch: 发送消息失败: \(error.localizedDescription)")
-            }
-        } else {
-            print("⚠️ Watch: sendMessage skipped, iPhone not reachable.")
-        }
+        print("WatchConnectivityManager: sendMessage called for type '\(messageType)', but WCSession message sending is deprecated. Ignoring.")
     }
     
     private func generateManualResult() {
