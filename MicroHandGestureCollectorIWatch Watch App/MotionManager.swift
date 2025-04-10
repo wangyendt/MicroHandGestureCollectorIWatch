@@ -234,6 +234,26 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         // 初始化时就更新 GestureRecognizer 的设置
         signalProcessor.gestureRecognizer.updateSettings(saveGestureData: saveGestureData)
+
+        // 添加通知观察者
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePhoneStartTimestamp(_:)),
+            name: .phoneStartTimestampReceived,
+            object: nil
+        )
+        print("MotionManager: 已添加 phoneStartTimestampReceived 通知观察者")
+    }
+    
+    // 添加通知处理方法
+    @objc private func handlePhoneStartTimestamp(_ notification: Notification) {
+        print("MotionManager: 收到 phoneStartTimestampReceived 通知")
+        if let timestamp = notification.userInfo?["timestamp"] as? TimeInterval {
+            print("MotionManager: 从通知中获取到手机时间戳: \(String(format: "%.6f", timestamp))")
+            self.setTimestampOffset(timestamp)
+        } else {
+            print("MotionManager: 无法从通知中获取手机时间戳")
+        }
     }
     
     // 实现代理方法
@@ -681,6 +701,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     // 将更新info.yaml文件的代码封装为一个单独的方法
     private func updateInfoFileWithDuration() {
+        print("updateInfoFileWithDuration: 开始更新 info.yaml")
         if let startTime = collectionStartTime {
             // 获取当前文件夹路径
             if let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
@@ -697,7 +718,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                         url.hasDirectoryPath && (url.lastPathComponent.contains("_右手_") || url.lastPathComponent.contains("_左手_"))
                     }) {
                         let infoURL = latestFolder.appendingPathComponent("info.yaml")
-                        if let content = try? String(contentsOf: infoURL, encoding: .utf8) {
+                        print("updateInfoFileWithDuration: 找到 info.yaml 路径: \(infoURL.path)")
+                        if var content = try? String(contentsOf: infoURL, encoding: .utf8) {
                             // 计算采集时长
                             let duration = Date().timeIntervalSince(startTime)
                             let hours = Int(duration) / 3600
@@ -710,51 +732,81 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                             var updatedLines = [String]()
                             var foundDuration = false
                             var foundTimestampOffset = false
-                            
+                            let timestampOffsetKey = "timestamp_offset:" // 方便查找
+
                             for line in lines {
-                                if line.trimmingCharacters(in: .whitespaces).hasPrefix("duration:") {
+                                let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+                                if trimmedLine.hasPrefix("duration:") {
                                     updatedLines.append("  duration: \(durationString)")
                                     foundDuration = true
-                                } else if line.trimmingCharacters(in: .whitespaces).hasPrefix("timestamp_offset:") {
+                                } else if trimmedLine.hasPrefix(timestampOffsetKey) {
                                     if let offset = self.timestampOffset {
-                                        updatedLines.append("  timestamp_offset: \(String(format: "%.3f", offset))")
+                                        let offsetString = String(format: "%.3f", offset) // 保留 3 位小数
+                                        print("updateInfoFileWithDuration: 更新现有的 timestamp_offset 为 \(offsetString)")
+                                        updatedLines.append("  timestamp_offset: \(offsetString)")
+                                    } else {
+                                        print("updateInfoFileWithDuration: timestampOffset 为 nil，移除现有的 timestamp_offset 行")
+                                        // 如果 offset 为 nil，则不添加该行，相当于移除
                                     }
                                     foundTimestampOffset = true
                                 } else {
                                     updatedLines.append(line)
                                 }
                             }
-                            
-                            // 如果没有找到时间戳差值字段，添加它
+
+                            // 如果没有找到时间戳差值字段，并且 offset 存在，则添加它
                             if !foundTimestampOffset, let offset = self.timestampOffset {
+                                let offsetString = String(format: "%.3f", offset) // 保留 3 位小数
+                                print("updateInfoFileWithDuration: 添加新的 timestamp_offset: \(offsetString)")
                                 // 在 version 字段后面添加 timestamp_offset
+                                var inserted = false
                                 for (index, line) in updatedLines.enumerated() {
                                     if line.trimmingCharacters(in: .whitespaces).hasPrefix("version:") {
-                                        updatedLines.insert("  timestamp_offset: \(String(format: "%.3f", offset))", at: index + 1)
+                                        updatedLines.insert("  timestamp_offset: \(offsetString)", at: index + 1)
+                                        inserted = true
                                         break
                                     }
                                 }
+                                // 如果没有 version 字段，就添加到 collection 部分的末尾
+                                if !inserted {
+                                     if let collectionEndIndex = updatedLines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces).isEmpty && !$0.contains("#") }) {
+                                         updatedLines.insert("  timestamp_offset: \(offsetString)", at: collectionEndIndex)
+                                     } else {
+                                         // 如果找不到合适的位置，添加到末尾（可能不太理想）
+                                         updatedLines.append("  timestamp_offset: \(offsetString)")
+                                     }
+                                }
                             }
-                            
+
                             // 写回文件
                             let updatedContent = updatedLines.joined(separator: "\n")
+                            print("updateInfoFileWithDuration: 准备写回更新后的 info.yaml:\n---\n\(updatedContent)\n---")
                             try updatedContent.write(to: infoURL, atomically: true, encoding: .utf8)
                             print("已更新采集时长: \(durationString)")
                             if let offset = self.timestampOffset {
                                 print("已更新时间戳差值: \(String(format: "%.3f", offset))")
                             }
+                        } else {
+                            print("updateInfoFileWithDuration: 无法读取 info.yaml 内容")
                         }
+                    } else {
+                         print("updateInfoFileWithDuration: 未找到最新的数据文件夹")
                     }
                 } catch {
                     print("更新采集时长时出错: \(error)")
                 }
+            } else {
+                print("updateInfoFileWithDuration: documentsPath 为 nil")
             }
+        } else {
+             print("updateInfoFileWithDuration: collectionStartTime 为 nil")
         }
-        
+
         // 重置采集开始时间
         collectionStartTime = nil
         firstImuFrameTime = nil
         timestampOffset = nil
+        print("updateInfoFileWithDuration: 重置采集相关时间戳")
     }
     
     public var isGyroAvailable: Bool {
@@ -917,7 +969,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         let infoFileURL = folderURL.appendingPathComponent("info.yaml")
         
         do {
+            print("saveDeviceInfo: 准备生成 info.yaml 内容")
             let yamlString = generateYAMLString(from: info)
+            print("saveDeviceInfo: 准备写入 info.yaml 到路径: \(infoFileURL.path)")
             try yamlString.write(to: infoFileURL, atomically: true, encoding: .utf8)
             print("成功保存信息到: \(infoFileURL.path)")
         } catch {
@@ -1026,7 +1080,11 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         // 添加时间戳差值
         if let offset = timestampOffset {
-            yamlString += "  timestamp_offset: \(String(format: "%.3f", offset))\n"
+            let offsetString = String(format: "%.3f", offset) // 保留 3 位小数
+            print("generateYAMLString: 添加 timestamp_offset: \(offsetString)")
+            yamlString += "  timestamp_offset: \(offsetString)\n"
+        } else {
+            print("generateYAMLString: timestampOffset 为 nil，不添加该字段")
         }
         
         // 获取模型元数据并添加到YAML
@@ -1044,6 +1102,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             yamlString += "  \(key): \(deviceInfo[key]!)\n"
         }
         
+        print("generateYAMLString: 生成的 YAML 字符串:\n---\n\(yamlString)\n---") // 打印完整的YAML
         return yamlString
     }
     
@@ -1156,13 +1215,17 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     
     // 修改设置时间戳差值的方法
     func setTimestampOffset(_ phoneStartTime: TimeInterval) {
+        print("调用 setTimestampOffset，手机启动时间戳: \(String(format: "%.6f", phoneStartTime))")
         guard let firstImuTime = firstImuFrameTime else {
             print("警告：尚未收到第一帧IMU数据，无法计算时间戳差值")
             return
         }
-        
+
         let watchStartTime = firstImuTime.timeIntervalSince1970
+        print("手表第一帧IMU时间戳: \(String(format: "%.6f", watchStartTime))")
+
         timestampOffset = phoneStartTime - watchStartTime
+        print("计算得到时间戳差值 timestampOffset: \(String(format: "%.6f", timestampOffset ?? 0))")
         print("设置时间戳差值：\(String(format: "%.3f", timestampOffset ?? 0))，手机时间戳：\(String(format: "%.3f", phoneStartTime))，手表时间戳：\(String(format: "%.3f", watchStartTime))")
     }
 

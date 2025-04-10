@@ -21,8 +21,6 @@ class BleCentralService: NSObject, ObservableObject {
     
     // 添加自动重连标志
     private var shouldAutoReconnect = true
-    // 添加数据缓冲区用于组装分块数据
-    private var incomingDataBuffer = Data()
     
     private let logger = Logger(subsystem: "com.wayne.MicroHandGestureCollectorIWatch", category: "BleCentral")
     
@@ -238,65 +236,52 @@ extension BleCentralService: CBPeripheralDelegate {
         }
         
         if characteristic.uuid == notifyCharacteristicUUID, let data = characteristic.value {
-            print("Watch App BleCentralService: Received raw data on notify characteristic (size: \(data.count) bytes): \(data as NSData)")
+            print("Watch App BleCentralService: Received raw data (size: \(data.count) bytes): \(data as NSData)")
             if let stringData = String(data: data, encoding: .utf8) {
                 print("Watch App BleCentralService: Raw data as UTF8 string: \(stringData)")
-            } else {
-                print("Watch App BleCentralService: Raw data could not be decoded as UTF8 string.")
             }
-            
-            // 尝试解析为普通数字（计数器值）
-            if let valueString = String(data: data, encoding: .utf8), let value = Int(valueString) {
-                // 收到计数器值，表示之前的 JSON 数据传输完成（如果有）
-                print("Watch App BleCentralService: Received counter value: \(value). Processing buffered data (size: \(incomingDataBuffer.count) bytes).")
-                if !incomingDataBuffer.isEmpty {
-                    processBufferedData()
-                    incomingDataBuffer.removeAll() // 清空缓冲区
+
+            // 尝试直接解析为 JSON
+            if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                print("Watch App BleCentralService: Successfully parsed as JSON: \(jsonObject)")
+
+                // 检查是否是手机开始时间戳消息
+                if let type = jsonObject["type"] as? String, type == "phone_start_timestamp",
+                   let timestamp = jsonObject["timestamp"] as? TimeInterval {
+                    print("Watch App BleCentralService: Received phone_start_timestamp: \(String(format: "%.6f", timestamp))")
+                    // 发送通知
+                    print("Watch App BleCentralService: Posting .phoneStartTimestampReceived notification.")
+                    NotificationCenter.default.post(
+                        name: .phoneStartTimestampReceived,
+                        object: nil,
+                        userInfo: ["timestamp": timestamp]
+                    )
+                // 检查是否是设置更新消息
+                } else if let type = jsonObject["type"] as? String, type == "update_settings" {
+                    self.logger.info("Watch App BleCentralService: Received settings update.")
+                    updateUserDefaults(from: jsonObject)
+                } else {
+                    // 其他 JSON 消息
+                    print("Watch App BleCentralService: Forwarding other JSON to MessageHandler/WCSession.")
+                    WatchConnectivityManager.shared.processMessage(jsonObject)
+                    print("Watch App BleCentralService: Posting .didReceiveBleJsonData notification.")
+                    NotificationCenter.default.post(
+                        name: .didReceiveBleJsonData,
+                        object: nil,
+                        userInfo: jsonObject
+                    )
                 }
-                
-                // 更新UI上的计数器值
+            // 如果 JSON 解析失败，尝试解析为 Int (计数器值)
+            } else if let valueString = String(data: data, encoding: .utf8), let value = Int(valueString) {
+                print("Watch App BleCentralService: Received counter value: \(value).")
                 DispatchQueue.main.async {
                     self.currentValue = value
                 }
-            } 
-            // 尝试解析为JSON数据 (如果不是计数器值，则认为是 JSON 数据块)
-            else {
-                // 将数据块添加到缓冲区
-                print("Watch App BleCentralService: Received data chunk. Appending to buffer (current size: \(incomingDataBuffer.count) bytes).")
-                incomingDataBuffer.append(data)
-            }
-        }
-    }
-    
-    // 新增：处理缓冲区的完整数据
-    private func processBufferedData() {
-        print("Watch App BleCentralService: processBufferedData() called.")
-        // 尝试解析为JSON数据
-        if let jsonObject = try? JSONSerialization.jsonObject(with: incomingDataBuffer, options: []) as? [String: Any] {
-            print("Watch App BleCentralService: Successfully parsed buffered data as JSON: \(jsonObject)")
-            
-            // 检查是否是设置更新消息
-            if let type = jsonObject["type"] as? String, type == "update_settings" {
-                self.logger.info("Watch App BleCentralService: Received settings update from buffer.")
-                updateUserDefaults(from: jsonObject)
+            // 如果两者都失败
             } else {
-                // 其他 JSON 消息继续走之前的逻辑
-                // 发送通知给 MessageHandlerService (通过 WatchConnectivityManager 间接触发)
-                print("Watch App BleCentralService: Forwarding non-settings JSON from buffer to MessageHandler/WCSession.")
-                WatchConnectivityManager.shared.processMessage(jsonObject)
-                
-                // 同时仍然发送通知，保持向后兼容 (可能可以移除，取决于 MessageHandler 是否完全依赖 WCSession 触发)
-                print("Watch App BleCentralService: Posting .didReceiveBleJsonData notification from buffer.")
-                NotificationCenter.default.post(
-                    name: .didReceiveBleJsonData,
-                    object: nil,
-                    userInfo: jsonObject
-                )
+                print("Watch App BleCentralService: Failed to parse received data as JSON or Int.")
             }
-        } else {
-            print("Watch App BleCentralService: Failed to parse buffered data as JSON.")
         }
-        // 注意：无论解析是否成功，缓冲区都在调用此方法后被清空
     }
     
     // 新增：直接更新 UserDefaults 的辅助函数
@@ -339,4 +324,5 @@ extension BleCentralService: CBPeripheralDelegate {
 extension Notification.Name {
     static let didReceiveBleJsonData = Notification.Name("didReceiveBleJsonData")
     static let userSettingsUpdatedViaBLE = Notification.Name("userSettingsUpdatedViaBLE")
+    static let phoneStartTimestampReceived = Notification.Name("phoneStartTimestampReceived")
 } 
