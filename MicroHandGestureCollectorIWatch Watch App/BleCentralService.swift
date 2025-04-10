@@ -22,6 +22,9 @@ class BleCentralService: NSObject, ObservableObject {
     // 添加自动重连标志
     private var shouldAutoReconnect = true
     
+    // 添加数据缓冲区用于处理分块数据
+    private var incomingDataBuffer = Data()
+    
     private let logger = Logger(subsystem: "com.wayne.MicroHandGestureCollectorIWatch", category: "BleCentral")
     
     override init() {
@@ -232,55 +235,99 @@ extension BleCentralService: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard error == nil else {
             logger.error("读取特性值出错: \(error!.localizedDescription)")
+            // 如果读取出错，清空缓冲区
+            incomingDataBuffer.removeAll()
             return
         }
         
         if characteristic.uuid == notifyCharacteristicUUID, let data = characteristic.value {
-            print("Watch App BleCentralService: Received raw data (size: \(data.count) bytes): \(data as NSData)")
-            if let stringData = String(data: data, encoding: .utf8) {
-                print("Watch App BleCentralService: Raw data as UTF8 string: \(stringData)")
-            }
-
-            // 尝试直接解析为 JSON
-            if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                print("Watch App BleCentralService: Successfully parsed as JSON: \(jsonObject)")
-
-                // 检查是否是手机开始时间戳消息
-                if let type = jsonObject["type"] as? String, type == "phone_start_timestamp",
-                   let timestamp = jsonObject["timestamp"] as? TimeInterval {
-                    print("Watch App BleCentralService: Received phone_start_timestamp: \(String(format: "%.6f", timestamp))")
-                    // 发送通知
-                    print("Watch App BleCentralService: Posting .phoneStartTimestampReceived notification.")
-                    NotificationCenter.default.post(
-                        name: .phoneStartTimestampReceived,
-                        object: nil,
-                        userInfo: ["timestamp": timestamp]
-                    )
-                // 检查是否是设置更新消息
-                } else if let type = jsonObject["type"] as? String, type == "update_settings" {
-                    self.logger.info("Watch App BleCentralService: Received settings update.")
-                    updateUserDefaults(from: jsonObject)
-                } else {
-                    // 其他 JSON 消息
-                    print("Watch App BleCentralService: Forwarding other JSON to MessageHandler/WCSession.")
-                    WatchConnectivityManager.shared.processMessage(jsonObject)
-                    print("Watch App BleCentralService: Posting .didReceiveBleJsonData notification.")
-                    NotificationCenter.default.post(
-                        name: .didReceiveBleJsonData,
-                        object: nil,
-                        userInfo: jsonObject
-                    )
-                }
-            // 如果 JSON 解析失败，尝试解析为 Int (计数器值)
-            } else if let valueString = String(data: data, encoding: .utf8), let value = Int(valueString) {
-                print("Watch App BleCentralService: Received counter value: \(value).")
+            print("Watch App BleCentralService: Received raw data chunk (size: \(data.count) bytes): \(data as NSData)")
+            
+            // 1. 首先尝试将 *当前数据块* 解析为 Int (计数器)
+            if let valueString = String(data: data, encoding: .utf8), let value = Int(valueString) {
+                print("Watch App BleCentralService: Parsed chunk directly as counter value: \(value).")
                 DispatchQueue.main.async {
                     self.currentValue = value
                 }
-            // 如果两者都失败
-            } else {
-                print("Watch App BleCentralService: Failed to parse received data as JSON or Int.")
+                // 计数器值处理完毕，不需要放入 JSON 缓冲区，直接返回
+                // 并且，如果收到明确的计数器值，可能意味着之前的 JSON 消息（如果有的话）已经结束或被中断，
+                // 清理一下缓冲区可能是安全的，以防万一。
+                if !incomingDataBuffer.isEmpty {
+                    print("Watch App BleCentralService: Received counter value, clearing potentially incomplete JSON buffer.")
+                    incomingDataBuffer.removeAll()
+                }
+                return
             }
+            
+            // 2. 如果不是 Int，则假定为 JSON 数据块，追加到缓冲区
+            incomingDataBuffer.append(data)
+            print("Watch App BleCentralService: Appended chunk to buffer. Current buffer size: \(incomingDataBuffer.count) bytes")
+
+            // 3. 尝试将 *整个缓冲区* 解析为 JSON
+            do {
+                // 使用 .allowFragments 可能有助于处理某些边缘情况，但标准的 JSON 对象应该以 { 开头
+                guard incomingDataBuffer.first == UInt8(ascii: "{") else {
+                    print("Watch App BleCentralService: Buffer does not start with '{', likely not a valid JSON object yet or corrupted. Buffer content: \(String(data: incomingDataBuffer, encoding: .utf8) ?? "invalid utf8")")
+                    // 如果缓冲区开头不是 {，可能不是有效的 JSON，或者包含了之前的非 JSON 数据（如部分计数器）
+                    // 考虑是否需要清空缓冲区，或者更智能地找到 { 的位置？
+                    // 暂时不清空，等待更多数据看是否能形成有效JSON
+                    return
+                }
+                
+                let jsonObject = try JSONSerialization.jsonObject(with: incomingDataBuffer, options: []) as? [String: Any]
+                print("Watch App BleCentralService: Successfully parsed buffer as JSON: \(jsonObject ?? [:])")
+
+                // 解析成功，处理 JSON 对象
+                if let json = jsonObject {
+                    handleParsedJson(json)
+                }
+                
+                // JSON 解析和处理成功后，清空缓冲区
+                incomingDataBuffer.removeAll()
+                print("Watch App BleCentralService: Cleared buffer after successful JSON processing.")
+
+            } catch let jsonError as NSError {
+                // 如果 JSON 解析失败，检查是否是因为数据不完整
+                if jsonError.domain == NSCocoaErrorDomain && jsonError.code == 3840 {
+                    // 错误码 3840 表示 JSON 数据不完整或损坏，可能是分块传输导致
+                    print("Watch App BleCentralService: JSON parsing failed (likely incomplete data), waiting for more data. Error: \(jsonError.localizedDescription)")
+                    // 不清空缓冲区，等待下一个数据块
+                } else {
+                    // 其他 JSON 解析错误，可能是缓冲区数据损坏
+                    print("Watch App BleCentralService: JSON parsing failed with unexpected error. Error: \(jsonError.localizedDescription). Clearing buffer.")
+                    incomingDataBuffer.removeAll()
+                }
+            }
+        }
+    }
+    
+    // 新增：处理解析后的 JSON 对象
+    private func handleParsedJson(_ json: [String: Any]) {
+        // 检查是否是手机开始时间戳消息
+        if let type = json["type"] as? String, type == "phone_start_timestamp",
+           let timestamp = json["timestamp"] as? TimeInterval {
+            print("Watch App BleCentralService: Received phone_start_timestamp: \(String(format: "%.6f", timestamp))")
+            // 发送通知
+            print("Watch App BleCentralService: Posting .phoneStartTimestampReceived notification.")
+            NotificationCenter.default.post(
+                name: .phoneStartTimestampReceived,
+                object: nil,
+                userInfo: ["timestamp": timestamp]
+            )
+        // 检查是否是设置更新消息
+        } else if let type = json["type"] as? String, type == "update_settings" {
+            self.logger.info("Watch App BleCentralService: Received settings update via buffer.")
+            updateUserDefaults(from: json)
+        } else {
+            // 其他 JSON 消息
+            print("Watch App BleCentralService: Forwarding other JSON from buffer to MessageHandler/WCSession.")
+            WatchConnectivityManager.shared.processMessage(json)
+            print("Watch App BleCentralService: Posting .didReceiveBleJsonData notification from buffer.")
+            NotificationCenter.default.post(
+                name: .didReceiveBleJsonData,
+                object: nil,
+                userInfo: json
+            )
         }
     }
     
