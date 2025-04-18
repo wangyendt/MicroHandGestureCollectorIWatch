@@ -148,6 +148,10 @@ struct ContentView: View {
     
     @State private var showingDataManagement = false
     @State private var showingDeleteAllAlert = false
+    @State private var swipeToDeleteOffset: CGFloat = 0
+    @State private var swipeToDeleteComplete = false
+    private let sliderWidth: CGFloat = 45 // 滑块宽度
+    private let swipeThresholdFraction: CGFloat = 0.7 // 滑动完成所需比例
     
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
@@ -678,30 +682,8 @@ struct ContentView: View {
                         .padding(.vertical, 4)
                 }
                 
-                // 删除全部数据按钮
-                Button(action: {
-                    guard !motionManager.isTransitioning else { return }
-                    showingDeleteAllAlert = true
-                }) {
-                    HStack {
-                        Text("🗑️ 删除全部数据")
-                            .foregroundColor(.white)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(Color.red)
-                    .cornerRadius(8)
-                    .opacity(motionManager.isTransitioning ? 0.5 : 1.0)
-                }
-                .disabled(motionManager.isTransitioning)
-                .alert("确认删除", isPresented: $showingDeleteAllAlert) {
-                    Button("取消", role: .cancel) { }
-                    Button("删除", role: .destructive) {
-                        deleteAllData()
-                    }
-                } message: {
-                    Text("确定要删除所有数据吗？此操作不可恢复。")
-                }
+                // 使用提取出的计算属性
+                swipeToDeleteButtonArea
                 
                 // 数据管理按钮
                 Button(action: {
@@ -772,6 +754,9 @@ struct ContentView: View {
             
             // 添加欢迎语音
             FeedbackManager.playFeedback(speak: " ")
+            // 重置滑动状态
+            swipeToDeleteOffset = 0
+            swipeToDeleteComplete = false
         }
         .onDisappear {
             if isCollecting {
@@ -871,6 +856,98 @@ struct ContentView: View {
         }
     }
     
+    // 提取出的滑动删除按钮区域
+    @ViewBuilder
+    private var swipeToDeleteButtonArea: some View {
+        VStack {
+            if !swipeToDeleteComplete {
+                GeometryReader { geometry in
+                    let trackWidth = geometry.size.width
+                    let maxOffset = trackWidth - sliderWidth
+                    let currentSwipeThreshold = maxOffset * swipeThresholdFraction
+
+                    ZStack(alignment: .leading) {
+                        // 背景
+                        Capsule()
+                            .fill(Color.red.opacity(0.8))
+                            .frame(height: 50)
+
+                        // 使用 HStack 和 Spacer 来居中文本
+                        HStack(spacing: 0) { // Use spacing 0 for precise control
+                            Spacer()
+                                .frame(width: sliderWidth + 5) // 占据滑块宽度 + 5pt 间隙
+
+                            Text("删除全部数据")
+                                .font(.footnote)
+                                .lineLimit(1)
+                                .foregroundColor(.white.opacity(0.7))
+                                .fixedSize() // 防止文本试图填充过多空间
+
+                            Spacer() // 将文本从右侧推开
+                        }
+                        .frame(height: 50) // 确保 HStack 高度与背景一致
+
+                        // 可拖动滑块 (保持在 ZStack 顶层, 覆盖 HStack 的一部分)
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: sliderWidth, height: sliderWidth)
+                            .overlay(Image(systemName: "trash.fill").foregroundColor(.red))
+                            .offset(x: swipeToDeleteOffset)
+                            .gesture(
+                                DragGesture()
+                                    .onChanged { value in
+                                        guard !motionManager.isTransitioning else { return }
+                                        let newOffset = value.translation.width
+                                        swipeToDeleteOffset = max(0, min(newOffset, maxOffset))
+                                    }
+                                    .onEnded { value in
+                                        guard !motionManager.isTransitioning else { return }
+                                        if swipeToDeleteOffset >= currentSwipeThreshold {
+                                            withAnimation {
+                                                swipeToDeleteOffset = maxOffset
+                                            }
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                                 swipeToDeleteComplete = true
+                                                 showingDeleteAllAlert = true
+                                            }
+                                        } else {
+                                            withAnimation(.spring()) {
+                                                swipeToDeleteOffset = 0
+                                            }
+                                        }
+                                    }
+                            )
+                    }
+                    .frame(height: 50)
+                }
+                .frame(height: 50)
+                .opacity(motionManager.isTransitioning ? 0.5 : 1.0)
+                .disabled(motionManager.isTransitioning)
+                .padding(.vertical, 5)
+
+            } else {
+                 // 滑动完成后可以显示不同的视图，或者简单地隐藏
+            }
+        }
+        .alert("确认删除", isPresented: $showingDeleteAllAlert) {
+            Button("取消", role: .cancel) {
+                withAnimation(.spring()) {
+                     swipeToDeleteOffset = 0
+                }
+                swipeToDeleteComplete = false
+            }
+            Button("删除", role: .destructive) {
+                deleteAllData() // 调用 ContentView 中的方法
+                withAnimation(.spring()) {
+                     swipeToDeleteOffset = 0
+                }
+                swipeToDeleteComplete = false
+            }
+        } message: {
+            Text("确定要删除所有数据吗？此操作不可恢复。")
+        }
+    }
+
     private func deleteAllData() {
         guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         
