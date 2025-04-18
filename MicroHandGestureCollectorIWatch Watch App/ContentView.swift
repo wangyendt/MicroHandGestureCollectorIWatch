@@ -681,10 +681,7 @@ struct ContentView: View {
                         .foregroundColor(.secondary)
                         .padding(.vertical, 4)
                 }
-                
-                // 使用提取出的计算属性
-                swipeToDeleteButtonArea
-                
+
                 // 数据管理按钮
                 Button(action: {
                     guard !motionManager.isTransitioning else { return }
@@ -703,7 +700,10 @@ struct ContentView: View {
                             .navigationBarTitleDisplayMode(.inline)
                     }
                 }
-                
+
+                // 滑动删除按钮区域 (移到后面)
+                swipeToDeleteButtonArea
+
                 // 实时数据显示
                 if let accData = motionManager.accelerationData {
                     RealTimeDataView(accData: accData, rotationData: motionManager.rotationData)
