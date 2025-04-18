@@ -7,8 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B04E240B2DA69AC7008C9A3A /* ios_tools_lib in Frameworks */ = {isa = PBXBuildFile; productRef = B04E240A2DA69AC7008C9A3A /* ios_tools_lib */; };
 		B096274E2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B0B463B32DB23BD2003D46E3 /* ios_tools_lib in Frameworks */ = {isa = PBXBuildFile; productRef = B0B463B22DB23BD2003D46E3 /* ios_tools_lib */; };
+		B0B463B52DB23C43003D46E3 /* ios_tools_lib in Frameworks */ = {isa = PBXBuildFile; productRef = B0B463B42DB23C43003D46E3 /* ios_tools_lib */; };
 		B0FCE81A2D2277D500DEDC4A /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0FCE8192D2277D500DEDC4A /* Accelerate.framework */; };
 /* End PBXBuildFile section */
 
@@ -125,7 +126,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B04E240B2DA69AC7008C9A3A /* ios_tools_lib in Frameworks */,
+				B0B463B52DB23C43003D46E3 /* ios_tools_lib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -147,6 +148,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0B463B32DB23BD2003D46E3 /* ios_tools_lib in Frameworks */,
 				B0FCE81A2D2277D500DEDC4A /* Accelerate.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -225,7 +227,7 @@
 			);
 			name = MicroHandGestureCollectorIWatch;
 			packageProductDependencies = (
-				B04E240A2DA69AC7008C9A3A /* ios_tools_lib */,
+				B0B463B42DB23C43003D46E3 /* ios_tools_lib */,
 			);
 			productName = MicroHandGestureCollectorIWatch;
 			productReference = B09627272D02CFA50015F052 /* MicroHandGestureCollectorIWatch.app */;
@@ -294,6 +296,7 @@
 			);
 			name = "MicroHandGestureCollectorIWatch Watch App";
 			packageProductDependencies = (
+				B0B463B22DB23BD2003D46E3 /* ios_tools_lib */,
 			);
 			productName = "MicroHandGestureCollectorIWatch Watch App";
 			productReference = B096274D2D02CFA70015F052 /* MicroHandGestureCollectorIWatch Watch App.app */;
@@ -389,7 +392,7 @@
 			mainGroup = B096271E2D02CFA50015F052;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				B04E24092DA69AC7008C9A3A /* XCRemoteSwiftPackageReference "ios_tools" */,
+				B0B463B12DB23BD2003D46E3 /* XCRemoteSwiftPackageReference "ios_tools" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B09627282D02CFA50015F052 /* Products */;
@@ -1026,20 +1029,25 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		B04E24092DA69AC7008C9A3A /* XCRemoteSwiftPackageReference "ios_tools" */ = {
+		B0B463B12DB23BD2003D46E3 /* XCRemoteSwiftPackageReference "ios_tools" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/wangyendt/ios_tools";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.1.2;
+				minimumVersion = 1.1.3;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		B04E240A2DA69AC7008C9A3A /* ios_tools_lib */ = {
+		B0B463B22DB23BD2003D46E3 /* ios_tools_lib */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = B04E24092DA69AC7008C9A3A /* XCRemoteSwiftPackageReference "ios_tools" */;
+			package = B0B463B12DB23BD2003D46E3 /* XCRemoteSwiftPackageReference "ios_tools" */;
+			productName = ios_tools_lib;
+		};
+		B0B463B42DB23C43003D46E3 /* ios_tools_lib */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B0B463B12DB23BD2003D46E3 /* XCRemoteSwiftPackageReference "ios_tools" */;
 			productName = ios_tools_lib;
 		};
 /* End XCSwiftPackageProductDependency section */
