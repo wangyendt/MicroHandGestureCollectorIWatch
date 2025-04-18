@@ -11,18 +11,21 @@ import Combine
 import os.log
 import WatchKit
 import WatchConnectivity  // 添加 WatchConnectivity 框架
+import CoreLocation // <-- 添加 CoreLocation 框架导入
 
 #if os(watchOS)
-public class MotionManager: ObservableObject, SignalProcessorDelegate {
+public class MotionManager: NSObject, ObservableObject, SignalProcessorDelegate, CLLocationManagerDelegate { // <-- 添加 NSObject 继承
     @Published private(set) var accelerationData: CMAcceleration?
     @Published private(set) var rotationData: CMRotationRate?
     private let motionManager: CMMotionManager
+    private let locationManager = CLLocationManager() // <-- 添加 locationManager
     private var accFileHandle: FileHandle?
     private var gyroFileHandle: FileHandle?
     private var peakFileHandle: FileHandle?
     private var valleyFileHandle: FileHandle?
     private var selectedPeakFileHandle: FileHandle?
     private var quaternionFileHandle: FileHandle?
+    private var gpsFileHandle: FileHandle? // <-- 添加 gpsFileHandle
     private var isCollecting = false
     private var logger: OSLog
     
@@ -33,6 +36,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
     private var collectionStartTime: Date?
     private var firstImuFrameTime: Date?
     private var timestampOffset: TimeInterval?
+    private var lastIMUTimestampNs: UInt64 = 0 // <-- 添加用于记录最近IMU时间戳的属性
     
     @Published var isReady = true
     
@@ -203,7 +207,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
     }()
     
-    public init() {
+    override public init() {
         logger = OSLog(subsystem: "wayne.MicroHandGestureCollectorIWatch.watchkitapp", category: "sensors")
         motionManager = CMMotionManager()
         
@@ -217,14 +221,6 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             peakWindow: window > 0 ? window : 0.6
         )
         
-        // 设置代理
-        signalProcessor.delegate = self
-        
-        print("MotionManager 初始化")
-        print("加速度计状态: \(motionManager.isAccelerometerAvailable ? "可用" : "不可用")")
-        print("陀螺仪状态: \(motionManager.isGyroAvailable ? "可用" : "不可用")")
-        print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
-        
         // 从 UserDefaults 读取所有保存设置的初始值
         savePeaks = UserDefaults.standard.bool(forKey: "savePeaks")
         saveValleys = UserDefaults.standard.bool(forKey: "saveValleys")
@@ -232,10 +228,27 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         saveQuaternions = UserDefaults.standard.bool(forKey: "saveQuaternions")
         saveGestureData = UserDefaults.standard.bool(forKey: "saveGestureData")  // 默认为 false
         
+        // 调用 super.init() 在所有本类属性初始化之后
+        super.init()
+        
+        // 设置代理 (在 super.init() 之后)
+        signalProcessor.delegate = self
+        locationManager.delegate = self
+
+        print("MotionManager 初始化")
+        print("加速度计状态: \(motionManager.isAccelerometerAvailable ? "可用" : "不可用")")
+        print("陀螺仪状态: \(motionManager.isGyroAvailable ? "可用" : "不可用")")
+        print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
+        
+        // 配置 Location Manager (部分配置可以在 super.init() 后进行)
+        locationManager.requestWhenInUseAuthorization() // 请求定位权限
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation // 设置最高精度
+        locationManager.activityType = .fitness // 适用于运动场景
+        
         // 初始化时就更新 GestureRecognizer 的设置
         signalProcessor.gestureRecognizer.updateSettings(saveGestureData: saveGestureData)
 
-        // 添加通知观察者
+        // 添加通知观察者 (在 super.init() 之后)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handlePhoneStartTimestamp(_:)),
@@ -307,6 +320,8 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         selectedPeakFileHandle = nil
         quaternionFileHandle?.closeFile()
         quaternionFileHandle = nil
+        gpsFileHandle?.closeFile() // <-- 清理 gpsFileHandle
+        gpsFileHandle = nil
         
         // 清除当前文件夹URL
         currentFolderURL = nil
@@ -404,6 +419,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             // 创建必需的文件
             let accFileURL = folderURL.appendingPathComponent("acc.txt")
             let gyroFileURL = folderURL.appendingPathComponent("gyro.txt")
+            let gpsFileURL = folderURL.appendingPathComponent("gps.txt") // <-- 定义 gps 文件 URL
             
             // 根据设置创建可选文件
             let peakFileURL = savePeaks ? folderURL.appendingPathComponent("peak.txt") : nil
@@ -414,10 +430,12 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             // 创建必需的文件头部信息
             let accHeader = "timestamp_ns,acc_x,acc_y,acc_z\n"
             let gyroHeader = "timestamp_ns,gyro_x,gyro_y,gyro_z\n"
+            let gpsHeader = "timestamp_cst,gps_timestamp_ns,nearest_imu_timestamp_ns,latitude,longitude,altitude,speed,course,horizontalAccuracy,verticalAccuracy,speedAccuracy,courseAccuracy\n" // <-- 修改 gps 文件头
             
             // 写入必需的文件头部信息
             try accHeader.write(to: accFileURL, atomically: true, encoding: .utf8)
             try gyroHeader.write(to: gyroFileURL, atomically: true, encoding: .utf8)
+            try gpsHeader.write(to: gpsFileURL, atomically: true, encoding: .utf8) // <-- 写入 gps 文件头
             
             // 根据设置写入可选文件头部信息
             if savePeaks {
@@ -440,6 +458,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             // 打开必需的文件句柄
             accFileHandle = try FileHandle(forWritingTo: accFileURL)
             gyroFileHandle = try FileHandle(forWritingTo: gyroFileURL)
+            gpsFileHandle = try FileHandle(forWritingTo: gpsFileURL) // <-- 获取 gps 文件句柄
             
             // 根据设置打开可选文件句柄
             if savePeaks {
@@ -462,6 +481,7 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             valleyFileHandle?.seekToEndOfFile()
             selectedPeakFileHandle?.seekToEndOfFile()
             quaternionFileHandle?.seekToEndOfFile()
+            gpsFileHandle?.seekToEndOfFile() // <-- 移动 gps 文件句柄到末尾
             
             // 发送文件夹名到手机 (改为BLE)
             let message: [String: Any] = [
@@ -485,6 +505,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         var lastTimestamp: UInt64 = 0
         
         var printCounter = 0
+        // 开始 GPS 更新
+        locationManager.startUpdatingLocation()
+        
         // 开始收集数据
         motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, error in
             guard let motion = motion else { return }
@@ -594,6 +617,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
 //                self?.signalProcessor.printStatus()
                 printCounter = 0
             }
+            
+            // 更新最近的 IMU 时间戳
+            self?.lastIMUTimestampNs = timestamp
         }
         
         isCollecting = true
@@ -617,6 +643,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
             self.isTransitioning = false
             self.isReady = true
         }
+        
+        // 开始 GPS 更新
+        locationManager.startUpdatingLocation()
     }
     
     public func stopDataCollection() {
@@ -631,6 +660,9 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         
         // 先停止设备运动更新
         motionManager.stopDeviceMotionUpdates()
+        
+        // 停止 GPS 更新
+        locationManager.stopUpdatingLocation()
         
         // 更新状态
         isCollecting = false
@@ -668,11 +700,17 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
                 // 清理
                 self.cleanUpResources()
                 self.finishStopProcess()
+                
+                // 停止 GPS 更新（确保再次调用）
+                self.locationManager.stopUpdatingLocation()
             }
         } else {
             // 即使没有缓冲数据需要写入，也进行资源清理
             cleanUpResources()
             finishStopProcess()
+            
+            // 停止 GPS 更新
+            locationManager.stopUpdatingLocation()
         }
     }
     
@@ -1233,6 +1271,74 @@ public class MotionManager: ObservableObject, SignalProcessorDelegate {
         timestampOffset = phoneStartTime - watchStartTime
         print("计算得到时间戳差值 timestampOffset: \(String(format: "%.6f", timestampOffset ?? 0))")
         print("设置时间戳差值：\(String(format: "%.3f", timestampOffset ?? 0))，手机时间戳：\(String(format: "%.3f", phoneStartTime))，手表时间戳：\(String(format: "%.3f", watchStartTime))")
+    }
+
+    // MARK: - CLLocationManagerDelegate Methods
+
+    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+
+        // 只在采集中时记录GPS数据
+        guard isCollecting, let fileHandle = gpsFileHandle else { return }
+
+        // 修改为中国时区和指定格式
+        let timestampCST: String = {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+            formatter.timeZone = TimeZone(identifier: "Asia/Shanghai") // 中国标准时间
+            return formatter.string(from: location.timestamp)
+        }()
+        
+        let latitude = location.coordinate.latitude
+        let longitude = location.coordinate.longitude
+        let altitude = location.altitude
+        let speed = max(0, location.speed) // Speed is non-negative
+        let course = location.course >= 0 ? location.course : -1.0 // Use -1 for invalid course
+        let horizontalAccuracy = location.horizontalAccuracy
+        let verticalAccuracy = location.verticalAccuracy
+        let speedAccuracy = location.speedAccuracy >= 0 ? location.speedAccuracy : -1.0 // Use -1 for invalid
+        let courseAccuracy = location.courseAccuracy >= 0 ? location.courseAccuracy : -1.0 // Use -1 for invalid
+
+        let gpsTimestampNs = UInt64(location.timestamp.timeIntervalSince1970 * 1_000_000_000)
+        let nearestImuTimestampNs = self.lastIMUTimestampNs // 使用最近记录的 IMU 时间戳
+
+        // 调整格式化字符串以匹配新的表头顺序
+        let gpsString = String(format: "%@,%llu,%llu,%.8f,%.8f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
+                             timestampCST,          // timestamp_cst
+                             gpsTimestampNs,        // gps_timestamp_ns
+                             nearestImuTimestampNs, // nearest_imu_timestamp_ns
+                             latitude,
+                             longitude,
+                             altitude,
+                             speed,
+                             course,
+                             horizontalAccuracy,
+                             verticalAccuracy,
+                             speedAccuracy,
+                             courseAccuracy)
+
+        if let data = gpsString.data(using: .utf8) {
+            self.fileWriteQueue.async {
+                fileHandle.write(data)
+            }
+        }
+    }
+
+    public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("GPS 定位失败: \(error.localizedDescription)")
+    }
+    
+    public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            print("GPS 权限已授权")
+        case .denied, .restricted:
+            print("GPS 权限被拒绝或限制")
+        case .notDetermined:
+            print("GPS 权限尚未确定")
+        @unknown default:
+            print("未知的 GPS 权限状态")
+        }
     }
 
     // MARK: - Data Sending

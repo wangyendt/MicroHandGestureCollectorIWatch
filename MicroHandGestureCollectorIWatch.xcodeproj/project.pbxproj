@@ -659,6 +659,7 @@
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "应用需要使用蓝牙来连接设备并收集数据";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "需要访问您的心率和活动卡路里数据，以与传感器数据一同记录。";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "为了能够在后台持续采集心率、卡路里和传感器数据，需要启动一个体能训练会话。";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "用于在数据采集中记录 GPS 轨迹";
 				INFOPLIST_KEY_NSMotionUsageDescription = "此应用需要访问运动传感器数据来识别手势";
 				INFOPLIST_KEY_UIBackgroundModes = "audio,bluetooth-central,processing";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
@@ -700,6 +701,7 @@
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "应用需要使用蓝牙来连接设备并收集数据";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "需要访问您的心率和活动卡路里数据，以与传感器数据一同记录。";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "为了能够在后台持续采集心率、卡路里和传感器数据，需要启动一个体能训练会话。";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "用于在数据采集中记录 GPS 轨迹";
 				INFOPLIST_KEY_NSMotionUsageDescription = "此应用需要访问运动传感器数据来识别手势";
 				INFOPLIST_KEY_UIBackgroundModes = "audio,bluetooth-central,processing";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";

@@ -17,6 +17,8 @@
 		<string>bluetooth-central</string>
 		<string>processing</string>
 	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
 	<key>WKAlwaysRunsInBackground</key>
 	<true/>
 	<key>WKBackgroundModes</key>
