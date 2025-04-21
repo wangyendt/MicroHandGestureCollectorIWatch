@@ -742,6 +742,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MicroHandGestureCollectorIWatch/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "此应用需要在后台使用蓝牙以持续与您的 Apple Watch 连接，进行数据同步和接收指令。";
 				INFOPLIST_KEY_NSCameraUsageDescription = "需要访问相机以便在采集手势数据时录制视频";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "需要访问麦克风以便在采集手势数据时录制音频";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -777,6 +778,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MicroHandGestureCollectorIWatch/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MicroHandGestureCollectorIWatch;
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "此应用需要在后台使用蓝牙以持续与您的 Apple Watch 连接，进行数据同步和接收指令。";
 				INFOPLIST_KEY_NSCameraUsageDescription = "需要访问相机以便在采集手势数据时录制视频";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "需要访问麦克风以便在采集手势数据时录制音频";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

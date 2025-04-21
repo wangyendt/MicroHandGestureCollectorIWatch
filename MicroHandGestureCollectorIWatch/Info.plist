@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>Bluetooth Always Usage Description</key>
+	<string>此应用需要在后台使用蓝牙以持续与您的 Apple Watch 连接，进行数据同步和接收指令。</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 </dict>
