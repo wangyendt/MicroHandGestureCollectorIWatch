@@ -190,6 +190,11 @@ struct ContentView: View {
     let bandTypeOptions = ["金属", "真皮", "编织", "运动", "橡胶"]
     let crownPositionOptions = ["左", "右"]
     
+    // 计算属性，决定是否显示删除按钮
+    private var showDeleteButton: Bool {
+        return supervisorName != "陈科亦" && supervisorName != "徐森爱"
+    }
+    
     // Helper view for Hand Picker
     private var handPickerSection: some View {
         Button(action: { showHandPicker = true }) {
@@ -702,8 +707,10 @@ struct ContentView: View {
                 }
 
                 // 滑动删除按钮区域 (移到后面)
-                swipeToDeleteButtonArea
-
+                if showDeleteButton {
+                    swipeToDeleteButtonArea
+                }
+                
                 // 实时数据显示
                 if let accData = motionManager.accelerationData {
                     RealTimeDataView(accData: accData, rotationData: motionManager.rotationData)
@@ -860,7 +867,7 @@ struct ContentView: View {
     @ViewBuilder
     private var swipeToDeleteButtonArea: some View {
         VStack {
-            if !swipeToDeleteComplete {
+            if showDeleteButton && !swipeToDeleteComplete {
                 GeometryReader { geometry in
                     let trackWidth = geometry.size.width
                     let maxOffset = trackWidth - sliderWidth

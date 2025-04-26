@@ -17,8 +17,14 @@ struct DataManagementView: View {
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @Environment(\.dismiss) private var dismiss
     
+    @AppStorage("supervisorName") private var supervisorName: String = ""
+    
     var selectedFiles: [DataFile] {
         dataFiles.filter { $0.isSelected }
+    }
+    
+    private var showDeleteButton: Bool {
+        return supervisorName != "陈科亦" && supervisorName != "徐森爱"
     }
     
     var body: some View {
@@ -86,14 +92,18 @@ struct DataManagementView: View {
             
             ToolbarItemGroup(placement: .bottomBar) {
                 if isEditing && !selectedFiles.isEmpty {
-                    Button {
-                        showingDeleteAlert = true
-                    } label: {
-                        Image(systemName: "trash")
-                        Text("删除")
+                    // 仅在特定监督者下显示删除按钮
+                    if showDeleteButton {
+                        Button {
+                            showingDeleteAlert = true
+                        } label: {
+                            Image(systemName: "trash")
+                            Text("删除")
+                        }
+                        .foregroundColor(.red)
                     }
-                    .foregroundColor(.red)
                     
+                    // 导出按钮始终可见（在编辑模式且有选中文件时）
                     Button {
                         showingExportAlert = true
                     } label: {
