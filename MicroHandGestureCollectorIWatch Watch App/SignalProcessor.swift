@@ -47,7 +47,7 @@ public class SignalProcessor {
     private(set) var selectedPeakCount: Int = 0
     
     // 在类属性中添加
-    public let gestureRecognizer = GestureRecognizer()
+    public let gestureRecognizer: GestureRecognizer
     
     // 在 SignalProcessor 类中添加
     private var resultFileHandle: FileHandle?
@@ -61,6 +61,10 @@ public class SignalProcessor {
     init(peakThreshold: Double = 0.5, peakWindow: Double = 0.6) {  // peak阈值
         self.peakThreshold = peakThreshold
         self.peakWindow = peakWindow
+        
+        // 从UserDefaults获取selectedHand，如果没有则默认为左手
+        let selectedHand = UserDefaults.standard.string(forKey: "selectedHand") ?? "左手"
+        self.gestureRecognizer = GestureRecognizer(selectedHand: selectedHand)
         
         // 初始化 VQF，采样率 100Hz (0.01s)
         vqf = VQFBridge(gyrTs: 0.01, accTs: 0.01)

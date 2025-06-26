@@ -42,24 +42,7 @@ public class GestureRecognizer {
         )
     ]
     
-    // 定义模型处理器类型
-    private typealias ModelProcessor = (MLMultiArray) throws -> MLMultiArray
-    
-    // 模型处理器字典
-    private let modelProcessors: [String: ModelProcessor] = [
-        "wayne": { inputArray in
-            let model = try GestureClassifier(configuration: MLModelConfiguration())
-            let input = GestureClassifierInput(input: inputArray)
-            let output = try model.prediction(input: input)
-            return output.output
-        },
-        "haili": { inputArray in
-            let model = try GestureModel_1(configuration: MLModelConfiguration())
-            let input = GestureModel_1Input(input: inputArray)
-            let output = try model.prediction(input: input)
-            return output.output
-        }
-    ]
+    // 移除旧的模型处理器代码，现在使用预加载模型和 predictOptimized 方法
     
     private let whoseModel: String
     private var gestureClassifier: Any?
@@ -69,6 +52,9 @@ public class GestureRecognizer {
     private var saveGestureData = false
     private var currentFolderURL: URL?
     private var gestureCount = 0
+    
+    // 修改为 var 以便可以更新
+    private var selectedHand: String
     
     // 将依赖于 halfWindowSize 的属性改为计算属性
     private var modelInputLength: Int {
@@ -91,9 +77,10 @@ public class GestureRecognizer {
     // 添加推理队列
     private let inferenceQueue = DispatchQueue(label: "com.wayne.inferenceQueue", qos: .userInitiated)
     
-    // 修改init方法，预加载模型
-    public init(whoseModel: String = "haili") {
+    // 修改init方法，预加载模型，并接收 selectedHand
+    public init(whoseModel: String = "haili", selectedHand: String) {
         self.whoseModel = whoseModel
+        self.selectedHand = selectedHand // 存储传入的 selectedHand
         guard let params = modelConfigs[whoseModel] else {
             fatalError("不支持的模型类型: \(whoseModel)")
         }
@@ -119,8 +106,11 @@ public class GestureRecognizer {
             } else if whoseModel == "haili" {
                 hailiCachedModel = try GestureModel_1(configuration: config)
                 // 预热模型
-                let dummyInput = try MLMultiArray(shape: [1, 6, 4, 100], dataType: .float32)
-                let dummyInputObj = GestureModel_1Input(input: dummyInput)
+                let dummyInput1 = try MLMultiArray(shape: [1, 6, 4, 100], dataType: .float32)
+                // 创建 input2 的 dummy 数据
+                let dummyInput2 = try MLMultiArray(shape: [1], dataType: .float32) // 假设 input2 形状为 [1]
+                dummyInput2[0] = 0.0 // 预热时使用默认值，例如左手
+                let dummyInputObj = GestureModel_1Input(input1: dummyInput1, input2: dummyInput2) // 使用 input1 和 input2
                 _ = try hailiCachedModel?.prediction(input: dummyInputObj)
                 print("Haili模型预加载完成")
             }
@@ -345,7 +335,15 @@ public class GestureRecognizer {
                     print("Haili model not preloaded")
                     return nil
                 }
-                let input = GestureModel_1Input(input: inputArray)
+                // 创建 input2
+                let handValue = (self.selectedHand == "右手") ? 1.0 : 0.0
+                guard let input2Array = try? MLMultiArray(shape: [1], dataType: .float32) else {
+                    print("Failed to create input2 array")
+                    return nil
+                }
+                input2Array[0] = NSNumber(value: handValue)
+                
+                let input = GestureModel_1Input(input1: inputArray, input2: input2Array)
                 let result = try model.prediction(input: input)
                 output = result.output
             }
@@ -810,37 +808,36 @@ public class GestureRecognizer {
     public func getModelMetadata() -> [String: String] {
         var metadata: [String: String] = [:]
         
-        if whoseModel == "wayne", let model = gestureClassifier as? GestureClassifier {
-            metadata["model_name"] = "GestureClassifier"
-            // 尝试直接从模型中读取元数据
+        if whoseModel == "wayne", let model = wayneCachedModel {
+            // 从预加载的缓存模型中读取元数据
             let modelDescription = model.model.modelDescription
             
-            // 使用正确的MLModelMetadataKey常量而不是字符串
+            // 使用正确的MLModelMetadataKey常量读取标准元数据
             if let author = modelDescription.metadata[.author] as? String {
                 metadata["model_author"] = author
             } else {
-                metadata["model_author"] = "N/A" // 如果没有找到元数据，使用N/A
+                metadata["model_author"] = "N/A"
             }
             
             if let version = modelDescription.metadata[.versionString] as? String {
                 metadata["model_version"] = version
             } else {
-                metadata["model_version"] = "N/A" // 如果没有找到元数据，使用N/A
+                metadata["model_version"] = "N/A"
             }
             
             if let license = modelDescription.metadata[.license] as? String {
                 metadata["model_license"] = license
             } else {
-                metadata["model_license"] = "N/A" // 如果没有找到元数据，使用N/A
+                metadata["model_license"] = "N/A"
             }
             
             if let description = modelDescription.metadata[.description] as? String {
                 metadata["model_description"] = description
             } else {
-                metadata["model_description"] = "N/A" // 如果没有找到元数据，使用N/A
+                metadata["model_description"] = "N/A"
             }
             
-            // 尝试读取用户自定义元数据 (creatorDefinedKey)
+            // 尝试读取用户自定义元数据
             if let userDefined = modelDescription.metadata[.creatorDefinedKey] as? [String: Any] {
                 if let userAuthor = userDefined["author"] as? String {
                     metadata["model_author"] = userAuthor
@@ -857,39 +854,38 @@ public class GestureRecognizer {
             }
             
             // 打印完整元数据用于调试
-            print("完整模型元数据：\(modelDescription.metadata)")
+            print("Wayne模型完整元数据：\(modelDescription.metadata)")
             
-        } else if whoseModel == "haili", let model = gestureClassifier as? GestureModel_1 {
-            metadata["model_name"] = "GestureModel_1"
-            // 尝试直接从模型中读取元数据
+        } else if whoseModel == "haili", let model = hailiCachedModel {
+            // 从预加载的缓存模型中读取元数据
             let modelDescription = model.model.modelDescription
             
-            // 使用正确的MLModelMetadataKey常量而不是字符串
+            // 使用正确的MLModelMetadataKey常量读取标准元数据
             if let author = modelDescription.metadata[.author] as? String {
                 metadata["model_author"] = author
             } else {
-                metadata["model_author"] = "N/A" // 如果没有找到元数据，使用N/A
+                metadata["model_author"] = "N/A"
             }
             
             if let version = modelDescription.metadata[.versionString] as? String {
                 metadata["model_version"] = version
             } else {
-                metadata["model_version"] = "N/A" // 如果没有找到元数据，使用N/A
+                metadata["model_version"] = "N/A"
             }
             
             if let license = modelDescription.metadata[.license] as? String {
                 metadata["model_license"] = license
             } else {
-                metadata["model_license"] = "N/A" // 如果没有找到元数据，使用N/A
+                metadata["model_license"] = "N/A"
             }
             
             if let description = modelDescription.metadata[.description] as? String {
                 metadata["model_description"] = description
             } else {
-                metadata["model_description"] = "N/A" // 如果没有找到元数据，使用N/A
+                metadata["model_description"] = "N/A"
             }
             
-            // 尝试读取用户自定义元数据 (creatorDefinedKey)
+            // 尝试读取用户自定义元数据
             if let userDefined = modelDescription.metadata[.creatorDefinedKey] as? [String: Any] {
                 if let userAuthor = userDefined["author"] as? String {
                     metadata["model_author"] = userAuthor
@@ -906,10 +902,10 @@ public class GestureRecognizer {
             }
             
             // 打印完整元数据用于调试
-            print("完整模型元数据：\(modelDescription.metadata)")
+            print("Haili模型完整元数据：\(modelDescription.metadata)")
             
         } else {
-            metadata["model_name"] = whoseModel
+            // 如果模型没有加载，返回默认值
             metadata["model_author"] = "N/A"
             metadata["model_version"] = "N/A"
             metadata["model_license"] = "N/A"

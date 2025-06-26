@@ -1131,9 +1131,8 @@ public class MotionManager: NSObject, ObservableObject, SignalProcessorDelegate,
             print("generateYAMLString: timestampOffset 为 nil，不添加该字段")
         }
         
-        // 获取模型元数据并添加到YAML
+        // 获取模型元数据并添加到YAML（只包含标准的4个字段）
         let modelMetadata = signalProcessor.gestureRecognizer.getModelMetadata()
-        yamlString += "  model_name: \(modelMetadata["model_name"] ?? "未知")\n"
         yamlString += "  model_author: \(modelMetadata["model_author"] ?? "未知")\n"
         yamlString += "  model_version: \(modelMetadata["model_version"] ?? "未知")\n"
         yamlString += "  model_license: \(modelMetadata["model_license"] ?? "未知")\n"
