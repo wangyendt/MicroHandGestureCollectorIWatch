@@ -1,6 +1,26 @@
 import Foundation
 import CoreBluetooth
+import WatchKit
 import os.log
+
+// 添加配对状态枚举
+enum WatchPairingState {
+    case idle           // 空闲状态
+    case scanning       // 扫描中
+    case deviceFound    // 发现设备
+    case pairingRequest // 发送配对请求
+    case waitingResponse // 等待配对响应
+    case paired         // 已配对
+}
+
+// 添加发现的设备信息
+struct DiscoveredDevice: Identifiable {
+    let id: String
+    let peripheral: CBPeripheral
+    let name: String
+    let rssi: Int
+    let timestamp: Date
+}
 
 class BleCentralService: NSObject, ObservableObject {
     static let shared = BleCentralService()
@@ -14,47 +34,105 @@ class BleCentralService: NSObject, ObservableObject {
     private var peripheral: CBPeripheral?
     private var writeCharacteristic: CBCharacteristic?
     
+    @Published var pairingState: WatchPairingState = .idle
+    @Published var discoveredDevices: [DiscoveredDevice] = []
     @Published var isScanning = false
     @Published var isConnected = false
     @Published var currentValue: Int = 0
     @Published var lastError: String?
+    @Published var connectedDeviceName: String = ""
+    @Published var pairingMessage: String = ""
     
     // 添加自动重连标志
-    private var shouldAutoReconnect = true
+    private var shouldAutoReconnect = false // 改为默认false，需要手动配对
+    private var selectedDeviceId: String?
+    private var pairingTimer: Timer?
+    private let pairingTimeout: TimeInterval = 30.0 // 配对超时30秒
     
     // 添加数据缓冲区用于处理分块数据
     private var incomingDataBuffer = Data()
     
     private let logger = Logger(subsystem: "com.wayne.MicroHandGestureCollectorIWatch", category: "BleCentral")
+    private let deviceName = WKInterfaceDevice.current().name // 获取手表设备名称
     
     override init() {
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil)
     }
     
+    // 开始扫描可用设备
     func startScanning() {
         guard centralManager.state == .poweredOn else {
             lastError = "蓝牙未开启"
             return
         }
         
-        shouldAutoReconnect = true
+        // 清空之前发现的设备列表
+        discoveredDevices.removeAll()
+        pairingState = .scanning
         isScanning = true
-        centralManager.scanForPeripherals(withServices: [serviceUUID], options: nil)
+        
+        centralManager.scanForPeripherals(withServices: [serviceUUID], options: [
+            CBCentralManagerScanOptionAllowDuplicatesKey: false
+        ])
         logger.info("开始扫描设备")
+        
+        // 设置扫描超时
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+            if self.isScanning {
+                self.stopScanning()
+            }
+        }
     }
     
     func stopScanning() {
         centralManager.stopScan()
         isScanning = false
+        if discoveredDevices.isEmpty {
+            pairingState = .idle
+        } else {
+            pairingState = .deviceFound
+        }
         logger.info("停止扫描设备")
     }
     
+    // 向指定设备发送配对请求
+    func sendPairingRequest(to device: DiscoveredDevice) {
+        selectedDeviceId = device.id
+        pairingState = .pairingRequest
+        pairingMessage = "正在连接到 \(device.name)..."
+        
+        // 启动配对超时计时器
+        startPairingTimer()
+        
+        // 连接设备
+        centralManager.connect(device.peripheral, options: nil)
+        logger.info("向 \(device.name) 发送配对请求")
+    }
+    
+    // 主动断开连接
     func disconnect() {
-        shouldAutoReconnect = false  // 用户主动断开时，禁用自动重连
+        shouldAutoReconnect = false
+        selectedDeviceId = nil
+        stopPairingTimer() // 停止配对计时器
+        
         if let peripheral = peripheral {
             centralManager.cancelPeripheralConnection(peripheral)
         }
+        
+        pairingState = .idle
+        connectedDeviceName = ""
+        pairingMessage = ""
+        logger.info("主动断开连接")
+    }
+    
+    // 重新扫描
+    func refreshDevices() {
+        if isConnected {
+            disconnect()
+        }
+        discoveredDevices.removeAll()
+        startScanning()
     }
     
     func sendGestureData(_ gesture: String) {
@@ -138,6 +216,99 @@ class BleCentralService: NSObject, ObservableObject {
             logger.error("设置更新序列化失败: \(error.localizedDescription)")
         }
     }
+    
+    // 发送配对请求消息
+    private func sendPairingRequestMessage() {
+        let message: [String: Any] = [
+            "type": "pairing_request",
+            "device_name": deviceName,
+            "device_id": WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "",
+            "rssi": -50
+        ]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: message, options: [])
+            peripheral?.writeValue(jsonData, for: writeCharacteristic!, type: .withResponse)
+            logger.info("发送配对请求消息")
+            
+            pairingState = .waitingResponse
+            pairingMessage = "等待配对响应..."
+            
+        } catch {
+            lastError = "配对请求序列化失败: \(error.localizedDescription)"
+            logger.error("配对请求序列化失败: \(error.localizedDescription)")
+        }
+    }
+    
+    // 处理配对响应
+    private func handlePairingResponse(_ message: [String: Any]) {
+        guard let type = message["type"] as? String else { return }
+        
+        switch type {
+        case "pairing_accepted":
+            stopPairingTimer() // 停止配对计时器
+            if let deviceName = message["device_name"] as? String {
+                DispatchQueue.main.async {
+                    self.pairingState = .paired
+                    self.connectedDeviceName = deviceName
+                    self.pairingMessage = "配对成功"
+                    self.shouldAutoReconnect = true
+                }
+                logger.info("配对被接受，来自: \(deviceName)")
+            }
+            
+        case "pairing_rejected":
+            stopPairingTimer() // 停止配对计时器
+            if let deviceName = message["device_name"] as? String {
+                DispatchQueue.main.async {
+                    self.pairingState = .idle
+                    self.pairingMessage = "配对被拒绝"
+                    self.disconnect()
+                }
+                logger.info("配对被拒绝，来自: \(deviceName)")
+            }
+            
+        case "disconnect_request":
+            DispatchQueue.main.async {
+                self.disconnect()
+            }
+            logger.info("收到断开连接请求")
+            
+        default:
+            break
+        }
+    }
+    
+    // 启动配对计时器
+    private func startPairingTimer() {
+        stopPairingTimer() // 先停止之前的计时器
+        pairingTimer = Timer.scheduledTimer(withTimeInterval: pairingTimeout, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.handlePairingTimeout()
+            }
+        }
+    }
+    
+    // 停止配对计时器
+    private func stopPairingTimer() {
+        pairingTimer?.invalidate()
+        pairingTimer = nil
+    }
+    
+    // 处理配对超时
+    private func handlePairingTimeout() {
+        logger.warning("配对超时")
+        DispatchQueue.main.async {
+            self.pairingState = .idle
+            self.pairingMessage = "配对超时，请重试"
+            self.lastError = "配对超时"
+            
+            // 断开连接
+            if let peripheral = self.peripheral {
+                self.centralManager.cancelPeripheralConnection(peripheral)
+            }
+        }
+    }
 }
 
 extension BleCentralService: CBCentralManagerDelegate {
@@ -145,8 +316,7 @@ extension BleCentralService: CBCentralManagerDelegate {
         switch central.state {
         case .poweredOn:
             logger.info("蓝牙已开启")
-            // 自动开始扫描
-            startScanning()
+            // 不再自动开始扫描，需要用户手动开启
         case .poweredOff:
             lastError = "蓝牙已关闭"
             isConnected = false
@@ -164,21 +334,37 @@ extension BleCentralService: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        logger.info("发现设备: \(peripheral.name ?? "未知设备")")
+        let deviceName = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "未知设备"
+        logger.info("发现设备: \(deviceName)")
         
-        // 停止扫描
-        stopScanning()
+        // 添加到发现的设备列表中（不自动连接）
+        let device = DiscoveredDevice(
+            id: peripheral.identifier.uuidString,
+            peripheral: peripheral,
+            name: deviceName,
+            rssi: RSSI.intValue,
+            timestamp: Date()
+        )
         
-        // 连接设备
-        self.peripheral = peripheral
-        central.connect(peripheral, options: nil)
+        // 检查是否已经存在（避免重复）
+        if !discoveredDevices.contains(where: { $0.id == device.id }) {
+            DispatchQueue.main.async {
+                self.discoveredDevices.append(device)
+                self.pairingState = .deviceFound
+            }
+        }
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         logger.info("已连接到设备: \(peripheral.name ?? "未知设备")")
         isConnected = true
+        self.peripheral = peripheral
         peripheral.delegate = self
         peripheral.discoverServices([serviceUUID])
+        
+        DispatchQueue.main.async {
+            self.pairingMessage = "已连接，正在初始化..."
+        }
     }
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
@@ -193,9 +379,19 @@ extension BleCentralService: CBCentralManagerDelegate {
         self.peripheral = nil
         self.writeCharacteristic = nil
         
+        DispatchQueue.main.async {
+            if self.pairingState == .paired {
+                self.pairingMessage = "连接已断开"
+            }
+            self.pairingState = .idle
+            self.connectedDeviceName = ""
+        }
+        
         // 只有在shouldAutoReconnect为true时才自动重新扫描
         if shouldAutoReconnect {
-            startScanning()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self.startScanning()
+            }
         }
     }
 }
@@ -228,6 +424,11 @@ extension BleCentralService: CBPeripheralDelegate {
             } else if characteristic.uuid == writeCharacteristicUUID {
                 logger.info("发现写入特性")
                 writeCharacteristic = characteristic
+                
+                // 特征发现完成后，发送配对请求
+                if pairingState == .pairingRequest {
+                    sendPairingRequestMessage()
+                }
             }
         }
     }
@@ -319,6 +520,12 @@ extension BleCentralService: CBPeripheralDelegate {
             self.logger.info("Watch App BleCentralService: Received settings update via buffer.")
             updateUserDefaults(from: json)
         } else {
+            // 检查是否是配对相关消息
+            if let type = json["type"] as? String,
+               ["pairing_accepted", "pairing_rejected", "disconnect_request"].contains(type) {
+                handlePairingResponse(json)
+            }
+            
             // 其他 JSON 消息
             print("Watch App BleCentralService: Forwarding other JSON from buffer to MessageHandler/WCSession.")
             WatchConnectivityManager.shared.processMessage(json)

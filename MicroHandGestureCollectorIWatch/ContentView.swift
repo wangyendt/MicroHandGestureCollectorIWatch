@@ -110,8 +110,85 @@ struct ContentView: View {
                                     Text(bleService.isAdvertising ? "蓝牙已启动" : "蓝牙未启动")
                                     Spacer()
                                     if bleService.isConnected {
-                                        Text("已连接")
-                                            .foregroundColor(.green)
+                                        VStack(alignment: .trailing) {
+                                            Text("已连接")
+                                                .foregroundColor(.green)
+                                            if !bleService.connectedDeviceName.isEmpty {
+                                                Text(bleService.connectedDeviceName)
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // 蓝牙配对控制
+                                VStack(spacing: 8) {
+                                    switch bleService.pairingState {
+                                    case .idle:
+                                        Button("开始可发现模式") {
+                                            bleService.startDiscoverableMode()
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        
+                                    case .discoverable:
+                                        VStack {
+                                            Text("设备可被发现")
+                                                .foregroundColor(.blue)
+                                            Button("停止可发现模式") {
+                                                bleService.stopAdvertising()
+                                            }
+                                            .buttonStyle(.bordered)
+                                        }
+                                        
+                                    case .pairingRequest:
+                                        if let request = bleService.pendingPairingRequest {
+                                            VStack {
+                                                Text("配对请求")
+                                                    .font(.headline)
+                                                Text("来自: \(request.name)")
+                                                    .foregroundColor(.blue)
+                                                
+                                                HStack {
+                                                    Button("拒绝") {
+                                                        bleService.rejectPairingRequest()
+                                                    }
+                                                    .buttonStyle(.bordered)
+                                                    .foregroundColor(.red)
+                                                    
+                                                    Button("接受") {
+                                                        bleService.acceptPairingRequest()
+                                                    }
+                                                    .buttonStyle(.borderedProminent)
+                                                }
+                                            }
+                                            .padding()
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(10)
+                                        }
+                                        
+                                    case .paired:
+                                        VStack {
+                                            HStack {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundColor(.green)
+                                                Text("已配对")
+                                                    .foregroundColor(.green)
+                                            }
+                                            if !bleService.connectedDeviceName.isEmpty {
+                                                Text("连接到: \(bleService.connectedDeviceName)")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            Button("断开连接") {
+                                                bleService.disconnect()
+                                            }
+                                            .buttonStyle(.bordered)
+                                            .foregroundColor(.red)
+                                        }
+                                        
+                                    default:
+                                        EmptyView()
                                     }
                                 }
                                 

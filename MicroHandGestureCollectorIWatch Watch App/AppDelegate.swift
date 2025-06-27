@@ -25,9 +25,9 @@ class AppDelegate: NSObject, WKApplicationDelegate {
         // motionManager.startSensorUpdates() // Remove this call, start sensors via UI
         healthKitManager.startWorkoutSession() // This will check/request auth and keep app running
         
-        // 自动开始蓝牙扫描
-        BleCentralService.shared.startScanning()
-        print("📱 AppDelegate: 自动启动蓝牙扫描")
+        // 初始化蓝牙服务（不自动扫描）
+        _ = BleCentralService.shared
+        print("📱 AppDelegate: 蓝牙服务已初始化")
     }
 
     // 应用进入后台时调用

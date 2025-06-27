@@ -1,5 +1,27 @@
 import CoreBluetooth
+import UIKit
 import os.log
+
+// 添加配对状态枚举
+enum PairingState {
+    case idle           // 空闲状态
+    case advertising    // 广播中，等待连接
+    case discoverable   // 可被发现状态
+    case pairingRequest // 收到配对请求
+    case paired         // 已配对
+}
+
+// 添加设备信息结构
+struct DeviceInfo: Identifiable, Codable {
+    let id: String
+    let name: String
+    let rssi: Int
+    let timestamp: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, rssi, timestamp
+    }
+}
 
 class BlePeripheralService: NSObject, ObservableObject {
     static let shared = BlePeripheralService()
@@ -17,23 +39,118 @@ class BlePeripheralService: NSObject, ObservableObject {
     private var dataToSendQueue: [Data] = []
     private var isReadyToSend = true
     
+    // 添加配对相关状态
+    @Published var pairingState: PairingState = .idle
+    @Published var pendingPairingRequest: DeviceInfo?
     @Published var isAdvertising = false
     @Published var isConnected = false
     @Published var currentValue = 0
+    @Published var connectedDeviceName: String = ""
+    
+    private var pairingTimer: Timer?
+    private let pairingTimeout: TimeInterval = 30.0 // 配对超时30秒
     
     private let logger = Logger(subsystem: "com.wayne.MicroHandGestureCollectorIWatch", category: "BlePeripheral")
+    private let deviceName = UIDevice.current.name // 获取设备名称
     
     override private init() {
         super.init()
         peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
     }
     
-    func startAdvertising() {
+    // 开始可发现模式（不自动连接）
+    func startDiscoverableMode() {
         guard peripheralManager.state == .poweredOn else {
             logger.error("蓝牙未开启")
             return
         }
         
+        setupService()
+        
+        // 开始广播，包含设备信息
+        peripheralManager.startAdvertising([
+            CBAdvertisementDataServiceUUIDsKey: [serviceUUID],
+            CBAdvertisementDataLocalNameKey: "iPhone-\(deviceName)"
+        ])
+        
+        pairingState = .discoverable
+        isAdvertising = true
+        logger.info("开始可发现模式")
+    }
+    
+    // 停止广播
+    func stopAdvertising() {
+        peripheralManager.stopAdvertising()
+        isAdvertising = false
+        if pairingState != .paired {
+            pairingState = .idle
+        }
+        logger.info("停止广播")
+    }
+    
+    // 主动断开连接
+    func disconnect() {
+        // 清除所有连接的中心设备
+        connectedCentrals.removeAll()
+        isConnected = false
+        connectedDeviceName = ""
+        pairingState = .idle
+        stopCounter()
+        
+        // 注意：CBPeripheralManager没有直接断开连接的方法
+        // 连接是由中心设备发起的，断开也需要中心设备或系统处理
+        logger.info("断开连接")
+        
+        // 发送断开通知给连接的设备
+        sendJSONData([
+            "type": "disconnect_request",
+            "message": "iPhone主动断开连接"
+        ])
+    }
+    
+    // 接受配对请求
+    func acceptPairingRequest() {
+        guard let request = pendingPairingRequest else { return }
+        
+        logger.info("接受来自 \(request.name) 的配对请求")
+        
+        stopPairingTimer() // 停止配对计时器
+        
+        // 发送配对接受消息
+        sendJSONData([
+            "type": "pairing_accepted",
+            "device_name": deviceName,
+            "device_id": UIDevice.current.identifierForVendor?.uuidString ?? ""
+        ])
+        
+        pairingState = .paired
+        connectedDeviceName = request.name
+        pendingPairingRequest = nil
+        
+        // 开始计数器
+        startCounter()
+    }
+    
+    // 拒绝配对请求
+    func rejectPairingRequest() {
+        guard let request = pendingPairingRequest else { return }
+        
+        logger.info("拒绝来自 \(request.name) 的配对请求")
+        
+        stopPairingTimer() // 停止配对计时器
+        
+        // 发送配对拒绝消息
+        sendJSONData([
+            "type": "pairing_rejected",
+            "device_name": deviceName,
+            "device_id": UIDevice.current.identifierForVendor?.uuidString ?? ""
+        ])
+        
+        pendingPairingRequest = nil
+        pairingState = .discoverable
+    }
+    
+    private func setupService() {
         // 创建特征
         notifyCharacteristic = CBMutableCharacteristic(
             type: notifyCharacteristicUUID,
@@ -55,27 +172,6 @@ class BlePeripheralService: NSObject, ObservableObject {
         
         // 添加服务
         peripheralManager.add(service)
-        
-        // 开始广播
-        peripheralManager.startAdvertising([
-            CBAdvertisementDataServiceUUIDsKey: [serviceUUID],
-            CBAdvertisementDataLocalNameKey: "手势游戏"
-        ])
-        
-        isAdvertising = true
-        logger.info("开始广播")
-        
-        // 启动计数器
-        startCounter()
-    }
-    
-    func stopAdvertising() {
-        peripheralManager.stopAdvertising()
-        isAdvertising = false
-        isConnected = false
-        connectedCentrals.removeAll()
-        stopCounter()
-        logger.info("停止广播")
     }
     
     private func startCounter() {
@@ -198,7 +294,7 @@ extension BlePeripheralService: CBPeripheralManagerDelegate {
         switch peripheral.state {
         case .poweredOn:
             logger.info("蓝牙已开启")
-            startAdvertising()  // 自动开始广播
+            // 不再自动开始可发现模式，需要用户手动开启
         case .poweredOff:
             logger.error("蓝牙已关闭")
             stopAdvertising()
@@ -219,11 +315,25 @@ extension BlePeripheralService: CBPeripheralManagerDelegate {
         connectedCentrals.insert(central)
         isConnected = true
         logger.info("设备已连接")
+        
+        // 只有在已配对状态下才开始正常工作
+        if pairingState != .paired {
+            pairingState = .pairingRequest
+            startPairingTimer() // 启动配对超时计时器
+            logger.info("等待配对确认...")
+        }
     }
     
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
         connectedCentrals.remove(central)
         isConnected = !connectedCentrals.isEmpty
+        
+        if !isConnected {
+            pairingState = .idle
+            connectedDeviceName = ""
+            stopCounter()
+        }
+        
         logger.info("设备已断开")
     }
     
@@ -234,6 +344,8 @@ extension BlePeripheralService: CBPeripheralManagerDelegate {
                 
                 // 尝试解析为JSON格式数据
                 if let jsonObject = try? JSONSerialization.jsonObject(with: value, options: []) as? [String: Any] {
+                    handlePairingMessage(jsonObject)
+                    
                     // 直接发送原始JSON数据通知，不在BLE服务中解析业务数据
                     logger.info("收到JSON格式数据")
                     print("Phone BlePeripheralService: Received JSON data: \(jsonObject)")
@@ -258,6 +370,70 @@ extension BlePeripheralService: CBPeripheralManagerDelegate {
             if request.characteristic.uuid == writeCharacteristicUUID {
                 peripheral.respond(to: request, withResult: .success)
             }
+        }
+    }
+    
+    // 处理配对相关消息
+    private func handlePairingMessage(_ message: [String: Any]) {
+        guard let type = message["type"] as? String else { return }
+        
+        switch type {
+        case "pairing_request":
+            if let deviceName = message["device_name"] as? String,
+               let deviceId = message["device_id"] as? String {
+                
+                let deviceInfo = DeviceInfo(
+                    id: deviceId,
+                    name: deviceName,
+                    rssi: message["rssi"] as? Int ?? -50,
+                    timestamp: Date()
+                )
+                
+                DispatchQueue.main.async {
+                    self.pendingPairingRequest = deviceInfo
+                    self.pairingState = .pairingRequest
+                }
+                
+                logger.info("收到来自 \(deviceName) 的配对请求")
+            }
+            
+        case "disconnect_request":
+            DispatchQueue.main.async {
+                self.disconnect()
+            }
+            logger.info("收到断开连接请求")
+            
+        default:
+            break
+        }
+    }
+    
+    // MARK: - 配对超时处理
+    private func startPairingTimer() {
+        stopPairingTimer() // 先停止之前的计时器
+        pairingTimer = Timer.scheduledTimer(withTimeInterval: pairingTimeout, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.handlePairingTimeout()
+            }
+        }
+    }
+    
+    private func stopPairingTimer() {
+        pairingTimer?.invalidate()
+        pairingTimer = nil
+    }
+    
+    private func handlePairingTimeout() {
+        logger.warning("配对超时")
+        DispatchQueue.main.async {
+            self.pairingState = .discoverable
+            self.pendingPairingRequest = nil
+            
+            // 发送超时通知给连接的设备
+            self.sendJSONData([
+                "type": "pairing_timeout",
+                "message": "配对超时"
+            ])
         }
     }
     

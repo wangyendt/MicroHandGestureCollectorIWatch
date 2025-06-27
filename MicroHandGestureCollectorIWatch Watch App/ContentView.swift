@@ -147,6 +147,7 @@ struct ContentView: View {
     @State private var showCrownPicker = false
     
     @State private var showingDataManagement = false
+    @State private var showingBlePairing = false
     @State private var showingDeleteAllAlert = false
     @State private var swipeToDeleteOffset: CGFloat = 0
     @State private var swipeToDeleteComplete = false
@@ -193,6 +194,40 @@ struct ContentView: View {
     // 计算属性，决定是否显示删除按钮
     private var showDeleteButton: Bool {
         return supervisorName != "陈科亦" && supervisorName != "徐森爱"
+    }
+    
+    // 获取蓝牙状态文本
+    private func getBleStatusText() -> String {
+        switch bleService.pairingState {
+        case .idle:
+            return "未连接"
+        case .scanning:
+            return "扫描中..."
+        case .deviceFound:
+            return "发现设备"
+        case .pairingRequest:
+            return "配对中..."
+        case .waitingResponse:
+            return "等待响应..."
+        case .paired:
+            return "已配对"
+        }
+    }
+    
+    // 获取蓝牙状态颜色
+    private func getBleStatusColor() -> Color {
+        switch bleService.pairingState {
+        case .idle:
+            return .gray
+        case .scanning:
+            return .orange
+        case .deviceFound:
+            return .green
+        case .pairingRequest, .waitingResponse:
+            return .orange
+        case .paired:
+            return .blue
+        }
     }
     
     // Helper view for Hand Picker
@@ -523,46 +558,96 @@ struct ContentView: View {
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
                 
-                // 添加设置按钮
-                Button(action: {
-                    showingSettings = true
-                }) {
-                    HStack {
-                        Text("⚙️ 设置")
-                            .foregroundColor(.blue)
+                // 添加按钮区域（分两行显示）
+                VStack(spacing: 8) {
+                    // 设置按钮
+                    Button(action: {
+                        showingSettings = true
+                    }) {
+                        HStack {
+                            Text("⚙️ 设置")
+                                .foregroundColor(.blue)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                }
-                .sheet(isPresented: $showingSettings) {
-                    WatchAppSettingsView(
-                        peakThreshold: $peakThreshold,
-                        peakWindow: $peakWindow
-                    )
+                    .sheet(isPresented: $showingSettings) {
+                        WatchAppSettingsView(
+                            peakThreshold: $peakThreshold,
+                            peakWindow: $peakWindow
+                        )
+                    }
+                    
+                    // 蓝牙配对按钮
+                    Button(action: {
+                        showingBlePairing = true
+                    }) {
+                        HStack {
+                            Text("📱 配对")
+                                .foregroundColor(.blue)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .sheet(isPresented: $showingBlePairing) {
+                        BlePairingView()
+                    }
                 }
 
                 // 添加蓝牙状态显示
-                HStack {
-                    Image(systemName: bleService.isConnected ? "bolt.circle.fill" : "bolt.circle")
-                        .foregroundColor(bleService.isConnected ? .blue : .gray)
-                    Text(bleService.isConnected ? "已连接" : (bleService.isScanning ? "扫描中..." : "未连接"))
-                        .foregroundColor(bleService.isConnected ? .blue : (bleService.isScanning ? .orange : .gray))
-                    Spacer()
-                    if bleService.isConnected {
-                        Button(action: {
-                            bleService.disconnect()
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.red)
-                        }
-                    } else {
-                        Button(action: {
-                            if bleService.isScanning {
-                                bleService.stopScanning()
-                            } else {
-                                bleService.startScanning()
+                VStack(spacing: 4) {
+                    HStack {
+                        Image(systemName: bleService.isConnected ? "bolt.circle.fill" : "bolt.circle")
+                            .foregroundColor(bleService.isConnected ? .blue : .gray)
+                        Text(getBleStatusText())
+                            .foregroundColor(getBleStatusColor())
+                        Spacer()
+                        if bleService.isConnected {
+                            Button(action: {
+                                bleService.disconnect()
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
                             }
-                        }) {
-                            Image(systemName: bleService.isScanning ? "stop.circle.fill" : "arrow.clockwise.circle.fill")
-                                .foregroundColor(bleService.isScanning ? .red : .blue)
+                        } else {
+                            Button(action: {
+                                if bleService.isScanning {
+                                    bleService.stopScanning()
+                                } else {
+                                    bleService.startScanning()
+                                }
+                            }) {
+                                Image(systemName: bleService.isScanning ? "stop.circle.fill" : "arrow.clockwise.circle.fill")
+                                    .foregroundColor(bleService.isScanning ? .red : .blue)
+                            }
+                        }
+                    }
+                    
+                    // 显示连接的设备名称
+                    if bleService.isConnected && !bleService.connectedDeviceName.isEmpty {
+                        HStack {
+                            Text("设备: \(bleService.connectedDeviceName)")
+                                .font(.caption2)
+                                .foregroundColor(.blue)
+                            Spacer()
+                        }
+                    }
+                    
+                    // 显示配对消息
+                    if !bleService.pairingMessage.isEmpty {
+                        HStack {
+                            Text(bleService.pairingMessage)
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                            Spacer()
+                        }
+                    }
+                    
+                    // 显示发现的设备数量
+                    if bleService.pairingState == .deviceFound && !bleService.discoveredDevices.isEmpty {
+                        HStack {
+                            Text("发现 \(bleService.discoveredDevices.count) 个设备")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                            Spacer()
                         }
                     }
                 }
