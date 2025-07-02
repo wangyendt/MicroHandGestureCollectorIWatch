@@ -216,7 +216,7 @@ public class SignalProcessor {
             }
             
             // 修改阈值，因为现在是对差分值进行判断
-            if peakValue > 0.3 {  // 可能需要调整这个阈值
+            if peakValue > 0.05 {  // 可能需要调整这个阈值
                 candidate_peaks.append((timestamp: timestamp, value: peakValue))
                 
                 // 维护单调栈
