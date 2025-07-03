@@ -28,6 +28,18 @@ public class SignalProcessor {
     private var last_selected_time: TimeInterval = -.infinity
     private var selected_peaks: [(timestamp: TimeInterval, value: Double)] = []
     
+    // 添加延迟推理任务管理
+    private struct PendingGestureTask {
+        let id = UUID()
+        let peakTime: TimeInterval
+        let peakValue: Double
+        let scheduleTime: TimeInterval // 数据收集完成时间
+        var isProcessing = false
+    }
+    
+    private var pendingTasks: [PendingGestureTask] = []
+    private let maxConcurrentTasks = 10 // 支持最多10个并发推理任务
+    
     // 添加代理协议来处理峰值检测事件
     weak var delegate: SignalProcessorDelegate?
     
@@ -230,6 +242,9 @@ public class SignalProcessor {
         // 检查候选peaks
         checkCandidatePeaks(currentTime: timestamp)
         
+        // 检查待处理的推理任务
+        checkPendingTasks(currentTime: timestamp)
+        
         if isValley, let valleyValue = valley {
             // 添加代理调用来保存谷值
             delegate?.signalProcessor(self, didDetectValley: timestamp, value: valleyValue)
@@ -272,9 +287,6 @@ public class SignalProcessor {
                     if peak_val > peakThreshold {
                         selectedPeakCount += 1
                         
-                        // 计算相对时间
-                        let relativeTimeS = peak_time - (startTime ?? peak_time)
-                        
                         // 触发代理方法来保存选中的峰值
                         delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
                         
@@ -286,44 +298,8 @@ public class SignalProcessor {
                             delegate?.signalProcessor(self, didSelectPeak: peak_time, value: peak_val)
                         }
                         
-                        // 进行手势识别
-                        if let (gesture, confidence) = gestureRecognizer.recognizeGesture(atPeakTime: peak_time) {
-                            // 根据设置决定是否触发手势反馈
-                            if feedbackType == "gesture" {
-                                // 触发手势反馈
-                                delegate?.signalProcessor(self, didRecognizeGesture: gesture, confidence: confidence)
-                            }
-                            
-                            // 发送手势数据到Android设备
-                            BleCentralService.shared.sendGestureData(gesture)
-                            
-                            // 先生成一个 UUID，然后在发送和保存时都使用这个相同的 ID
-                            let resultId = UUID().uuidString
-                            
-                            // 构建完整的手势结果数据
-                            let result: [String: Any] = [
-                                "type": "gesture_result",
-                                "gesture": gesture,
-                                "confidence": confidence,
-                                "peakValue": peak_val,
-                                "timestamp": relativeTimeS,
-                                "id": resultId,
-                                "bodyGesture": "无",
-                                "armGesture": "无",
-                                "fingerGesture": "无"
-                            ]
-                            
-                            // 通过BLE发送详细的手势结果到iPhone
-                            BleCentralService.shared.sendGestureResult(resultDict: result)
-                            
-                            // 保存结果到文件
-                            saveResult(timestamp: UInt64(peak_time * 1_000_000_000), 
-                                      relativeTime: relativeTimeS, 
-                                      gesture: gesture, 
-                                      confidence: confidence, 
-                                      peakValue: peak_val,
-                                      id: resultId)
-                        }
+                        // 安排延迟手势识别任务（取代立即执行）
+                        scheduleGestureRecognition(peakTime: peak_time, peakValue: peak_val)
                     }
                 }
                 
@@ -466,6 +442,9 @@ public class SignalProcessor {
         resultFileHandle = nil
         currentFolderURL = nil
         gestureRecognizer.closeFiles()  // 确保也关闭 GestureRecognizer 的文件
+        
+        // 清理所有待处理的推理任务
+        clearPendingTasks()
     }
     
     // 在开始新的数据采集时重置开始时间
@@ -477,6 +456,127 @@ public class SignalProcessor {
     func updateSettings(saveResult: Bool) {
         shouldSaveResult = saveResult
         print("Updated result saving setting: \(saveResult)")
+    }
+    
+    // MARK: - 延迟推理任务管理
+    
+    // 安排延迟手势识别任务
+    private func scheduleGestureRecognition(peakTime: TimeInterval, peakValue: Double) {
+        // 计算数据收集完成时间：峰值时间 + 0.5秒（前后各50帧 @ 100Hz）
+        let dataReadyTime = peakTime + 0.5
+        
+        // 检查是否超过最大并发数
+        if pendingTasks.count >= maxConcurrentTasks {
+            print("⚠️ 推理任务队列已满(\(maxConcurrentTasks))，丢弃峰值时间: \(String(format: "%.2f", peakTime))s 的任务")
+            return
+        }
+        
+        // 创建延迟推理任务
+        let task = PendingGestureTask(
+            peakTime: peakTime,
+            peakValue: peakValue,
+            scheduleTime: dataReadyTime
+        )
+        
+        pendingTasks.append(task)
+        print("📅 已安排手势推理任务，峰值时间: \(String(format: "%.2f", peakTime))s, 执行时间: \(String(format: "%.2f", dataReadyTime))s, 队列长度: \(pendingTasks.count)")
+    }
+    
+    // 检查并执行等待中的任务
+    private func checkPendingTasks(currentTime: TimeInterval) {
+        guard !pendingTasks.isEmpty else { return }
+        
+        var tasksToExecute: [Int] = []
+        
+        // 找到需要执行的任务
+        for i in 0..<pendingTasks.count {
+            let task = pendingTasks[i]
+            
+            if currentTime >= task.scheduleTime && !task.isProcessing {
+                tasksToExecute.append(i)
+                print("⏰ 时间到达，准备执行任务: 峰值时间=\(String(format: "%.2f", task.peakTime))s, 当前时间=\(String(format: "%.2f", currentTime))s, 计划时间=\(String(format: "%.2f", task.scheduleTime))s")
+            }
+        }
+        
+        // 执行推理任务
+        for i in tasksToExecute.reversed() { // 逆序处理避免索引问题
+            let task = pendingTasks[i]
+            pendingTasks[i].isProcessing = true
+            executeGestureRecognition(task: task)
+        }
+    }
+    
+    // 执行具体的手势识别
+    private func executeGestureRecognition(task: PendingGestureTask) {
+        print("🚀 开始执行手势推理任务，峰值时间: \(String(format: "%.2f", task.peakTime))s, 任务ID: \(task.id.uuidString.prefix(8))")
+        
+        // 使用现有的异步推理方法
+        gestureRecognizer.recognizeGestureAsync(atPeakTime: task.peakTime) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.handleGestureResult(task: task, result: result)
+            }
+        }
+    }
+    
+    // 处理手势识别结果
+    private func handleGestureResult(task: PendingGestureTask, result: (gesture: String, confidence: Double)?) {
+        // 从队列中移除完成的任务
+        pendingTasks.removeAll { $0.id == task.id }
+        
+        if let (gesture, confidence) = result {
+            print("✅ 手势推理完成: \(gesture), 置信度: \(String(format: "%.3f", confidence)), 峰值时间: \(String(format: "%.2f", task.peakTime))s")
+            
+            // 计算相对时间
+            let relativeTimeS = task.peakTime - (startTime ?? task.peakTime)
+            
+            // 根据设置决定是否触发手势反馈
+            let feedbackType = UserDefaults.standard.string(forKey: "feedbackType") ?? "gesture"
+            if feedbackType == "gesture" {
+                // 触发手势反馈
+                delegate?.signalProcessor(self, didRecognizeGesture: gesture, confidence: confidence)
+            }
+            
+            // 发送手势数据到Android设备
+            BleCentralService.shared.sendGestureData(gesture)
+            
+            // 生成结果ID
+            let resultId = UUID().uuidString
+            
+            // 构建完整的手势结果数据
+            let result: [String: Any] = [
+                "type": "gesture_result",
+                "gesture": gesture,
+                "confidence": confidence,
+                "peakValue": task.peakValue,
+                "timestamp": relativeTimeS,
+                "id": resultId,
+                "bodyGesture": "无",
+                "armGesture": "无",
+                "fingerGesture": "无"
+            ]
+            
+            // 通过BLE发送详细的手势结果到iPhone
+            BleCentralService.shared.sendGestureResult(resultDict: result)
+            
+            // 保存结果到文件
+            saveResult(timestamp: UInt64(task.peakTime * 1_000_000_000), 
+                      relativeTime: relativeTimeS, 
+                      gesture: gesture, 
+                      confidence: confidence, 
+                      peakValue: task.peakValue,
+                      id: resultId)
+                      
+            print("📊 当前待处理任务数: \(pendingTasks.count)")
+        } else {
+            print("❌ 手势推理失败，峰值时间: \(String(format: "%.2f", task.peakTime))s, 任务ID: \(task.id.uuidString.prefix(8))")
+            print("📊 当前待处理任务数: \(pendingTasks.count)")
+        }
+    }
+    
+    // 清理所有待处理任务（在停止数据收集时调用）
+    public func clearPendingTasks() {
+        pendingTasks.removeAll()
+        print("🧹 已清理所有待处理的推理任务")
     }
 }
 
