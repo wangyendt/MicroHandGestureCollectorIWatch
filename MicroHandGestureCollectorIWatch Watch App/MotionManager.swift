@@ -1104,6 +1104,10 @@ public class MotionManager: NSObject, ObservableObject, SignalProcessorDelegate,
             }
         }
         
+        // 获取peak阈值和peak window设置
+        let peakThreshold = UserDefaults.standard.double(forKey: "peakThreshold")
+        let peakWindow = UserDefaults.standard.double(forKey: "peakWindow")
+        
         // 生成YAML字符串
         var yamlString = "# 采集信息\n"
         yamlString += "collection:\n"
@@ -1120,6 +1124,8 @@ public class MotionManager: NSObject, ObservableObject, SignalProcessorDelegate,
         yamlString += "  note: \(collectionInfo["note"] ?? "")\n"
         yamlString += "  supervisor_name: \(collectionInfo["supervisor_name"] ?? "")\n"  // 添加监督者姓名
         yamlString += "  crown_position: \(collectionInfo["crown_position"] ?? "")\n" // 添加表冠位置
+        yamlString += "  peak_threshold: \(peakThreshold > 0 ? peakThreshold : 0.5)\n"  // 添加peak阈值
+        yamlString += "  peak_window: \(peakWindow > 0 ? peakWindow : 0.6)\n"  // 添加peak window窗长
         yamlString += "  version: \(version)\n"
         
         // 添加时间戳差值
