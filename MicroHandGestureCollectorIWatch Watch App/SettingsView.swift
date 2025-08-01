@@ -6,6 +6,7 @@ struct WatchAppSettingsView: View {
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @Binding var peakThreshold: Double
     @Binding var peakWindow: Double
+    @Binding var gestureCooldownWindow: Double
     
     // 数据保存设置，明确指定默认值
     @AppStorage("savePeaks") private var savePeaks: Bool = false
@@ -51,6 +52,18 @@ struct WatchAppSettingsView: View {
                         Text(String(format: "%.1f", peakWindow))
                             .frame(width: 40)
                     }
+                    
+                    HStack {
+                        Text("冷却窗长")
+                        Spacer()
+                        Slider(
+                            value: $gestureCooldownWindow,
+                            in: 0.1...2.0,
+                            step: 0.1
+                        )
+                        Text(String(format: "%.1f", gestureCooldownWindow))
+                            .frame(width: 40)
+                    }
                 }
                 
                 Section(header: Text("数据保存设置")) {
@@ -93,6 +106,7 @@ struct WatchAppSettingsView: View {
                             "feedbackType": feedbackType,
                             "peakThreshold": peakThreshold,
                             "peakWindow": peakWindow,
+                            "gestureCooldownWindow": gestureCooldownWindow,
                             "saveGestureData": saveGestureData,
                             "savePeaks": savePeaks,
                             "saveValleys": saveValleys,
@@ -108,6 +122,7 @@ struct WatchAppSettingsView: View {
                         // 2. 更新 UserDefaults (虽然@AppStorage会自动做，但显式调用 synchronize 确保立即生效)
                         UserDefaults.standard.set(peakThreshold, forKey: "peakThreshold")
                         UserDefaults.standard.set(peakWindow, forKey: "peakWindow")
+                        UserDefaults.standard.set(gestureCooldownWindow, forKey: "gestureCooldownWindow")
                         UserDefaults.standard.set(savePeaks, forKey: "savePeaks")
                         UserDefaults.standard.set(saveValleys, forKey: "saveValleys")
                         UserDefaults.standard.set(saveSelectedPeaks, forKey: "saveSelectedPeaks")

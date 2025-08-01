@@ -163,8 +163,9 @@ struct ContentView: View {
     @State private var showingNameInput = false
     
     // 添加设置相关的状态
-    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.5  // peak阈值
-    @AppStorage("peakWindow") private var peakWindow: Double = 0.6  // peak窗口
+    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.3  // peak阈值
+    @AppStorage("peakWindow") private var peakWindow: Double = 0.2  // peak窗口
+    @AppStorage("gestureCooldownWindow") private var gestureCooldownWindow: Double = 0.5  // 手势冷却窗长
     @State private var showingSettings = false
     
     @AppStorage("selectedGender") private var selectedGender: String = "男"
@@ -573,7 +574,8 @@ struct ContentView: View {
                     .sheet(isPresented: $showingSettings) {
                         WatchAppSettingsView(
                             peakThreshold: $peakThreshold,
-                            peakWindow: $peakWindow
+                            peakWindow: $peakWindow,
+                            gestureCooldownWindow: $gestureCooldownWindow
                         )
                     }
                     
@@ -1173,6 +1175,7 @@ struct ContentView: View {
         // 读取设置值，如果不存在则使用当前的 AppStorage 值或默认值
         let newPeakThreshold = settings["peakThreshold"] as? Double ?? peakThreshold
         let newPeakWindow = settings["peakWindow"] as? Double ?? peakWindow
+        let newGestureCooldownWindow = settings["gestureCooldownWindow"] as? Double ?? gestureCooldownWindow
         let newSavePeaks = settings["savePeaks"] as? Bool ?? UserDefaults.standard.bool(forKey: "savePeaks")
         let newSaveValleys = settings["saveValleys"] as? Bool ?? UserDefaults.standard.bool(forKey: "saveValleys")
         let newSaveSelectedPeaks = settings["saveSelectedPeaks"] as? Bool ?? UserDefaults.standard.bool(forKey: "saveSelectedPeaks")
@@ -1188,10 +1191,11 @@ struct ContentView: View {
         // 更新 AppStorage 变量 (确保 UI 反映最新值)
         peakThreshold = newPeakThreshold
         peakWindow = newPeakWindow
+        gestureCooldownWindow = newGestureCooldownWindow
         // 更新其他 AppStorage 变量...
 
         // 更新 MotionManager 的设置
-        motionManager.signalProcessor.updateSettings(peakThreshold: newPeakThreshold, peakWindow: newPeakWindow)
+        motionManager.signalProcessor.updateSettings(peakThreshold: newPeakThreshold, peakWindow: newPeakWindow, gestureCooldownWindow: newGestureCooldownWindow)
         motionManager.updateSaveSettings(
             peaks: newSavePeaks,
             valleys: newSaveValleys,

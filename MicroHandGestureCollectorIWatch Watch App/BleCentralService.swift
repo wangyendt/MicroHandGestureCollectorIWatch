@@ -543,8 +543,9 @@ extension BleCentralService: CBPeripheralDelegate {
         print("Watch App BleCentralService: updateUserDefaults called with: \(settings)")
         DispatchQueue.main.async {
             UserDefaults.standard.set(settings["feedbackType"] as? String ?? "gesture", forKey: "feedbackType")
-            UserDefaults.standard.set(settings["peakThreshold"] as? Double ?? 0.5, forKey: "peakThreshold")
-            UserDefaults.standard.set(settings["peakWindow"] as? Double ?? 0.6, forKey: "peakWindow")
+            UserDefaults.standard.set(settings["peakThreshold"] as? Double ?? 0.3, forKey: "peakThreshold")
+            UserDefaults.standard.set(settings["peakWindow"] as? Double ?? 0.2, forKey: "peakWindow")
+            UserDefaults.standard.set(settings["gestureCooldownWindow"] as? Double ?? 0.5, forKey: "gestureCooldownWindow")
             UserDefaults.standard.set(settings["saveGestureData"] as? Bool ?? false, forKey: "saveGestureData")
             UserDefaults.standard.set(settings["savePeaks"] as? Bool ?? false, forKey: "savePeaks")
             UserDefaults.standard.set(settings["saveValleys"] as? Bool ?? false, forKey: "saveValleys")

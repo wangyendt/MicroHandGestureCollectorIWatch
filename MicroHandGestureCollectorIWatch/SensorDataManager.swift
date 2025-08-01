@@ -286,6 +286,9 @@ class SensorDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 if let peakWindow = message["peakWindow"] as? Double {
                     UserDefaults.standard.set(peakWindow, forKey: "peakWindow")
                 }
+                if let gestureCooldownWindow = message["gestureCooldownWindow"] as? Double {
+                    UserDefaults.standard.set(gestureCooldownWindow, forKey: "gestureCooldownWindow")
+                }
                 if let saveGestureData = message["saveGestureData"] as? Bool {
                     UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
                 }

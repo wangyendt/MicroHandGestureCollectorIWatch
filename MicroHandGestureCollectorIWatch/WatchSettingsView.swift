@@ -4,8 +4,9 @@ import WatchConnectivity
 struct WatchSettingsView: View {
     @Environment(\.dismiss) var dismiss
     
-    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.5  // peak阈值
-    @AppStorage("peakWindow") private var peakWindow: Double = 0.6
+    @AppStorage("peakThreshold") private var peakThreshold: Double = 0.3  // peak阈值
+    @AppStorage("peakWindow") private var peakWindow: Double = 0.2
+    @AppStorage("gestureCooldownWindow") private var gestureCooldownWindow: Double = 0.5
     @AppStorage("savePeaks") private var savePeaks = false
     @AppStorage("saveValleys") private var saveValleys = false
     @AppStorage("saveSelectedPeaks") private var saveSelectedPeaks = false
@@ -45,6 +46,18 @@ struct WatchSettingsView: View {
                             step: 0.1
                         )
                         Text(String(format: "%.1f", peakWindow))
+                            .frame(width: 40)
+                    }
+                    
+                    HStack {
+                        Text("冷却窗长")
+                        Spacer()
+                        Slider(
+                            value: $gestureCooldownWindow,
+                            in: 0.1...2.0,
+                            step: 0.1
+                        )
+                        Text(String(format: "%.1f", gestureCooldownWindow))
                             .frame(width: 40)
                     }
                 }
@@ -88,6 +101,7 @@ struct WatchSettingsView: View {
                             "feedbackType": feedbackType,
                             "peakThreshold": peakThreshold,
                             "peakWindow": peakWindow,
+                            "gestureCooldownWindow": gestureCooldownWindow,
                             "saveGestureData": saveGestureData,
                             "savePeaks": savePeaks,
                             "saveValleys": saveValleys,
@@ -120,6 +134,7 @@ struct WatchSettingsView: View {
             // Load initial values (redundant for @AppStorage but good practice)
             peakThreshold = UserDefaults.standard.double(forKey: "peakThreshold")
             peakWindow = UserDefaults.standard.double(forKey: "peakWindow")
+            gestureCooldownWindow = UserDefaults.standard.double(forKey: "gestureCooldownWindow")
             savePeaks = UserDefaults.standard.bool(forKey: "savePeaks")
             saveValleys = UserDefaults.standard.bool(forKey: "saveValleys")
             saveSelectedPeaks = UserDefaults.standard.bool(forKey: "saveSelectedPeaks")
@@ -147,6 +162,7 @@ struct WatchSettingsView: View {
         print("Updating settings in WatchSettingsView: \(settings)")
         if let value = settings["peakThreshold"] as? Double { peakThreshold = value }
         if let value = settings["peakWindow"] as? Double { peakWindow = value }
+        if let value = settings["gestureCooldownWindow"] as? Double { gestureCooldownWindow = value }
         if let value = settings["savePeaks"] as? Bool { savePeaks = value }
         if let value = settings["saveValleys"] as? Bool { saveValleys = value }
         if let value = settings["saveSelectedPeaks"] as? Bool { saveSelectedPeaks = value }

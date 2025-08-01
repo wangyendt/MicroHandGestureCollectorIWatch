@@ -214,11 +214,13 @@ public class MotionManager: NSObject, ObservableObject, SignalProcessorDelegate,
         // 从 UserDefaults 读取保存的设置
         let threshold = UserDefaults.standard.double(forKey: "peakThreshold")
         let window = UserDefaults.standard.double(forKey: "peakWindow")
+        let cooldownWindow = UserDefaults.standard.double(forKey: "gestureCooldownWindow")
         
         // peak阈值
         signalProcessor = SignalProcessor(
-            peakThreshold: threshold > 0 ? threshold : 0.5,  // peak阈值
-            peakWindow: window > 0 ? window : 0.6
+            peakThreshold: threshold > 0 ? threshold : 0.3,  // peak阈值
+            peakWindow: window > 0 ? window : 0.2,
+            gestureCooldownWindow: cooldownWindow > 0 ? cooldownWindow : 0.5
         )
         
         // 从 UserDefaults 读取所有保存设置的初始值

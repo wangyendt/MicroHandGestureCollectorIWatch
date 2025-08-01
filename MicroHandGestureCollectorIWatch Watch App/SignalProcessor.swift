@@ -55,6 +55,11 @@ public class SignalProcessor {
     private var peakThreshold: Double
     private var peakWindow: Double
     
+    // 记录上一次手势信息，用于冷却时间判断
+    private var lastGestureTime: TimeInterval = -1.0
+    private var lastGestureName: String = ""
+    private var gestureCooldownWindow: Double  // 手势间阻止时间窗长
+    
     // 添加计数器
     private(set) var selectedPeakCount: Int = 0
     
@@ -70,9 +75,10 @@ public class SignalProcessor {
     
     private var shouldSaveResult = true  // 添加这个属性
     
-    init(peakThreshold: Double = 0.5, peakWindow: Double = 0.6) {  // peak阈值
+    init(peakThreshold: Double = 0.3, peakWindow: Double = 0.2, gestureCooldownWindow: Double = 0.5) {  // peak阈值
         self.peakThreshold = peakThreshold
         self.peakWindow = peakWindow
+        self.gestureCooldownWindow = gestureCooldownWindow
         
         // 从UserDefaults获取selectedHand，如果没有则默认为左手
         let selectedHand = UserDefaults.standard.string(forKey: "selectedHand") ?? "左手"
@@ -356,12 +362,15 @@ public class SignalProcessor {
     }
     
     // 添加设置方法
-    func updateSettings(peakThreshold: Double? = nil, peakWindow: Double? = nil) {
+    func updateSettings(peakThreshold: Double? = nil, peakWindow: Double? = nil, gestureCooldownWindow: Double? = nil) {
         if let threshold = peakThreshold {
             self.peakThreshold = threshold
         }
         if let window = peakWindow {
             self.peakWindow = window
+        }
+        if let cooldownWindow = gestureCooldownWindow {
+            self.gestureCooldownWindow = cooldownWindow
         }
     }
     
@@ -524,6 +533,27 @@ public class SignalProcessor {
         pendingTasks.removeAll { $0.id == task.id }
         
         if let (gesture, confidence) = result {
+            // 手势间冷却时间判断
+            let timeSinceLastGesture = task.peakTime - lastGestureTime
+            
+            // 如果有上一次手势记录且时间间隔小于冷却窗长
+            if lastGestureTime > 0 && timeSinceLastGesture < gestureCooldownWindow {
+                // 如果时间间隔大于用户设置的peakWindow
+                if timeSinceLastGesture > peakWindow {
+                    // 检查是否为允许的手势组合：前一次是摊掌，当前是单击/双击
+                    let isAllowedCombination = (lastGestureName == "摊掌" && (gesture == "单击" || gesture == "双击"))
+                    
+                    if !isAllowedCombination {
+                        print("🚫 手势被冷却时间阻止: 前一次=\(lastGestureName)(\(String(format: "%.3f", lastGestureTime))s), 当前=\(gesture)(\(String(format: "%.3f", task.peakTime))s), 间隔=\(String(format: "%.3f", timeSinceLastGesture))s")
+                        return // 不符合条件，直接返回
+                    } else {
+                        print("✅ 允许的手势组合: \(lastGestureName) → \(gesture), 间隔=\(String(format: "%.3f", timeSinceLastGesture))s")
+                    }
+                } else {
+                    print("🚫 手势被冷却时间阻止: 间隔\(String(format: "%.3f", timeSinceLastGesture))s < peakWindow(\(String(format: "%.3f", peakWindow))s)")
+                    return // 时间间隔太短，直接返回
+                }
+            }
             print("✅ 手势推理完成: \(gesture), 置信度: \(String(format: "%.3f", confidence)), 峰值时间: \(String(format: "%.2f", task.peakTime))s")
             
             // 计算相对时间
@@ -565,6 +595,10 @@ public class SignalProcessor {
                       confidence: confidence, 
                       peakValue: task.peakValue,
                       id: resultId)
+            
+            // 更新上一次手势记录
+            lastGestureTime = task.peakTime
+            lastGestureName = gesture
                       
             print("📊 当前待处理任务数: \(pendingTasks.count)")
         } else {
@@ -576,6 +610,9 @@ public class SignalProcessor {
     // 清理所有待处理任务（在停止数据收集时调用）
     public func clearPendingTasks() {
         pendingTasks.removeAll()
+        // 重置手势历史记录
+        lastGestureTime = -1.0
+        lastGestureName = ""
         print("🧹 已清理所有待处理的推理任务")
     }
 }

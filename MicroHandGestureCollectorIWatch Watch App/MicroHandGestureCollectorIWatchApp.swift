@@ -28,8 +28,9 @@ struct MicroHandGestureCollectorIWatch_Watch_AppApp: App {
     
     private func registerDefaultsSettings() {
         let defaults: [String: Any] = [
-            "peakThreshold": 0.5,
-            "peakWindow": 0.6,
+            "peakThreshold": 0.3,
+            "peakWindow": 0.2,
+            "gestureCooldownWindow": 0.5,
             "savePeaks": false,
             "saveValleys": false,
             "saveSelectedPeaks": false,

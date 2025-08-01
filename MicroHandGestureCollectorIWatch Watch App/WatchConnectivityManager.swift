@@ -622,6 +622,10 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
                 UserDefaults.standard.set(peakWindow, forKey: "peakWindow")
                 self.motionManager?.signalProcessor.updateSettings(peakWindow: peakWindow)
             }
+            if let gestureCooldownWindow = message["gestureCooldownWindow"] as? Double {
+                UserDefaults.standard.set(gestureCooldownWindow, forKey: "gestureCooldownWindow")
+                self.motionManager?.signalProcessor.updateSettings(gestureCooldownWindow: gestureCooldownWindow)
+            }
             if let saveGestureData = message["saveGestureData"] as? Bool {
                 UserDefaults.standard.set(saveGestureData, forKey: "saveGestureData")
                 self.motionManager?.updateSaveSettings(gestureData: saveGestureData)
