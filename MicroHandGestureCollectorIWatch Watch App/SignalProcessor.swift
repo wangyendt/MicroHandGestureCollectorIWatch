@@ -541,7 +541,7 @@ public class SignalProcessor {
                 // 如果时间间隔大于用户设置的peakWindow
                 if timeSinceLastGesture > peakWindow {
                     // 检查是否为允许的手势组合：前一次是摊掌，当前是单击/双击
-                    let isAllowedCombination = (lastGestureName == "摊掌" && (gesture == "单击" || gesture == "双击"))
+                    let isAllowedCombination = (lastGestureName == "摊掌") // && (gesture == "单击" || gesture == "双击"))
                     
                     if !isAllowedCombination {
                         print("🚫 手势被冷却时间阻止: 前一次=\(lastGestureName)(\(String(format: "%.3f", lastGestureTime))s), 当前=\(gesture)(\(String(format: "%.3f", task.peakTime))s), 间隔=\(String(format: "%.3f", timeSinceLastGesture))s")
